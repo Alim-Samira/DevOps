@@ -1,5 +1,5 @@
 # DevOps
-Mmembre du groupe:
+Membre du groupe:
 Liam
 Léa
 Samira
