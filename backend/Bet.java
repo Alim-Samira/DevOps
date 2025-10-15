@@ -16,11 +16,8 @@ public class Bet {
     }
 
 
-    public Bet(
-        Map<User,Integer> users,
-        Collection options,
-        Time votingTime
-    ) {
+    public Bet(Map<User,Integer> users, Collection options, Time votingTime) 
+    {
         this.users = new HashMap<>(users);
         this.options = new ArrayList<>(options);
         this.state = State.VOTING;
