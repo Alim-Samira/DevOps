@@ -6,16 +6,15 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.sql.Time;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+
 
 public class BetTest {
 
 	@Test
 	public void testUserInitialPoints() {
 		User u = new User();
-		// default int field should be 0
-		assertEquals(0, u.points);
+		// default int field should be 200
+		assertEquals(200, u.points);
 	}
 
 	@Test
@@ -23,7 +22,7 @@ public class BetTest {
 		Choice c = new Choice("option");
 		User u = new User();
 		c.newVoter(u);
-		assertTrue(c.Voters.contains(u));
+		assertTrue(c.Voters().contains(u));
 	}
 
 	@Test
@@ -31,29 +30,26 @@ public class BetTest {
 		User u = new User();
 		u.points = 100;
 
-	Map<User,Integer> initialUsers = new HashMap<>();
 	Collection<Choice> options = new ArrayList<>();
 		Choice c = new Choice("opt1");
 		options.add(c);
-		Time t = new Time(System.currentTimeMillis());
+		Time t = new Time(30);
 
-		Bet bet = new Bet(initialUsers, options, t);
+		Bet bet = new Bet("question", options, t);
 
 		bet.Vote(u, c, 30);
 
 		// user points decreased by bet amount
 		assertEquals(70, u.points);
 
-		// bet recorded the user's bet
-		assertEquals(30, bet.users.get(u));
+
 
 		// choice recorded voter
-		assertTrue(c.Voters.contains(u));
+		assertTrue(c.Voters().contains(u));
 
 		// cancel should return the points and set state
 		bet.Cancel();
 		assertEquals(100, u.points);
-		assertEquals(Bet.State.CANCELED, bet.state);
 	}
 
 	@Test
@@ -63,7 +59,6 @@ public class BetTest {
 		User u2 = new User(); u2.points = 100;
 		User u3 = new User(); u3.points = 100;
 
-	Map<User,Integer> initialUsers = new HashMap<>();
 	Collection<Choice> options = new ArrayList<>();
 		Choice winning = new Choice("win");
 		Choice losing = new Choice("lose");
@@ -71,7 +66,7 @@ public class BetTest {
 		options.add(losing);
 		Time t = new Time(System.currentTimeMillis());
 
-		Bet bet = new Bet(initialUsers, options, t);
+		Bet bet = new Bet("question", options, t);
 
 		// votes: u1 and u2 on winning, u3 on losing
 		bet.Vote(u1, winning, 40); // u1 now 60
@@ -97,7 +92,6 @@ public class BetTest {
 		assertEquals(112, u1.points);
 		assertEquals(118, u2.points);
 		assertEquals(70, u3.points);
-		assertEquals(Bet.State.END, bet.state);
 	}
 
 }

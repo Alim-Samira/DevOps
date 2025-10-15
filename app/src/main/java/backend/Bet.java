@@ -8,19 +8,21 @@ import java.util.Map;
 
 
 public class Bet {
-    Map<User,Integer> users;
-    Collection options;
-    State state;
-    Time votingTime;
+    private Map<User,Integer> users;
+    private String question;
+    private Collection options;
+    private State state;
+    private Time votingTime;
 
     public enum State {
         VOTING,PENDING,END,CANCELED 
     }
 
 
-    public Bet(Map<User,Integer> users, Collection options, Time votingTime) 
+    public Bet( String question, Collection options, Time votingTime) 
     {
-        this.users = new HashMap<>(users);
+        this.question = question;
+        this.users = new HashMap<>();
         this.options = new ArrayList<>(options);
         this.state = State.VOTING;
         this.votingTime = votingTime;
@@ -35,12 +37,12 @@ public class Bet {
         int totalPoints = users.values().stream().mapToInt(Integer::intValue).sum();
         int winningPoints = 0;
         for (User u : users.keySet()) {
-            if (choice.Voters.contains(u)) {
+            if (choice.Voters().contains(u)) {
                 winningPoints += users.get(u);
             }
         }
         for (User u : users.keySet()) {
-            if (choice.Voters.contains(u)) {
+            if (choice.Voters().contains(u)) {
                 int userBet = users.get(u);
                 int reward = (int) ((double) userBet / winningPoints * totalPoints);
                 u.points += reward;
