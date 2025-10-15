@@ -93,6 +93,8 @@ public class Main {
                     sendBotResponse(currentChat, "The sky! Wait... I'm joking. I'm doing great! What about you?");
                 } else if (isThanks(messageContent)) {
                     sendBotResponse(currentChat, "Happy to help!");
+                } else if (isResponse(messageContent)) {
+                    sendBotResponse(currentChat, "That's nice to hear!");
                 }
             }
 
@@ -106,6 +108,17 @@ public class Main {
         String[] greetings = {"hi", "hey", "hello", "morning", "evening"};
         for (String greeting : greetings) {
             if (message.toLowerCase().contains(greeting)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Method to check if the message is a "thank you"
+    private static boolean isResponse(String message) {
+        String[] response = {"good", "great", "I'm fine", "not bad", "doing well", "okay", "ok"};
+        for (String res : response) {
+            if (message.toLowerCase().contains(res)) {
                 return true;
             }
         }
