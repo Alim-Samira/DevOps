@@ -1,5 +1,3 @@
-package backend;
-
 import java.sql.Time;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -45,7 +43,7 @@ public class Bet {
             if (choice.Voters().contains(u)) {
                 int userBet = users.get(u);
                 int reward = (int) ((double) userBet / winningPoints * totalPoints);
-                u.points += reward;
+                u.setPoints(u.getPoints() + reward);
             } 
         }
     }
@@ -55,7 +53,7 @@ public class Bet {
         if (this.state == State.VOTING && options.contains(choice)) {
             choice.newVoter(user);
             this.users.put(user, points);
-            user.points -= points;
+            user.setPoints(user.getPoints() - points);
         }
     }
 
@@ -63,7 +61,7 @@ public class Bet {
         this.state = State.CANCELED;
         for (User u : users.keySet()) {
             int userBet = users.get(u);
-            u.points += userBet;
+            u.setPoints(u.getPoints() + userBet);
         }
     }
 

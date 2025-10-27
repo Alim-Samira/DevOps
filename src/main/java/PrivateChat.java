@@ -1,6 +1,3 @@
-import java.util.ArrayList;
-import java.util.List;
-
 public class PrivateChat extends Chat {
     public PrivateChat(String name, User admin) {
         super(name, admin);  // Pass both name and admin to the superclass constructor
