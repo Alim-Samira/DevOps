@@ -1,8 +1,10 @@
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.jvm.toolchain.JavaLanguageVersion
+import org.gradle.jvm.tasks.Jar
 
 plugins {
     java
+    application
 }
 
 repositories {
@@ -37,4 +39,17 @@ dependencies {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+}
+
+// Configure the application entry point
+application {
+    // Main class is in the default package
+    mainClass.set("Main")
+}
+
+// Make the built JAR executable with `java -jar`
+tasks.named<Jar>("jar") {
+    manifest {
+        attributes["Main-Class"] = "Main"
+    }
 }
