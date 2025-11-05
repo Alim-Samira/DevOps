@@ -34,6 +34,7 @@ L’application propose:
 │  │     ├─ Bet.java
 │  │     ├─ Chat.java
 │  │     ├─ Choice.java
+│  │     ├─ Main.java
 │  │     ├─ Message.java
 │  │     ├─ PrivateChat.java
 │  │     ├─ PublicChat.java
