@@ -17,4 +17,9 @@ public class Choice {
     public Collection Voters(){
         return this.Voters;
     }
+
+    @Override
+    public String toString() {
+        return this.Text;
+    }
 }
