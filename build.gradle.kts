@@ -3,6 +3,7 @@ import org.gradle.jvm.toolchain.JavaLanguageVersion
 
 plugins {
     java
+    application
 }
 
 repositories {
@@ -37,4 +38,8 @@ dependencies {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+}
+
+application {
+    mainClass = "Main"
 }
