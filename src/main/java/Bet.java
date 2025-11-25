@@ -4,21 +4,18 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-
 public class Bet {
-    private Map<User,Integer> users;
+    private Map<User, Integer> users;
     private String question;
-    private Collection options;
+    private Collection<Choice> options;
     private State state;
     private Time votingTime;
 
     public enum State {
-        VOTING,PENDING,END,CANCELED 
+        VOTING, PENDING, END, CANCELED 
     }
 
-
-    public Bet( String question, Collection options, Time votingTime) 
-    {
+    public Bet(String question, Collection<Choice> options, Time votingTime) {
         this.question = question;
         this.users = new HashMap<>();
         this.options = new ArrayList<>(options);
@@ -26,11 +23,11 @@ public class Bet {
         this.votingTime = votingTime;
     }
 
-    public void Options(Collection options){
+    public void Options(Collection<Choice> options){
         this.options = options;
     }
 
-    public void SetResult(Choice choice){
+    public void SetResult(Choice choice) {
         this.state = State.END;
         int totalPoints = users.values().stream().mapToInt(Integer::intValue).sum();
         int winningPoints = 0;
@@ -48,8 +45,7 @@ public class Bet {
         }
     }
 
-    
-    public void Vote(User user, Choice choice,Integer points){
+    public void Vote(User user, Choice choice, Integer points) {
         if (this.state == State.VOTING && options.contains(choice)) {
             choice.newVoter(user);
             this.users.put(user, points);
@@ -57,7 +53,7 @@ public class Bet {
         }
     }
 
-    public void Cancel(){
+    public void Cancel() {
         this.state = State.CANCELED;
         for (User u : users.keySet()) {
             int userBet = users.get(u);
@@ -65,9 +61,7 @@ public class Bet {
         }
     }
 
-    public void EndVoteTime(){
+    public void EndVoteTime() {
         this.state = State.PENDING;
     }
-
 }
-
