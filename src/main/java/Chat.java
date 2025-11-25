@@ -2,8 +2,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import minigames.MiniGame;
-import minigames.QuizGame;
 
 public abstract class Chat {
     protected String name;
