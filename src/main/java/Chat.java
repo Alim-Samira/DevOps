@@ -7,7 +7,6 @@ public abstract class Chat {
     protected String name;
     protected List<Message> messages;
     protected User admin;
-    //Gestion des mini-jeux
     private MiniGame activeGame;
     private final List<MiniGame> availableGames;
 
@@ -15,9 +14,9 @@ public abstract class Chat {
         this.name = name;
         this.admin = admin;
         this.messages = new ArrayList<>();
-        //  Initialisation des jeux disponibles (extensible)
+        //  Initialisation des jeux disponibles 
         this.availableGames = new ArrayList<>();
-        this.availableGames.add(new QuizGame()); // Ajout du QuizGame
+        this.availableGames.add(new QuizGame());
         this.activeGame = null;
     }
 
@@ -41,7 +40,7 @@ public abstract class Chat {
         System.out.println("\n--- Messages in " + this.name + " ---");
         // Affichage de l'état du jeu
         if (activeGame != null) {
-            System.out.println("🚨 **MINI-JEU ACTIF: " + activeGame.getCommandName().toUpperCase() + " en cours!** Utilisez la commande '!" + activeGame.getCommandName() + " exit' pour l'arrêter.");
+            System.out.println("🕹️ **MINI-JEU ACTIF: " + activeGame.getCommandName().toUpperCase() + " en cours!** Utilisez la commande '!" + activeGame.getCommandName() + " exit' pour l'arrêter.");
         } else {
             System.out.print("💡Jeux dispos: ");
             for (MiniGame game : availableGames) {
@@ -56,7 +55,6 @@ public abstract class Chat {
             for (Message message : messages) {
                 String senderName = message.getSender().getName();
                 
-                // Truncate the timestamp for a shorter, more readable ID (hash code snippet)
                 String messageIdSnippet = String.valueOf(message.getTimestamp().hashCode() & 0xFFFF); 
                 
                 String displaySender;
@@ -64,13 +62,12 @@ public abstract class Chat {
 
                 if (senderName.equals("RB")) {
                     displaySender = "🤖 RB";
-                    senderIcon = ""; // Already handled by the name
+                    senderIcon = ""; 
                 } else if (senderName.equals("RB")) {
                     displaySender = "🎮 RB";
                     senderIcon = ""; 
                 } else {
                     displaySender = message.getSender().getName();
-                    // On ne met pas d'icône pour l'utilisateur courant, c'est mieux dans le contexte de la console.
                     senderIcon = ""; 
                 }
 
@@ -80,12 +77,10 @@ public abstract class Chat {
                     replyIndicator = " \n    [REPLY to: " + message.getReplyTo().getSender().getName() + ": '" + message.getReplyContentSnippet() + "']";
                 }
 
-                // Display the message with the short ID, sender, content, and reply info
                 System.out.println(String.format(" %s | ID: %s", message.getTimestamp(), messageIdSnippet));
                 System.out.println(String.format(" %s %s: %s", senderIcon, displaySender, message.getContent()));
                 System.out.println(replyIndicator);
                 
-                // Display likes and reports on a separate line
                 System.out.println(String.format("   👍 %d | 🚩 %d", message.getLikes(), message.getReports()));
                 System.out.println("------------------------------------");
             }
@@ -99,7 +94,6 @@ public abstract class Chat {
             return "⛔ Un mini-jeu (" + activeGame.getCommandName() + ") est déjà en cours. Utilisez '!" + activeGame.getCommandName() + " exit' pour l'arrêter.";
         }
         
-        // Trouver le jeu correspondant à la commande
         for (MiniGame game : availableGames) {
             if (game.getCommandName().equalsIgnoreCase(gameCommand)) {
                 // Seul un admin ou un modérateur peut lancer un jeu
@@ -121,7 +115,6 @@ public abstract class Chat {
             return null;
         }
         
-        // Commande d'arrêt du jeu
         if (input.trim().equalsIgnoreCase("!" + activeGame.getCommandName() + " exit")) {
             String results = activeGame.getResults();
             activeGame.reset();
@@ -129,26 +122,21 @@ public abstract class Chat {
             return "🛑 **Mini-jeu arrêté par l'utilisateur.** " + results;
         }
 
-        // Laisser le jeu actif traiter l'entrée
         String gameResponse = activeGame.processInput(user, input);
         
-        // Si le jeu est terminé après le traitement, réinitialiser
         if (activeGame != null && activeGame.isFinished()) {
-            activeGame = null; // Le jeu a renvoyé les résultats dans sa réponse
+            activeGame = null; 
         }
         
         return gameResponse;
     }
     
-    // Getter pour l'état du jeu
     public MiniGame getActiveGame() {
         return activeGame;
     }
 
-    // Uniformisation de la recherche par ID court (hash code)
     public Message findMessageById(String shortId) {
         if (shortId == null || shortId.isEmpty()) return null;
-        // L'ID court est le hash code du timestamp tronqué
         for (Message message : messages) {
             String messageIdSnippet = String.valueOf(message.getTimestamp().hashCode() & 0xFFFF);
             if (messageIdSnippet.equals(shortId)) {
@@ -158,7 +146,6 @@ public abstract class Chat {
         return null;
     }
 
-    // Utilise la méthode findMessageById uniformisée pour la suppression
     public void deleteMessage(User remover, String messageShortId) {
         Message message = findMessageById(messageShortId);
         if (message == null) {
@@ -177,36 +164,34 @@ public abstract class Chat {
         }
     }
 
-    // Cette méthode a été conservée pour la compatibilité, mais deleteMessage est préférée.
     public void removeMessage(Message message) {
         if (messages.contains(message)) {
             messages.remove(message);
-            // Note: The success message is handled in Main.java, but we add a local confirmation here too.
             System.out.println("✅ Message removed from chat history.");
         } else {
             System.out.println("❌ Error: Message not found in chat history for removal.");
         }
     }
 
-    // Getter for the name of the Chat
     public String getName() {
         return name;
     }
 
-    // Getter for the admin
     public User getAdmin() {
         return admin;
     }
 
-    // Getter for messages (to allow findMessageById to work)
     public List<Message> getMessages() {
         return messages;
     }
     
-    //  Allow admin to add custom games (needed for the Game Menu feature in Main.java)
     public void registerGame(MiniGame game) {
         this.availableGames.add(game);
         System.out.println("✨ Nouveau jeu ajouté au " + this.name + " : " + game.getCommandName());
     }
-
+    
+    // Game history
+    public List<MiniGame> getAvailableGames() {
+        return availableGames;
+    }
 }
