@@ -52,4 +52,10 @@ tasks.named<Jar>("jar") {
     manifest {
         attributes["Main-Class"] = "Main"
     }
+
+}
+
+// Attach standard input to the Gradle run task for interactive apps
+tasks.named<JavaExec>("run") {
+    standardInput = System.`in`
 }
