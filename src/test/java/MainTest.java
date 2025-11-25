@@ -41,7 +41,7 @@ public class MainTest {
         options.add(choiceA);
         Time votingTime = new Time(System.currentTimeMillis());
 
-        Bet bet = new Bet("Which option?", options, votingTime);
+        PublicBet bet = new PublicBet("Which option?", options, votingTime);
 
         // Alice votes 50 points for choiceA
         bet.Vote(alice, choiceA, 50);

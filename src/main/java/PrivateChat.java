@@ -5,16 +5,20 @@ public class PrivateChat extends Chat {
 
     public PrivateChat(String name, User admin) {
         super(name, admin);  // Pass both name and admin to the superclass constructor
+        this.users = new java.util.HashMap<>();
     }
 
     // Method to add a user to the private chat
     public void addUser(User user) {
-        //users.put(user,200);
+        users.put(user,200);
         System.out.println(user.getName() + " has joined the private chat.");
     }
-    public void addPoint(User user, Integer points){
+    public void setPoints(User user, Integer points){
         if(users.containsKey(user)){
-            users.put(user, users.get(user) + points);
+            users.replace(user, points);
         }
+    }
+    public Map<User,Integer> Users(){
+        return this.users;
     }
 }
