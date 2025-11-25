@@ -53,7 +53,7 @@ public class Bet {
         if (this.state == State.VOTING && options.contains(choice)) {
             choice.newVoter(user);
             this.users.put(user, points);
-            user.setPoints(user.getPoints() - points);
+            user.setPoints(user.getPoints() - points); // a modifier car manque point quand privé
         }
     }
 
