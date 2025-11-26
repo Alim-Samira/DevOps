@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 public class QuizGame implements MiniGame {
-    private String commandName; // Changed from final constant to variable
+    private String commandName; // Changed from final constant to variable for better flexibility 
     private final Map<User, Integer> scores;
     private final List<QuizQuestion> questions;
     private int currentQuestionIndex;
@@ -23,10 +23,10 @@ public class QuizGame implements MiniGame {
         }
     }
 
-    // Default constructor (The original hardcoded quiz)
+    // Default constructor (The original quiz) 
     public QuizGame() {
         this("quiz"); // Default command name
-        // Add default questions
+        // Possibility to add default questions here
         this.questions.add(new QuizQuestion("Quel est l'acteur principal dans le film 'Inception' ?", "Leonardo DiCaprio"));
         this.questions.add(new QuizQuestion("En quelle année le confinement a t'il commencé ?", "2020"));
         this.questions.add(new QuizQuestion("Quelle est la capitale de l'Australie ?", "Canberra"));
@@ -41,7 +41,7 @@ public class QuizGame implements MiniGame {
         this.isActive = false;
     }
 
-    // Method to add questions dynamically
+    // Method to add questions 
     public void addQuestion(String question, String answer) {
         this.questions.add(new QuizQuestion(question, answer));
     }
@@ -78,7 +78,7 @@ public class QuizGame implements MiniGame {
         if (!isActive || isFinished()) return null;
 
         String lowerInput = input.trim().toLowerCase();
-        QuizQuestion currentQuestion = questions.get(currentQuestionIndex);
+        QuizQuestion currentQuestion = questions.get(currentQuestionIndex); 
 
         if (lowerInput.contains(currentQuestion.answer)) {
             scores.put(user, scores.getOrDefault(user, 0) + 1);

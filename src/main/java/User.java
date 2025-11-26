@@ -19,7 +19,7 @@ public class User {
         this(name, isAdmin, false); // Chains to the Master Constructor
     }
 
-    // Creates an Anonymous user with no permissions.
+    // Creates an Anonymous user with no permissions. 
     public User() {
         this("Anonymous", false, false); 
     }
