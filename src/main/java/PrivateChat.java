@@ -2,42 +2,32 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class PrivateChat extends Chat {
-    private int entryCost;
+
     private List<User> allowedMembers; 
 
-    public PrivateChat(String name, User owner, int entryCost) {
-        super(name, owner); // The creator becomes the 'admin' of this chat
-        this.entryCost = entryCost;
+    // Standard Constructor
+    public PrivateChat(String name, User owner) {
+        super(name, owner); 
         this.allowedMembers = new ArrayList<>();
         this.allowedMembers.add(owner); // Owner is automatically a member
     }
 
-    // Attempt to add a member (Logic: Check points -> Pay -> Enter)
+    // Compatibility Constructor 
+    public PrivateChat(String name, User owner, int ignoredCost) {
+        this(name, owner);
+    }
+
+    // Attempt to add a member 
     public boolean addMember(User user) {
         if (allowedMembers.contains(user)) {
             System.out.println("⚠️ " + user.getName() + " is already in the chat.");
             return true;
         }
 
-        
-        if (user.equals(this.admin) || user.isAdmin() || user.isModerator()) {
-            allowedMembers.add(user);
-            System.out.println("👑 " + user.getName() + " added to " + this.name + " (VIP/Owner access).");
-            return true;
-        }
-
-        // Regular users pay points
-        if (user.getPoints() >= entryCost) {
-            user.setPoints(user.getPoints() - entryCost); // Deduct points
-            allowedMembers.add(user);
-            System.out.println("✅ " + user.getName() + " added to " + this.name + ".");
-            System.out.println("   💰 -" + entryCost + " points. (Remaining: " + user.getPoints() + ")");
-            return true;
-        } else {
-            System.out.println("⛔ " + user.getName() + " cannot be added.");
-            System.out.println("   ❌ Insufficient points (Cost: " + entryCost + " | Has: " + user.getPoints() + ")");
-            return false;
-        }
+       
+        allowedMembers.add(user);
+        System.out.println("✅ " + user.getName() + " added to " + this.name + ".");
+        return true;
     }
 
     public void removeMember(User user) {
@@ -48,12 +38,12 @@ public class PrivateChat extends Chat {
     }
 
     public boolean isAllowed(User user) {
-        // Global Admins always allowed, otherwise must be in the list
-        return user.isAdmin() || allowedMembers.contains(user);
+        // Global Admins and Moderators always allowed, others must be in allowedMembers TO BE MODIFIED
+        return user.isAdmin() || user.isModerator() || allowedMembers.contains(user);
     }
-    
+
     public int getEntryCost() {
-        return entryCost;
+        return 0;
     }
 }
 
