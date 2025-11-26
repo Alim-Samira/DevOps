@@ -26,7 +26,7 @@ public class Main {
         allUsers.add(user1);
         allUsers.add(user2);
 
-        
+        // --- Default Chats ---
         PublicChat publicChat = new PublicChat("Public Chat", admin);
         publicChat.addUser(mod);
         publicChat.addUser(admin);
@@ -35,7 +35,7 @@ public class Main {
         publicChat.addUser(new User("Bob", false, false));
         chatRooms.add(publicChat);
         
-        PrivateChat privateChat = new PrivateChat("Private Chat", admin, 100); 
+        PrivateChat privateChat = new PrivateChat("Private Chat", admin, 0); // Default cost 0
         privateChat.addMember(admin); 
         privateChat.addMember(user1); 
         chatRooms.add(privateChat);
@@ -109,12 +109,9 @@ public class Main {
                         if (pc.isAllowed(sessionUser)) {
                             startChat(scanner, selectedChat, sessionUser);
                         } else {
-                            System.out.println("🔒 This chat is private.");
-                            System.out.print("Pay " + pc.getEntryCost() + " points to join? (y/n): ");
-                            if(scanner.nextLine().trim().equalsIgnoreCase("y")) {
-                                if(pc.addMember(sessionUser)) {
-                                    startChat(scanner, selectedChat, sessionUser);
-                                }
+                        
+                            if(pc.addMember(sessionUser)) {
+                                startChat(scanner, selectedChat, sessionUser);
                             }
                         }
                     } else {
@@ -130,27 +127,22 @@ public class Main {
         scanner.close();
     }
 
-    // --- 1. CHAT CREATION LOGIC ---
+    // CHAT CREATION LOGIC ---
     private static void createPrivateChat(Scanner scanner, User creator) {
         System.out.println("\n--- Create Your Room ---");
         System.out.print("Room Name: ");
         String name = scanner.nextLine().trim();
         if(name.isEmpty()) return;
 
-        System.out.print("Entry Cost (Points): ");
-        int cost = 0;
-        try {
-            cost = Integer.parseInt(scanner.nextLine().trim());
-        } catch (Exception e) {
-             System.out.println("Invalid number. Cost set to 0.");
-        }
+        // No longer asking for points cost
+        int cost = 0; 
 
         PrivateChat newChat = new PrivateChat(name, creator, cost);
         chatRooms.add(newChat);
         System.out.println("✅ Room created! You are the Admin.");
     }
 
-    // --- 2. ADMIN PANEL LOGIC ---
+    // ADMIN PANEL LOGIC ---
     private static void startAdminPanel(Scanner scanner, PublicChat pubChat, User admin) {
         while (true) {
             System.out.println("\n=== ADMIN PANEL ===");
@@ -190,7 +182,7 @@ public class Main {
         if (!dataFound) System.out.println("No messages with reports/likes found.");
     }
 
-    // --- 3. GAME MENU LOGIC (UPDATED WITH SELECTION LIST) ---
+    // --- GAME MENU LOGIC ---
     private static void gameMenu(Scanner scanner, Chat targetChat) {
         while(true) {
             System.out.println("\n--- 🎮 GAME MANAGEMENT ---");
@@ -222,7 +214,6 @@ public class Main {
                 System.out.println("✅ Game registered!");
             } 
             else if (ch.equals("2")) {
-                // --- NEW SELECTION LOGIC ---
                 List<MiniGame> available = targetChat.getAvailableGames();
                 
                 if (available.isEmpty()) {
@@ -255,7 +246,7 @@ public class Main {
         }
     }
 
-    // --- 4. MAIN CHAT LOOP ---
+    // --- MAIN CHAT LOOP (modified becuase of errors)---
     private static void startChat(Scanner scanner, Chat currentChat, User currentUser) {
         System.out.println("\n🎉 Joined " + currentChat.getName());
         currentChat.listMessages();
@@ -281,7 +272,7 @@ public class Main {
                 break;
             }
 
-            // OWNER COMMANDS
+            // OWNER COMMANDS (delete chat, add member)
             if (isOwner && input.equalsIgnoreCase("!delete")) {
                 System.out.print("⚠️ Delete this chat? (y/n): ");
                 if (scanner.nextLine().trim().equalsIgnoreCase("y")) {
@@ -309,7 +300,7 @@ public class Main {
                 continue;
             }
             
-            // GAME INPUT
+            // GAME INPUT 
             if (currentChat.getActiveGame() != null) {
                 String gameResponse = currentChat.processGameInput(currentUser, input);
                 if (gameResponse != null) {
@@ -319,7 +310,7 @@ public class Main {
                 continue;
             }
 
-            // MESSAGE ACTIONS
+            // MESSAGE ACTIONS (z for report , l for like, r for reply, d for delete)
             String[] parts = input.split("\\s+", 2);
             String cmd = parts[0].toLowerCase();
             String param = parts.length > 1 ? parts[1].trim() : "";
@@ -361,7 +352,7 @@ public class Main {
                     currentChat.sendMessage(currentUser, input);
                     if (isGreeting(input)) sendBotResponse(currentChat, "Hi! I'm RB the bot.");
                     else if (isHowAreYou(input)) sendBotResponse(currentChat, "I'm doing great!");
-                    else if (isWhatsUp(input)) sendBotResponse(currentChat, "The sky!");
+                    else if (isWhatsUp(input)) sendBotResponse(currentChat, "The sky! lol just kidding, I'm good how are you?");
                     else if (isThanks(input)) sendBotResponse(currentChat, "Happy to help!");
                     
                     currentChat.listMessages();

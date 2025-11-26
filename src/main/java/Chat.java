@@ -16,7 +16,7 @@ public abstract class Chat {
         this.messages = new ArrayList<>();
         //  Initialisation des jeux disponibles 
         this.availableGames = new ArrayList<>();
-        this.availableGames.add(new QuizGame());
+        this.availableGames.add(new QuizGame()); 
         this.activeGame = null;
     }
 
@@ -27,18 +27,14 @@ public abstract class Chat {
             return;
         }
 
-        // Get the current timestamp
         String timestamp = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy").format(new Date());
-
-        // Create the message and add it to the list
         Message newMessage = new Message(sender, content, timestamp);
         messages.add(newMessage);
     }
 
-    // List all messages in the Chat
     public void listMessages() {
         System.out.println("\n--- Messages in " + this.name + " ---");
-        // Affichage de l'état du jeu
+        
         if (activeGame != null) {
             System.out.println("🕹️ **MINI-JEU ACTIF: " + activeGame.getCommandName().toUpperCase() + " en cours!** Utilisez la commande '!" + activeGame.getCommandName() + " exit' pour l'arrêter.");
         } else {
@@ -54,9 +50,7 @@ public abstract class Chat {
         } else {
             for (Message message : messages) {
                 String senderName = message.getSender().getName();
-                
                 String messageIdSnippet = String.valueOf(message.getTimestamp().hashCode() & 0xFFFF); 
-                
                 String displaySender;
                 String senderIcon;
 
@@ -73,14 +67,12 @@ public abstract class Chat {
 
                 String replyIndicator = "";
                 if (message.getReplyTo() != null) {
-                   
                     replyIndicator = " \n    [REPLY to: " + message.getReplyTo().getSender().getName() + ": '" + message.getReplyContentSnippet() + "']";
                 }
 
                 System.out.println(String.format(" %s | ID: %s", message.getTimestamp(), messageIdSnippet));
                 System.out.println(String.format(" %s %s: %s", senderIcon, displaySender, message.getContent()));
                 System.out.println(replyIndicator);
-                
                 System.out.println(String.format("   👍 %d | 🚩 %d", message.getLikes(), message.getReports()));
                 System.out.println("------------------------------------");
             }
@@ -88,7 +80,6 @@ public abstract class Chat {
         System.out.println("------------------------------------");
     }
 
-    // Méthode pour lancer un mini-jeu
     public String launchGame(User launcher, String gameCommand) {
         if (activeGame != null) {
             return "⛔ Un mini-jeu (" + activeGame.getCommandName() + ") est déjà en cours. Utilisez '!" + activeGame.getCommandName() + " exit' pour l'arrêter.";
@@ -96,20 +87,16 @@ public abstract class Chat {
         
         for (MiniGame game : availableGames) {
             if (game.getCommandName().equalsIgnoreCase(gameCommand)) {
-                // Seul un admin ou un modérateur peut lancer un jeu
                 if (!launcher.isAdmin() && !launcher.isModerator()) {
                     return "⛔ Seuls les administrateurs et modérateurs peuvent lancer un mini-jeu.";
                 }
-                
                 activeGame = game;
                 return activeGame.start();
             }
         }
-        
         return "❌ Mini-jeu '" + gameCommand + "' non trouvé.";
     }
     
-    // Méthode pour traiter les entrées pendant un jeu
     public String processGameInput(User user, String input) {
         if (activeGame == null) {
             return null;
@@ -127,7 +114,6 @@ public abstract class Chat {
         if (activeGame != null && activeGame.isFinished()) {
             activeGame = null; 
         }
-        
         return gameResponse;
     }
     
@@ -190,7 +176,6 @@ public abstract class Chat {
         System.out.println("✨ Nouveau jeu ajouté au " + this.name + " : " + game.getCommandName());
     }
     
-    // Game history
     public List<MiniGame> getAvailableGames() {
         return availableGames;
     }
