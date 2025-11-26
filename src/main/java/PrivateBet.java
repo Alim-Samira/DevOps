@@ -41,7 +41,8 @@ public class PrivateBet implements Bet {
                 int userBet = users.get(u);
                 int reward = (int) ((double) userBet / winningPoints * totalPoints);
                 int current = chat.Users().get(u);
-                chat.setPoints(u, current + reward);            } 
+                chat.setPoints(u, current + reward);            
+            } 
         }
     }
 
