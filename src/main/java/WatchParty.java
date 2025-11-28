@@ -106,8 +106,19 @@ public class WatchParty {
             if (status == WatchPartyStatus.OPEN) {
                 status = WatchPartyStatus.CLOSED;
                 kickAllParticipants();
-                System.out.println("🔴 Watch party '" + name + "' closed - no upcoming match");
+                System.out.println("[X] Watch party '" + name + "' closed - no upcoming match");
             }
+            return;
+        }
+        
+        // Safety check: reject past matches
+        if (upcomingMatch.isPast()) {
+            System.out.println("[!] Warning: Attempted to set past match for watch party '" + name + "' - ignoring");
+            if (status == WatchPartyStatus.OPEN) {
+                status = WatchPartyStatus.CLOSED;
+                kickAllParticipants();
+            }
+            autoConfig.setCurrentMatch(null);
             return;
         }
         
@@ -117,7 +128,7 @@ public class WatchParty {
         // Check if match is starting soon (30 minutes before)
         if (upcomingMatch.isStartingSoon(30) && status != WatchPartyStatus.OPEN) {
             status = WatchPartyStatus.OPEN;
-            System.out.println("✅ Watch party '" + name + "' is now OPEN!");
+            System.out.println("[+] Watch party '" + name + "' is now OPEN!");
             System.out.println("   Match: " + upcomingMatch);
             System.out.println("   Stream: " + upcomingMatch.getStreamUrl());
         }
@@ -126,7 +137,7 @@ public class WatchParty {
         if (upcomingMatch.isFinished() && status == WatchPartyStatus.OPEN) {
             status = WatchPartyStatus.CLOSED;
             kickAllParticipants();
-            System.out.println("🔴 Watch party '" + name + "' closed - match finished");
+            System.out.println("[X] Watch party '" + name + "' closed - match finished");
         }
     }
     

@@ -39,6 +39,15 @@ public class Match {
     public boolean isFinished() {
         return status == MatchStatus.FINISHED;
     }
+    
+    /**
+     * Check if this match is in the past (scheduled time has passed)
+     */
+    public boolean isPast() {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime matchEnd = scheduledTime.plusHours(getEstimatedDurationHours());
+        return now.isAfter(matchEnd);
+    }
 
     public boolean isStartingSoon(int minutesBefore) {
         LocalDateTime now = LocalDateTime.now();

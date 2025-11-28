@@ -23,6 +23,7 @@ public class LeaguepediaClient {
         
         return mockMatches.stream()
             .filter(m -> !m.isFinished())
+            .filter(m -> !m.isPast()) 
             .filter(m -> m.getTeam1().equalsIgnoreCase(teamName) || 
                         m.getTeam2().equalsIgnoreCase(teamName))
             .filter(m -> m.getScheduledTime().isAfter(now))
@@ -38,6 +39,7 @@ public class LeaguepediaClient {
         
         return mockMatches.stream()
             .filter(m -> !m.isFinished())
+            .filter(m -> !m.isPast())  // Exclude past matches
             .filter(m -> m.getTournament().equalsIgnoreCase(tournamentName))
             .filter(m -> m.getScheduledTime().isAfter(now))
             .min((m1, m2) -> m1.getScheduledTime().compareTo(m2.getScheduledTime()))
@@ -54,6 +56,7 @@ public class LeaguepediaClient {
         List<Match> result = new ArrayList<>();
         for (Match m : mockMatches) {
             if (!m.isFinished() && 
+                !m.isPast() &&  // Exclude past matches
                 (m.getTeam1().equalsIgnoreCase(teamName) || m.getTeam2().equalsIgnoreCase(teamName)) &&
                 m.getScheduledTime().isAfter(now) &&
                 m.getScheduledTime().isBefore(deadline)) {
@@ -144,7 +147,11 @@ public class LeaguepediaClient {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime matchEnd = match.getScheduledTime().plusHours(match.getEstimatedDurationHours());
         
-        if (now.isAfter(match.getScheduledTime()) && now.isBefore(matchEnd)) {
+        // Auto-mark past matches as finished to prevent stale data
+        if (match.isPast() && match.getStatus() != MatchStatus.FINISHED) {
+            match.setStatus(MatchStatus.FINISHED);
+            System.out.println("[!] Auto-marked past match as finished: " + match.getId());
+        } else if (now.isAfter(match.getScheduledTime()) && now.isBefore(matchEnd)) {
             match.setStatus(MatchStatus.LIVE);
         } else if (now.isAfter(matchEnd)) {
             match.setStatus(MatchStatus.FINISHED);
