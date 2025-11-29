@@ -18,7 +18,7 @@ public class PrivateChat extends Chat {
             users.replace(user, points);
         }
     }
-    public Map<User,Integer> Users(){
+    public Map<User,Integer> users(){
         return this.users;
     }
 }

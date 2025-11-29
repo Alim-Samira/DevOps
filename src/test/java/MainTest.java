@@ -44,15 +44,15 @@ public class MainTest {
         PublicBet bet = new PublicBet("Which option?", options, votingTime);
 
         // Alice votes 50 points for choiceA
-        bet.Vote(alice, choiceA, 50);
+        bet.vote(alice, choiceA, 50);
         assertEquals(150, alice.getPoints());
 
         // Bob votes 50 points for choiceA too
-        bet.Vote(bob, choiceA, 50);
+        bet.vote(bob, choiceA, 50);
         assertEquals(150, bob.getPoints());
 
         // End the vote and set result
-        bet.SetResult(choiceA);
+        bet.setResult(choiceA);
 
         // After result, since both voted equally, their points should increase back (they receive a share)
         assertTrue(alice.getPoints() >= 150);

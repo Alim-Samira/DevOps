@@ -6,16 +6,15 @@ public interface Bet {
     }
 
 
-    void SetResult(Choice choice);
+    void setResult(Choice choice);
 
-    void Vote(User user, Choice choice, Integer points);
+    void vote(User user, Choice choice, Integer points);
 
-    void Cancel();
+    void cancel();
 
-    void EndVoteTime();
+    void endVoteTime();
 
-
-    void Options(Collection options);
+    void options(Collection options);
 
 }
 

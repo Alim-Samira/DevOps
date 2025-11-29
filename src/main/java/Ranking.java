@@ -1,9 +1,7 @@
-
 import java.util.List;
+import java.util.Map;
 
-public class Ranking {
+public interface Ranking {
     
-    public static void Ranking(List<User> users, List<Integer> points) {
-
-    }
+    Map<User, Integer> getRanking(List<User> allUsers);
 }

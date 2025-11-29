@@ -21,11 +21,11 @@ public class PublicBet implements Bet {
         this.votingTime = votingTime;
     }
 
-    public void Options(Collection options){
+    public void options(Collection options){
         this.options = options;
     }
 
-    public void SetResult(Choice choice){
+    public void setResult(Choice choice){
         this.state = State.END;
         int totalPoints = users.values().stream().mapToInt(Integer::intValue).sum();
         int winningPoints = 0;
@@ -37,14 +37,16 @@ public class PublicBet implements Bet {
         for (User u : users.keySet()) {
             if (choice.Voters().contains(u)) {
                 int userBet = users.get(u);
-                int reward = (int) ((double) userBet / winningPoints * totalPoints);
-                u.setPoints(u.getPoints() + reward);
+                if(winningPoints!=0){
+                    int reward = (int) ((double) userBet / winningPoints * totalPoints);
+                    u.setPoints(u.getPoints() + reward);
+                }
             } 
         }
     }
 
     
-    public void Vote(User user, Choice choice,Integer points){
+    public void vote(User user, Choice choice,Integer points){
         if (this.state == State.VOTING && options.contains(choice)) {
             choice.newVoter(user);
             this.users.put(user, points);
@@ -52,7 +54,7 @@ public class PublicBet implements Bet {
         }
     }
 
-    public void Cancel(){
+    public void cancel(){
         this.state = State.CANCELED;
         for (User u : users.keySet()) {
             int userBet = users.get(u);
@@ -60,7 +62,7 @@ public class PublicBet implements Bet {
         }
     }
 
-    public void EndVoteTime(){
+    public void endVoteTime(){
         this.state = State.PENDING;
     }
 

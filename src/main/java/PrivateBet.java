@@ -23,11 +23,11 @@ public class PrivateBet implements Bet {
         this.users=new HashMap<>();
     }
 
-    public void Options(Collection options){
+    public void options(Collection options){
         this.options = options;
     }
 
-    public void SetResult(Choice choice){
+    public void setResult(Choice choice){
         this.state = State.END;
         int totalPoints = users.values().stream().mapToInt(Integer::intValue).sum();
         int winningPoints = 0;
@@ -40,31 +40,31 @@ public class PrivateBet implements Bet {
             if (choice.Voters().contains(u)) {
                 int userBet = users.get(u);
                 int reward = (int) ((double) userBet / winningPoints * totalPoints);
-                int current = chat.Users().get(u);
+                int current = chat.users().get(u);
                 chat.setPoints(u, current + reward);            
             } 
         }
     }
 
     
-    public void Vote(User user, Choice choice,Integer points){
+    public void vote(User user, Choice choice,Integer points){
         if (this.state == State.VOTING && options.contains(choice)) {
             choice.newVoter(user);
             this.users.put(user, points);
-           int current = chat.Users().get(user);
+           int current = chat.users().get(user);
             chat.setPoints(user, current - points);        }
     }
 
-    public void Cancel(){
+    public void cancel(){
         this.state = State.CANCELED;
         for (User u : users.keySet()) {
             int userBet = users.get(u);
-            int current = chat.Users().get(u);
+            int current = chat.users().get(u);
             chat.setPoints(u, current + userBet);
         }
     }
 
-    public void EndVoteTime(){
+    public void endVoteTime(){
         this.state = State.PENDING;
     }
 

@@ -7,9 +7,8 @@ public abstract class Chat {
     protected String name;
     protected List<Message> messages;
     protected User admin;
-    protected Ranking ranking;
 
-    public Chat(String name, User admin) {
+    protected Chat(String name, User admin) {
         this.name = name;
         this.admin = admin;
         this.messages = new ArrayList<>();
