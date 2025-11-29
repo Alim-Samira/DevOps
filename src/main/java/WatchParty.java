@@ -6,12 +6,15 @@ public class WatchParty {
     private LocalDateTime date;
     private String game;
     private boolean planned;
+    private MatchState matchState;
+
 
     public WatchParty(String name, LocalDateTime date, String game) {
         this.name = name;
         this.date = date;
         this.game = game;
         this.planned=false;
+        this.matchState = MatchState.PRE_MATCH; // initial state 
     }
 
      public String name() {
@@ -30,7 +33,15 @@ public class WatchParty {
         return planned;
     }
 
-    public void toPlan() {
+    public MatchState matchState() {
+        return matchState;
+    }
+
+    public void setMatchState(MatchState matchState) {
+        this.matchState = matchState;
+    }
+
+    public void planify() {
         this.planned= true;
         System.out.println(" WatchParty planifiée : " + name +
                            " | Jeu : " + game +
@@ -43,19 +54,11 @@ public class WatchParty {
         System.out.println("date : " + date);
         System.out.println("jeu : " + game);
         System.out.println("Planifiee : " + (planned ? "oui" : "non"));
+        System.out.println("État du match : " + matchState);
+
+    }
+
+    public boolean canLaunchMiniGame() {
+        return matchState == MatchState.PAUSED; // return true if a miniGame can be launched ( only when the match is paused)
     }
 }
-
-
-
-
-
-
-  
-   
-
-    
-
-        
-    
-
