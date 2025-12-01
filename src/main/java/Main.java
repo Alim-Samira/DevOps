@@ -22,6 +22,11 @@ public class Main {
 
         privateChat.addUser(admin);
         privateChat.addUser(user1);
+        
+        // Watch Party Manager with auto scheduler
+        WatchPartyManager wpManager = new WatchPartyManager();
+        wpManager.startScheduler();
+        System.out.println("=== Watch Party System Initialized ===");
 
     // Scanner to read user input
     Scanner scanner = new Scanner(System.in);
@@ -37,7 +42,8 @@ public class Main {
             System.out.println("1. Public Chat");
             System.out.println("2. Private Chat");
             System.out.println("3. Bets");
-            System.out.println("4. Exit");
+            System.out.println("4. Auto Watch Parties");
+            System.out.println("5. Exit");
             System.out.print("Enter your choice (or 'e' to exit): ");
             
             // Read the input as a string
@@ -46,6 +52,7 @@ public class Main {
             // Exit if the user types 'e'
             if (choice.equals("e")) {
                 System.out.println("Exiting chat...");
+                wpManager.stopScheduler();
                 break;  // Exit the program
             }
 
@@ -69,6 +76,9 @@ public class Main {
                 BetAndChoices result = betsMenu(scanner, currentUser, currentBet, currentChoices, admin, user1, user2);
                 currentBet = result.bet;
                 currentChoices = result.choices;
+            } else if (chatChoice == 4) {
+                // Open auto watch parties menu
+                autoWatchPartiesMenu(scanner, currentUser, wpManager, admin);
             } else {
                 System.out.println("Invalid choice, try again.");
             }
@@ -244,6 +254,173 @@ public class Main {
         System.out.println("-- Balances --");
         for (User u : users) {
             System.out.println(u.getName() + ": " + u.getPoints());
+        }
+    }
+    
+    // Auto Watch Parties Menu
+    private static void autoWatchPartiesMenu(Scanner scanner, User currentUser, WatchPartyManager manager, User admin) {
+        while (true) {
+            System.out.println("\n=== Auto Watch Parties ===");
+            System.out.println("Current user: " + currentUser.getName());
+            System.out.println("Scheduler status: " + (manager.isSchedulerRunning() ? "RUNNING" : "STOPPED"));
+            System.out.println("\n1. Create Auto Watch Party (Team)");
+            System.out.println("2. Create Auto Watch Party (Tournament)");
+            System.out.println("3. List All Watch Parties");
+            System.out.println("4. Join Watch Party");
+            System.out.println("5. Leave Watch Party");
+            System.out.println("6. Delete Auto Watch Party (admin)");
+            System.out.println("7. Force Scheduler Update (debug)");
+            System.out.println("8. Back");
+            System.out.print("Choose: ");
+            
+            String line = scanner.nextLine().trim();
+            int sel;
+            try { sel = Integer.parseInt(line); } catch (NumberFormatException ex) { sel = -1; }
+            
+            switch (sel) {
+                case 1: {
+                    System.out.print("Enter team name (e.g., T1, G2, Gen.G): ");
+                    String team = scanner.nextLine().trim();
+                    if (team.isEmpty()) {
+                        System.out.println("Invalid team name.");
+                        break;
+                    }
+                    WatchParty wp = WatchParty.createAutoWatchParty(currentUser, team, AutoType.TEAM);
+                    manager.addAutoWatchParty(wp);
+                    System.out.println("[+] Auto watch party created for team: " + team);
+                    System.out.println("    It will open 30 minutes before each " + team + " match.");
+                    break;
+                }
+                case 2: {
+                    System.out.print("Enter tournament name (e.g., Worlds 2025, LCK Spring 2025): ");
+                    String tournament = scanner.nextLine().trim();
+                    if (tournament.isEmpty()) {
+                        System.out.println("Invalid tournament name.");
+                        break;
+                    }
+                    WatchParty wp = WatchParty.createAutoWatchParty(currentUser, tournament, AutoType.TOURNAMENT);
+                    manager.addAutoWatchParty(wp);
+                    System.out.println("[+] Auto watch party created for tournament: " + tournament);
+                    System.out.println("    It will open 30 minutes before each match.");
+                    break;
+                }
+                case 3: {
+                    List<WatchParty> allWP = manager.getAllWatchParties();
+                    if (allWP.isEmpty()) {
+                        System.out.println("No watch parties exist.");
+                    } else {
+                        System.out.println("\n=== All Watch Parties ===");
+                        for (int i = 0; i < allWP.size(); i++) {
+                            WatchParty wp = allWP.get(i);
+                            System.out.println("\n[" + (i + 1) + "] " + wp.name());
+                            if (wp.isAutoWatchParty()) {
+                                System.out.println("    Type: Auto (" + wp.getAutoConfig().getType() + ")");
+                                System.out.println("    Target: " + wp.getAutoConfig().getTarget());
+                                System.out.println("    Status: " + wp.getStatus());
+                                if (wp.getAutoConfig().getCurrentMatch() != null) {
+                                    System.out.println("    Next match: " + wp.getAutoConfig().getCurrentMatch());
+                                }
+                            } else {
+                                System.out.println("    Type: Manual");
+                                System.out.println("    Date: " + wp.date());
+                            }
+                            System.out.println("    Participants: " + wp.getParticipants().size());
+                            System.out.println("    Can join: " + 
+                                (wp.isAutoWatchParty() ? (wp.getStatus() == WatchPartyStatus.OPEN ? "YES" : "NO (status: " + wp.getStatus() + ")") : "YES"));
+                        }
+                    }
+                    break;
+                }
+                case 4: {
+                    List<WatchParty> allWP = manager.getAllWatchParties();
+                    if (allWP.isEmpty()) {
+                        System.out.println("No watch parties to join.");
+                        break;
+                    }
+                    System.out.println("Watch parties:");
+                    for (int i = 0; i < allWP.size(); i++) {
+                        System.out.println((i + 1) + ". " + allWP.get(i).name() + 
+                            " [" + (allWP.get(i).isAutoWatchParty() ? allWP.get(i).getStatus() : "OPEN") + "]");
+                    }
+                    System.out.print("Enter number to join: ");
+                    String idxStr = scanner.nextLine().trim();
+                    int idx;
+                    try { idx = Integer.parseInt(idxStr) - 1; } catch (NumberFormatException ex) { idx = -1; }
+                    if (idx < 0 || idx >= allWP.size()) {
+                        System.out.println("Invalid selection.");
+                        break;
+                    }
+                    allWP.get(idx).join(currentUser);
+                    break;
+                }
+                case 5: {
+                    List<WatchParty> allWP = manager.getAllWatchParties();
+                    if (allWP.isEmpty()) {
+                        System.out.println("No watch parties to leave.");
+                        break;
+                    }
+                    // Filter to only parties user is in
+                    List<WatchParty> myParties = new ArrayList<>();
+                    for (WatchParty wp : allWP) {
+                        if (wp.getParticipants().contains(currentUser)) {
+                            myParties.add(wp);
+                        }
+                    }
+                    if (myParties.isEmpty()) {
+                        System.out.println("You are not in any watch parties.");
+                        break;
+                    }
+                    System.out.println("Your watch parties:");
+                    for (int i = 0; i < myParties.size(); i++) {
+                        System.out.println((i + 1) + ". " + myParties.get(i).name());
+                    }
+                    System.out.print("Enter number to leave: ");
+                    String idxStr = scanner.nextLine().trim();
+                    int idx;
+                    try { idx = Integer.parseInt(idxStr) - 1; } catch (NumberFormatException ex) { idx = -1; }
+                    if (idx < 0 || idx >= myParties.size()) {
+                        System.out.println("Invalid selection.");
+                        break;
+                    }
+                    myParties.get(idx).leave(currentUser);
+                    break;
+                }
+                case 6: {
+                    if (!currentUser.isAdmin()) {
+                        System.out.println("[!] Only admins can delete watch parties.");
+                        break;
+                    }
+                    List<WatchParty> allWP = manager.getAllWatchParties();
+                    if (allWP.isEmpty()) {
+                        System.out.println("No watch parties to delete.");
+                        break;
+                    }
+                    System.out.println("Watch parties:");
+                    for (int i = 0; i < allWP.size(); i++) {
+                        System.out.println((i + 1) + ". " + allWP.get(i).name());
+                    }
+                    System.out.print("Enter number to delete: ");
+                    String idxStr = scanner.nextLine().trim();
+                    int idx;
+                    try { idx = Integer.parseInt(idxStr) - 1; } catch (NumberFormatException ex) { idx = -1; }
+                    if (idx < 0 || idx >= allWP.size()) {
+                        System.out.println("Invalid selection.");
+                        break;
+                    }
+                    manager.removeWatchParty(allWP.get(idx).name());
+                    break;
+                }
+                case 7: {
+                    System.out.println("Forcing scheduler update...");
+                    manager.forceSchedulerUpdate();
+                    System.out.println("Update complete. Check watch party statuses.");
+                    break;
+                }
+                case 8:
+                    return;
+                default:
+                    System.out.println("Invalid selection.");
+            }
         }
     }
 

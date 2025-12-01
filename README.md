@@ -18,7 +18,7 @@ Projet Java (structure Gradle standard) fournissant:
 - La gestion de Watch Parties (création, planification, affichage)
 
 L’application propose:
-- une exécution interactive en console (fichier JAR fourni dans la release v0.1),
+- une exécution interactive en console (fichier JAR fourni dans la release v0.1.1),
 - et une suite de tests JUnit 5 pour valider les fonctionnalités.
 
 ## 🧭 Structure du projet
@@ -85,23 +85,23 @@ Les tests JUnit 5 couvrent les principales fonctionnalités (chat, bets, watch p
 Rapport HTML des tests:
 - build/reports/tests/test/index.html
 
-## ▶️ Lancement de l’application (JAR release v0.1)
+## ▶️ Lancement de l’application (JAR release v0.1.1)
 
-La release actuelle v0.1 fournit un JAR exécutable prêt à l’emploi. Prérequis: Java 17.
+La release actuelle v0.1.1 fournit un JAR exécutable prêt à l’emploi. Prérequis: Java 17.
 
 • Release v0.1: https://github.com/Alim-Samira/DevOps/releases/tag/v0.1
 
-1) Téléchargez le JAR de la release v0.1 depuis l’onglet "Releases" de ce dépôt.
+1) Téléchargez le JAR de la release v0.1.1 depuis l’onglet "Releases" de ce dépôt.
 2) Depuis PowerShell (Windows):
 
 ```powershell
-java -jar .\DevOps-v0.1.jar
+java -jar .\DevOps-v0.1.1.jar
 ```
 
 Sur Linux/macOS:
 
 ```bash
-java -jar ./DevOps-v0.1.jar
+java -jar ./DevOps-v0.1.1.jar
 ```
 
 Notes:
