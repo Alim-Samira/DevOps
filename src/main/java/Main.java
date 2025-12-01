@@ -28,13 +28,13 @@ public class Main {
         wpManager.startScheduler();
         System.out.println("=== Watch Party System Initialized ===");
 
-    // Scanner to read user input
-    Scanner scanner = new Scanner(System.in);
-    User currentUser = user1;  // Let's assume user1 starts
+        // Scanner to read user input
+        Scanner scanner = new Scanner(System.in);
+        User currentUser = user1;  // Let's assume user1 starts
 
-    // Betting system state (managed from the menu)
-    Bet currentBet = null;
-    List<Choice> currentChoices = null;
+        // Betting system state (managed from the menu)
+        PublicBet currentBet = null;
+        List<Choice> currentChoices = null;
 
         while (true) {
             // Show the menu to the user
@@ -79,6 +79,10 @@ public class Main {
             } else if (chatChoice == 4) {
                 // Open auto watch parties menu
                 autoWatchPartiesMenu(scanner, currentUser, wpManager, admin);
+            } else if (chatChoice == 5) {
+                System.out.println("Exiting chat...");
+                wpManager.stopScheduler();
+                break;  // Exit the program
             } else {
                 System.out.println("Invalid choice, try again.");
             }
@@ -128,13 +132,13 @@ public class Main {
 
     // Helper holder for returning both bet and its options
     private static class BetAndChoices {
-        Bet bet;
+        PublicBet bet;
         List<Choice> choices;
-        BetAndChoices(Bet bet, List<Choice> choices) { this.bet = bet; this.choices = choices; }
+        BetAndChoices(PublicBet bet, List<Choice> choices) { this.bet = bet; this.choices = choices; }
     }
 
     // Bets menu: create bet, vote, end/cancel, show balances
-    private static BetAndChoices betsMenu(Scanner scanner, User currentUser, Bet currentBet, List<Choice> currentChoices,
+    private static BetAndChoices betsMenu(Scanner scanner, User currentUser, PublicBet currentBet, List<Choice> currentChoices,
                                           User admin, User user1, User user2) {
         while (true) {
             System.out.println("\n=== Bets Menu ===");
@@ -170,7 +174,7 @@ public class Main {
                     }
                     Collection<Choice> optionsCol = new ArrayList<>(choices);
                     Time votingTime = new Time(System.currentTimeMillis() + 10 * 60 * 1000); // 10 minutes window
-                    currentBet = new Bet(question, optionsCol, votingTime);
+                    currentBet = new PublicBet(question, optionsCol, votingTime);
                     currentChoices = choices;
                     System.out.println("Bet created: " + question + " with " + choices.size() + " options.");
                     break;
@@ -202,7 +206,7 @@ public class Main {
                         System.out.println("Invalid points amount.");
                         break;
                     }
-                    currentBet.Vote(currentUser, choice, pts);
+                    currentBet.vote(currentUser, choice, pts);
                     System.out.println("Voted " + pts + " points on option #" + (idx + 1));
                     break;
                 }
@@ -223,7 +227,7 @@ public class Main {
                         System.out.println("Invalid option.");
                         break;
                     }
-                    currentBet.SetResult(currentChoices.get(wIdx));
+                    currentBet.setResult(currentChoices.get(wIdx));
                     System.out.println("Result set. Updated balances:");
                     showBalances(admin, user1, user2);
                     break;
@@ -233,7 +237,7 @@ public class Main {
                         System.out.println("No active bet.");
                         break;
                     }
-                    currentBet.Cancel();
+                    currentBet.cancel();
                     System.out.println("Bet canceled. Points refunded where applicable.");
                     showBalances(admin, user1, user2);
                     break;
