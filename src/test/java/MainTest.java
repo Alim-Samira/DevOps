@@ -41,18 +41,18 @@ public class MainTest {
         options.add(choiceA);
         Time votingTime = new Time(System.currentTimeMillis());
 
-        Bet bet = new Bet("Which option?", options, votingTime);
+        PublicBet bet = new PublicBet("Which option?", options, votingTime);
 
         // Alice votes 50 points for choiceA
-        bet.Vote(alice, choiceA, 50);
+        bet.vote(alice, choiceA, 50);
         assertEquals(150, alice.getPoints());
 
         // Bob votes 50 points for choiceA too
-        bet.Vote(bob, choiceA, 50);
+        bet.vote(bob, choiceA, 50);
         assertEquals(150, bob.getPoints());
 
         // End the vote and set result
-        bet.SetResult(choiceA);
+        bet.setResult(choiceA);
 
         // After result, since both voted equally, their points should increase back (they receive a share)
         assertTrue(alice.getPoints() >= 150);
@@ -65,7 +65,7 @@ public class MainTest {
         WatchParty wp = new WatchParty("Party", LocalDateTime.now().plusDays(1), "Game");
 
         manager.addWatchParty(wp);
-        manager.toPlanWatchParty(wp);
+        manager.planifyWatchParty(wp);
 
         // planned list should contain the watch party
         assertTrue(manager.watchPartiesPlanifiees().contains(wp));

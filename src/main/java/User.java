@@ -1,20 +1,29 @@
 public class User {
     private String name;
     private boolean isAdmin;
-    private int points;
+    private boolean isModerator; 
+    private int points;          
 
-    public User(String name, boolean isAdmin) {
+
+    //Master Constructor (Sets everything)
+    public User(String name, boolean isAdmin, boolean isModerator) {
         this.name = name;
         this.isAdmin = isAdmin;
-        this.points = 200; // Default points from the original points-based version
+        this.isModerator = isModerator;
+        this.points = 200; // Default starting points for everyone
     }
 
-    // Default constructor from points-based version
-    public User() {
-        this.points = 200;
-        this.name = "Anonymous";
-        this.isAdmin = false;
+    
+    // Automatically sets isModerator to false.
+    public User(String name, boolean isAdmin) {
+        this(name, isAdmin, false); // Chains to the Master Constructor
     }
+
+    // Creates an Anonymous user with no permissions. 
+    public User() {
+        this("Anonymous", false, false); 
+    }
+
 
     public String getName() {
         return name;
@@ -24,9 +33,14 @@ public class User {
         return isAdmin;
     }
 
-    public int getPoints() {  // Renamed from Points() to follow Java naming conventions
+    public boolean isModerator() {
+        return isModerator;
+    }
+
+    public int getPoints() {
         return points;
     }
+
 
     public void setPoints(int points) {
         this.points = points;
@@ -39,4 +53,9 @@ public class User {
     public void setAdmin(boolean isAdmin) {
         this.isAdmin = isAdmin;
     }
+    
+    public void setModerator(boolean isModerator) {
+        this.isModerator = isModerator;
+    }
 }
+// 
