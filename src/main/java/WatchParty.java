@@ -14,6 +14,9 @@ public class WatchParty {
     private WatchPartyStatus status;
     private List<User> participants;
     private User creator;
+    
+    // Match state management (admin features)
+    private MatchState matchState;
 
     // Constructor for manual watch parties (existing)
     public WatchParty(String name, LocalDateTime date, String game) {
@@ -25,6 +28,7 @@ public class WatchParty {
         this.status = WatchPartyStatus.OPEN;
         this.participants = new ArrayList<>();
         this.creator = null;
+        this.matchState = MatchState.PRE_MATCH; // initial state
     }
     
     // Constructor for auto watch parties
@@ -37,6 +41,7 @@ public class WatchParty {
         this.status = WatchPartyStatus.WAITING;
         this.participants = new ArrayList<>();
         this.creator = creator;
+        this.matchState = MatchState.PRE_MATCH; // initial state
     }
 
      public String name() {
@@ -55,7 +60,15 @@ public class WatchParty {
         return planned;
     }
 
-    public void toPlan() {
+    public MatchState matchState() {
+        return matchState;
+    }
+
+    public void setMatchState(MatchState matchState) {
+        this.matchState = matchState;
+    }
+
+    public void planify() {
         this.planned= true;
         System.out.println(" WatchParty planifiée : " + name +
                            " | Jeu : " + game +
@@ -69,6 +82,9 @@ public class WatchParty {
         System.out.println("jeu : " + game);
         System.out.println("Planifiee : " + (planned ? "oui" : "non"));
         
+        // Show match state
+        System.out.println("État du match : " + matchState);
+
         if (isAutoWatchParty()) {
             System.out.println("Type : Auto Watch Party (" + autoConfig.getType() + ")");
             System.out.println("Cible : " + autoConfig.getTarget());
@@ -201,4 +217,10 @@ public class WatchParty {
     public AutoConfig getAutoConfig() { return autoConfig; }
     public List<User> getParticipants() { return new ArrayList<>(participants); }
     public User getCreator() { return creator; }
+
+    // Admin feature: whether a mini-game can be launched
+    public boolean canLaunchMiniGame() {
+        // Only when the match is paused
+        return matchState == MatchState.PAUSED;
+    }
 }

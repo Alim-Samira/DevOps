@@ -65,7 +65,7 @@ public class MainTest {
         WatchParty wp = new WatchParty("Party", LocalDateTime.now().plusDays(1), "Game");
 
         manager.addWatchParty(wp);
-        manager.toPlanWatchParty(wp);
+        manager.planifyWatchParty(wp);
 
         // planned list should contain the watch party
         assertTrue(manager.watchPartiesPlanifiees().contains(wp));

@@ -1,8 +1,10 @@
 /**
  * Status of an esports match
  */
+// Deprecated: replaced by MatchState. This file is kept temporarily to avoid tooling issues.
+@Deprecated
 public enum MatchStatus {
-    SCHEDULED,  // Match is scheduled but not started
-    LIVE,       // Match is currently being played
-    FINISHED    // Match has ended
+    SCHEDULED,
+    LIVE,
+    FINISHED
 }

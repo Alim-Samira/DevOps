@@ -10,7 +10,7 @@ public class Match {
     private LocalDateTime scheduledTime;
     private String tournament;
     private String streamUrl;
-    private MatchStatus status;
+    private MatchState state;
     private String bestOf; // "BO1", "BO3", "BO5"
 
     public Match(String id, String team1, String team2, LocalDateTime scheduledTime, 
@@ -22,7 +22,7 @@ public class Match {
         this.tournament = tournament;
         this.streamUrl = streamUrl;
         this.bestOf = bestOf;
-        this.status = MatchStatus.SCHEDULED;
+        this.state = MatchState.PRE_MATCH;
     }
 
     public String getId() { return id; }
@@ -31,13 +31,13 @@ public class Match {
     public LocalDateTime getScheduledTime() { return scheduledTime; }
     public String getTournament() { return tournament; }
     public String getStreamUrl() { return streamUrl; }
-    public MatchStatus getStatus() { return status; }
+    public MatchState getStatus() { return state; }
     public String getBestOf() { return bestOf; }
 
-    public void setStatus(MatchStatus status) { this.status = status; }
+    public void setStatus(MatchState state) { this.state = state; }
 
     public boolean isFinished() {
-        return status == MatchStatus.FINISHED;
+        return state == MatchState.FINISHED;
     }
     
     /**
@@ -67,6 +67,6 @@ public class Match {
     @Override
     public String toString() {
         return String.format("%s vs %s | %s | %s | %s", 
-            team1, team2, tournament, scheduledTime, status);
+            team1, team2, tournament, scheduledTime, state);
     }
 }

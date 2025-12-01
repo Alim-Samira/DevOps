@@ -50,7 +50,7 @@ public class AutoWatchPartyTest {
         
         assertNotNull(match);
         assertTrue(match.getTeam1().equals("T1") || match.getTeam2().equals("T1"));
-        assertEquals(MatchStatus.SCHEDULED, match.getStatus());
+        assertEquals(MatchState.PRE_MATCH, match.getStatus());
     }
     
     @Test
@@ -93,7 +93,7 @@ public class AutoWatchPartyTest {
         assertEquals(WatchPartyStatus.OPEN, wp.getStatus());
         
         // Finished match should close it
-        upcomingMatch.setStatus(MatchStatus.FINISHED);
+        upcomingMatch.setStatus(MatchState.FINISHED);
         wp.updateStatus(upcomingMatch);
         
         assertEquals(WatchPartyStatus.CLOSED, wp.getStatus());

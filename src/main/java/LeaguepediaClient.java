@@ -134,7 +134,7 @@ public class LeaguepediaClient {
         ));
         
         // Mark past match as finished
-        mockMatches.get(mockMatches.size() - 1).setStatus(MatchStatus.FINISHED);
+        mockMatches.get(mockMatches.size() - 1).setStatus(MatchState.FINISHED);
     }
     
     /**
@@ -148,13 +148,13 @@ public class LeaguepediaClient {
         LocalDateTime matchEnd = match.getScheduledTime().plusHours(match.getEstimatedDurationHours());
         
         // Auto-mark past matches as finished to prevent stale data
-        if (match.isPast() && match.getStatus() != MatchStatus.FINISHED) {
-            match.setStatus(MatchStatus.FINISHED);
+        if (match.isPast() && match.getStatus() != MatchState.FINISHED) {
+            match.setStatus(MatchState.FINISHED);
             System.out.println("[!] Auto-marked past match as finished: " + match.getId());
         } else if (now.isAfter(match.getScheduledTime()) && now.isBefore(matchEnd)) {
-            match.setStatus(MatchStatus.LIVE);
+            match.setStatus(MatchState.IN_PROGRESS);
         } else if (now.isAfter(matchEnd)) {
-            match.setStatus(MatchStatus.FINISHED);
+            match.setStatus(MatchState.FINISHED);
         }
     }
     
