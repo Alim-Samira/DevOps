@@ -7,6 +7,9 @@ plugins {
     application
 }
 
+group = "com.devops"
+version = "0.2.0"
+
 repositories {
     mavenCentral()
 }
