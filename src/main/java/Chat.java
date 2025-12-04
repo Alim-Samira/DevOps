@@ -34,47 +34,13 @@ public abstract class Chat {
 
     public void listMessages() {
         System.out.println("\n--- Messages in " + this.name + " ---");
-        
-        if (activeGame != null) {
-            System.out.println("[GAME] **MINI-JEU ACTIF: " + activeGame.getCommandName().toUpperCase() + " en cours!** Utilisez la commande '!" + activeGame.getCommandName() + " exit' pour l'arreter.");
-        } else {
-            System.out.print("[INFO] Jeux dispos: ");
-            for (MiniGame game : availableGames) {
-                System.out.print(game.getCommandName() + " ");
-            }
-            System.out.println("\n------------------------------------");
-        }
-        
+        printGameHeader();
+
         if (messages.isEmpty()) {
             System.out.println("No messages yet.");
         } else {
             for (Message message : messages) {
-                String senderName = message.getSender().getName();
-                String messageIdSnippet = String.valueOf(message.getTimestamp().hashCode() & 0xFFFF); 
-                String displaySender;
-                String senderIcon;
-
-                if (senderName.equals("RB")) {
-                    displaySender = "[BOT] RB";
-                    senderIcon = ""; 
-                } else if (senderName.equals("RB")) {
-                    displaySender = "[GAME] RB";
-                    senderIcon = ""; 
-                } else {
-                    displaySender = message.getSender().getName();
-                    senderIcon = ""; 
-                }
-
-                String replyIndicator = "";
-                if (message.getReplyTo() != null) {
-                    replyIndicator = " \n    [REPLY to: " + message.getReplyTo().getSender().getName() + ": '" + message.getReplyContentSnippet() + "']";
-                }
-
-                System.out.println(String.format(" %s | ID: %s", message.getTimestamp(), messageIdSnippet));
-                System.out.println(String.format(" %s %s: %s", senderIcon, displaySender, message.getContent()));
-                System.out.println(replyIndicator);
-                System.out.println(String.format("   [LIKES] %d | [REPORTS] %d", message.getLikes(), message.getReports()));
-                System.out.println("------------------------------------");
+                printSingleMessage(message);
             }
         }
         System.out.println("------------------------------------");
@@ -95,6 +61,33 @@ public abstract class Chat {
             }
         }
         return "[X] Mini-jeu '" + gameCommand + "' non trouve.";
+    }
+
+    private void printGameHeader() {
+        if (activeGame != null) {
+            System.out.println("[GAME] **MINI-JEU ACTIF: " + activeGame.getCommandName().toUpperCase() + " en cours!** Utilisez la commande '!" + activeGame.getCommandName() + " exit' pour l'arreter.");
+        } else {
+            System.out.print("[INFO] Jeux dispos: ");
+            for (MiniGame game : availableGames) {
+                System.out.print(game.getCommandName() + " ");
+            }
+            System.out.println("\n------------------------------------");
+        }
+    }
+
+    private void printSingleMessage(Message message) {
+        String senderName = message.getSender().getName();
+        String messageIdSnippet = String.valueOf(message.getTimestamp().hashCode() & 0xFFFF);
+        String replyIndicator = "";
+        if (message.getReplyTo() != null) {
+            replyIndicator = " \n    [REPLY to: " + message.getReplyTo().getSender().getName() + ": '" + message.getReplyContentSnippet() + "']";
+        }
+
+        System.out.println(String.format(" %s | ID: %s", message.getTimestamp(), messageIdSnippet));
+        System.out.println(String.format(" %s: %s", senderName, message.getContent()));
+        System.out.println(replyIndicator);
+        System.out.println(String.format("   [LIKES] %d | [REPORTS] %d", message.getLikes(), message.getReports()));
+        System.out.println("------------------------------------");
     }
     
     public String processGameInput(User user, String input) {

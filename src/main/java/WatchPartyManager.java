@@ -126,6 +126,15 @@ public class WatchPartyManager {
     public void forceSchedulerUpdate() {
         scheduler.forceUpdate();
     }
+
+    /**
+     * Force an immediate scheduler update and return a textual report of found matches.
+     * @param daysAhead number of days ahead to search for upcoming matches
+     * @return textual report (per watch party) listing matches or a "no match" message
+     */
+    public String forceSchedulerUpdateReport(int daysAhead) {
+        return scheduler.forceUpdateReport(daysAhead);
+    }
     
     /**
      * Check if scheduler is running

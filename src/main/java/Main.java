@@ -459,9 +459,9 @@ public class Main {
     }
 
     private static void forceSchedulerUpdate() {
-        System.out.println("[*] Forcing scheduler update...");
-        wpManager.forceSchedulerUpdate();
-        System.out.println("[+] Update complete. Check watch party statuses.");
+        System.out.println("[*] Forcing scheduler update (checking up to 7 days ahead)...");
+        String report = wpManager.forceSchedulerUpdateReport(7);
+        System.out.println("\n" + report);
     }
 
     private static List<WatchParty> getUserWatchParties() {

@@ -1,6 +1,7 @@
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.List;
 
 /**
  * Scheduler that automatically opens/closes watch parties based on match timing
@@ -114,6 +115,55 @@ public class AutoWatchPartyScheduler {
     public void forceUpdate() {
         System.out.println("🔄 Forcing immediate update...");
         updateAllAutoWatchParties();
+    }
+
+    /**
+     * Force an immediate update and return a textual report of matches retrieved.
+     * For each auto watch party, the report lists upcoming matches (within daysAhead)
+     * or a message indicating that no match was found.
+     */
+    public String forceUpdateReport(int daysAhead) {
+        StringBuilder report = new StringBuilder();
+        report.append("🔄 Forcing immediate update...\n");
+
+        for (WatchParty wp : manager.getAllAutoWatchParties()) {
+            try {
+                AutoConfig config = wp.getAutoConfig();
+                if (config == null) {
+                    report.append("[SKIP] " + wp.name() + " : no auto-config\n");
+                    continue;
+                }
+
+                List<Match> matches;
+                if (config.isTeamBased()) {
+                    matches = apiClient.fetchUpcomingMatchesForTeam(config.getTarget(), daysAhead);
+                } else {
+                    matches = apiClient.fetchUpcomingMatchesForTournament(config.getTarget(), daysAhead);
+                }
+
+                if (matches == null || matches.isEmpty()) {
+                    report.append("[NO MATCH] " + wp.name() + " (target='" + config.getTarget() + "') : Aucun match trouvé\n");
+                } else {
+                    report.append("[MATCHES] " + wp.name() + " (target='" + config.getTarget() + "') :\n");
+                    for (Match m : matches) {
+                        report.append("  - " + m.getTeam1() + " vs " + m.getTeam2() + " @ " + m.getScheduledTime() + " (" + m.getTournament() + ")\n");
+                    }
+                }
+
+                // Also update status based on the next match as before
+                Match nextMatch = (matches == null || matches.isEmpty()) ? null : matches.get(0);
+                if (config.getCurrentMatch() != null) {
+                    apiClient.updateMatchStatus(config.getCurrentMatch());
+                }
+                wp.updateStatus(nextMatch);
+
+            } catch (Exception e) {
+                report.append("[ERROR] " + wp.name() + " : " + e.getMessage() + "\n");
+            }
+        }
+
+        report.append("✅ Auto watch party check complete\n");
+        return report.toString();
     }
     
     /**
