@@ -30,12 +30,12 @@ public class PublicBet implements Bet {
         int totalPoints = users.values().stream().mapToInt(Integer::intValue).sum();
         int winningPoints = 0;
         for (User u : users.keySet()) {
-            if (choice.voters().contains(u)) {
+            if (choice.Voters().contains(u)) {
                 winningPoints += users.get(u);
             }
         }
         for (User u : users.keySet()) {
-            if (choice.voters().contains(u)) {
+            if (choice.Voters().contains(u)) {
                 int userBet = users.get(u);
                 if(winningPoints!=0){
                     int reward = (int) ((double) userBet / winningPoints * totalPoints);

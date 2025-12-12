@@ -10,7 +10,8 @@ public class PrivateChat extends Chat {
 
     // Method to add a user to the private chat
     public void addUser(User user) {
-        users.put(user, 200);
+        users.put(user,200);
+        System.out.println(user.getName() + " has joined the private chat.");
     }
     public void setPoints(User user, Integer points){
         if(users.containsKey(user)){

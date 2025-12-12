@@ -14,7 +14,7 @@ public interface Bet {
 
     void endVoteTime();
 
-    void options(Collection<Choice> options);
+    void options(Collection options);
 
 }
 
