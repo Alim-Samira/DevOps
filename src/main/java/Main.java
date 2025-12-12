@@ -8,8 +8,12 @@ import java.util.Scanner;
  * Main entry point for the DevOps Chat & Watch Party System
  * Features: Chat (Public/Private), Betting System, Auto Watch Parties
  */
+
+@SuppressWarnings("java:S106")
 public class Main {
     private static final Scanner scanner = new Scanner(System.in);
+    private static final String ADMIN_USER = "Admin";
+    private static final String INVALID_SELECTION_MSG = "[!] Invalid selection.";
     private static User currentUser;
     private static WatchPartyManager wpManager;
 
@@ -84,7 +88,7 @@ public class Main {
     // ==================== CHAT SYSTEM ====================
 
     private static void enterPublicChat() {
-        User admin = new User("Admin", true);
+        User admin = new User(ADMIN_USER, true);
         PublicChat chat = new PublicChat("Public Chat", admin);
         chat.addUser(admin);
         chat.addUser(currentUser);
@@ -93,7 +97,7 @@ public class Main {
     }
 
     private static void enterPrivateChat() {
-        User admin = new User("Admin", true);
+        User admin = new User(ADMIN_USER, true);
         PrivateChat chat = new PrivateChat("Private Chat", admin);
         chat.addUser(admin);
         chat.addUser(currentUser);
@@ -121,7 +125,7 @@ public class Main {
     // ==================== BETTING SYSTEM ====================
 
     private static void enterBettingMenu() {
-        User admin = new User("Admin", true);
+        User admin = new User(ADMIN_USER, true);
         User user1 = currentUser;
         User user2 = new User("Bob", false);
         
@@ -153,7 +157,7 @@ public class Main {
                 case 6:
                     return;
                 default:
-                    System.out.println("[!] Invalid selection.");
+                    System.out.println(INVALID_SELECTION_MSG);
             }
         }
     }
@@ -303,7 +307,7 @@ public class Main {
                 case 8:
                     return;
                 default:
-                    System.out.println("[!] Invalid selection.");
+                    System.out.println(INVALID_SELECTION_MSG);
             }
         }
     }
@@ -397,7 +401,7 @@ public class Main {
         int idx = parseChoice(scanner.nextLine().trim()) - 1;
         
         if (idx < 0 || idx >= allWP.size()) {
-            System.out.println("[!] Invalid selection.");
+            System.out.println(INVALID_SELECTION_MSG);
             return;
         }
 
@@ -421,7 +425,7 @@ public class Main {
         int idx = parseChoice(scanner.nextLine().trim()) - 1;
         
         if (idx < 0 || idx >= myParties.size()) {
-            System.out.println("[!] Invalid selection.");
+            System.out.println(INVALID_SELECTION_MSG);
             return;
         }
 
@@ -450,7 +454,7 @@ public class Main {
         int idx = parseChoice(scanner.nextLine().trim()) - 1;
         
         if (idx < 0 || idx >= allWP.size()) {
-            System.out.println("[!] Invalid selection.");
+            System.out.println(INVALID_SELECTION_MSG);
             return;
         }
 
@@ -459,9 +463,9 @@ public class Main {
     }
 
     private static void forceSchedulerUpdate() {
-        System.out.println("[*] Forcing scheduler update...");
-        wpManager.forceSchedulerUpdate();
-        System.out.println("[+] Update complete. Check watch party statuses.");
+        System.out.println("[*] Forcing scheduler update (checking up to 7 days ahead)...");
+        String report = wpManager.forceSchedulerUpdateReport(7);
+        System.out.println("\n" + report);
     }
 
     private static List<WatchParty> getUserWatchParties() {
