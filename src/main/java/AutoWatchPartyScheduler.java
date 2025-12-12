@@ -26,13 +26,10 @@ public class AutoWatchPartyScheduler {
      */
     public void start() {
         if (running) {
-            System.out.println("[!] Scheduler already running");
             return;
         }
         
         running = true;
-        System.out.println("🚀 Auto Watch Party Scheduler started");
-        System.out.println("   Checking for updates every 5 minutes...");
         
         // Run immediately, then every 5 minutes
         scheduler.scheduleAtFixedRate(
@@ -57,7 +54,6 @@ public class AutoWatchPartyScheduler {
             if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
                 scheduler.shutdownNow();
             }
-            System.out.println("🛑 Auto Watch Party Scheduler stopped");
         } catch (InterruptedException e) {
             scheduler.shutdownNow();
             Thread.currentThread().interrupt();
@@ -68,17 +64,13 @@ public class AutoWatchPartyScheduler {
      * Check all auto watch parties and update their status
      */
     private void updateAllAutoWatchParties() {
-        System.out.println("\n🔄 Checking auto watch parties...");
-        
         for (WatchParty wp : manager.getAllAutoWatchParties()) {
             try {
                 updateWatchParty(wp);
             } catch (Exception e) {
-                System.err.println("[X] Error updating watch party '" + wp.name() + "': " + e.getMessage());
+                // Ignore errors for individual watch parties
             }
         }
-        
-        System.out.println("✅ Auto watch party check complete\n");
     }
     
     /**
@@ -113,7 +105,6 @@ public class AutoWatchPartyScheduler {
      * Force an immediate update (useful for testing)
      */
     public void forceUpdate() {
-        System.out.println("🔄 Forcing immediate update...");
         updateAllAutoWatchParties();
     }
 
@@ -130,7 +121,7 @@ public class AutoWatchPartyScheduler {
             try {
                 AutoConfig config = wp.getAutoConfig();
                 if (config == null) {
-                    report.append("[SKIP] " + wp.name() + " : no auto-config\n");
+                    report.append("[SKIP] ").append(wp.name()).append(" : no auto-config\n");
                     continue;
                 }
 
@@ -142,11 +133,18 @@ public class AutoWatchPartyScheduler {
                 }
 
                 if (matches == null || matches.isEmpty()) {
-                    report.append("[NO MATCH] " + wp.name() + " (target='" + config.getTarget() + "') : Aucun match trouvé\n");
+                    report.append("[NO MATCH] ").append(wp.name())
+                          .append(" (target='").append(config.getTarget())
+                          .append("') : Aucun match trouvé\n");
                 } else {
-                    report.append("[MATCHES] " + wp.name() + " (target='" + config.getTarget() + "') :\n");
+                    report.append("[MATCHES] ").append(wp.name())
+                          .append(" (target='").append(config.getTarget())
+                          .append("') :\n");
                     for (Match m : matches) {
-                        report.append("  - " + m.getTeam1() + " vs " + m.getTeam2() + " @ " + m.getScheduledTime() + " (" + m.getTournament() + ")\n");
+                        report.append("  - ").append(m.getTeam1())
+                              .append(" vs ").append(m.getTeam2())
+                              .append(" @ ").append(m.getScheduledTime())
+                              .append(" (").append(m.getTournament()).append(")\n");
                     }
                 }
 
@@ -158,7 +156,8 @@ public class AutoWatchPartyScheduler {
                 wp.updateStatus(nextMatch);
 
             } catch (Exception e) {
-                report.append("[ERROR] " + wp.name() + " : " + e.getMessage() + "\n");
+                report.append("[ERROR] ").append(wp.name())
+                      .append(" : ").append(e.getMessage()).append("\n");
             }
         }
 

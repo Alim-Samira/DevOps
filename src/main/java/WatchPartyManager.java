@@ -39,8 +39,7 @@ public class WatchPartyManager {
         } else {
             System.out.println("\n Liste des WatchParties :");
             for (WatchParty wp : watchParties) {
-                wp.displayInfos();
-                System.out.println("-------------------------");
+                System.out.println("- " + wp.name());
             }
         }
     }

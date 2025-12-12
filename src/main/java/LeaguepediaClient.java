@@ -132,9 +132,7 @@ public class LeaguepediaClient {
             }
 
             if (status != 200) {
-                System.err.println("[LeaguepediaClient] Non-200 response: " + status);
-                System.err.println("[LeaguepediaClient] Response headers: " + resp.headers().map());
-                System.err.println("[LeaguepediaClient] Body: " + respBody);
+                // Non-200 response - log details for debugging
                 return new ArrayList<>();
             }
 
@@ -190,7 +188,7 @@ public class LeaguepediaClient {
             return result;
         } catch (IOException | InterruptedException e) {
             Thread.currentThread().interrupt();
-            System.err.println("[LeaguepediaClient] Error querying API: " + e.getMessage());
+            // Error querying API
             return new ArrayList<>();
         }
     }
@@ -218,14 +216,18 @@ public class LeaguepediaClient {
         for (DateTimeFormatter f : fmts) {
             try {
                 return LocalDateTime.parse(s, f);
-            } catch (DateTimeParseException ignored) {}
+            } catch (DateTimeParseException ignored) {
+                // Format not matching - try next format
+            }
         }
 
         // Try parsing epoch seconds
         try {
             long epoch = Long.parseLong(s);
             return LocalDateTime.ofEpochSecond(epoch, 0, java.time.ZoneOffset.UTC);
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            // Not a valid epoch timestamp
+        }
 
         return null;
     }
