@@ -2,6 +2,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 public class QuizGame implements MiniGame {
     private String commandName; // Changed from final constant to variable for better flexibility 
@@ -13,10 +14,12 @@ public class QuizGame implements MiniGame {
     private static class QuizQuestion {
         String question;
         String answer;
+        List<String> choices;
 
-        public QuizQuestion(String question, String answer) {
+        public QuizQuestion(String question, String answer, String... choices) {
             this.question = question;
             this.answer = answer.toLowerCase();
+            this.choices = Arrays.asList(choices);
         }
     }
 
@@ -66,7 +69,7 @@ public class QuizGame implements MiniGame {
             return "Fin du quiz. Tapez 'exit' pour voir les résultats.";
         }
         QuizQuestion q = questions.get(currentQuestionIndex);
-        return String.format("[Q] Question %d/%d : %s%n(Tapez la reponse directement)", 
+        return String.format("[Q] Question %d/%d : %s\n(Tapez la reponse directement)", 
                              currentQuestionIndex + 1, questions.size(), q.question);
     }
 
@@ -79,7 +82,7 @@ public class QuizGame implements MiniGame {
 
         if (lowerInput.contains(currentQuestion.answer)) {
             scores.put(user, scores.getOrDefault(user, 0) + 1);
-            String response = String.format("✅ **BRAVO %s !** La réponse était bien '%s'. (Score: %d)%n", 
+            String response = String.format("✅ **BRAVO %s !** La réponse était bien '%s'. (Score: %d)\n", 
                                             user.getName(), currentQuestion.answer, scores.get(user));
             
             currentQuestionIndex++;
@@ -105,7 +108,7 @@ public class QuizGame implements MiniGame {
         sb.append("\n[RESULTS] --- RESULTATS: " + commandName.toUpperCase() + " ---\n");
         scores.entrySet().stream()
             .sorted(Map.Entry.<User, Integer>comparingByValue().reversed())
-            .forEach(entry -> sb.append(String.format("[*] %s : %d pts%n", entry.getKey().getName(), entry.getValue())));
+            .forEach(entry -> sb.append(String.format("[*] %s : %d pts\n", entry.getKey().getName(), entry.getValue())));
         sb.append("--------------------------\n");
         return sb.toString();
     }
