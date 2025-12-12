@@ -8,6 +8,8 @@ import java.util.Scanner;
  * Main entry point for the DevOps Chat & Watch Party System
  * Features: Chat (Public/Private), Betting System, Auto Watch Parties
  */
+
+@SuppressWarnings("java:S106")
 public class Main {
     private static final Scanner scanner = new Scanner(System.in);
     private static final String ADMIN_USER = "Admin";
