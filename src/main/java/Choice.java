@@ -2,26 +2,24 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 public class Choice {
-    private String Text;
-    private Collection<User> Voters;
-    private Integer Points;
+    private String text;
+    private Collection<User> voters;
 
     public Choice(String text) {
-        this.Text = text;
-        this.Voters = new ArrayList<>();
-        this.Points = 0;
+        this.text = text;
+        this.voters = new ArrayList<>();
     }
 
     public void newVoter(User user) {
-        this.Voters.add(user);
+        this.voters.add(user);
     }
 
-    public Collection<User> Voters() {
-        return this.Voters;
+    public Collection<User> voters() {
+        return this.voters;
     }
 
     @Override
     public String toString() {
-        return this.Text;
+        return this.text;
     }
 }

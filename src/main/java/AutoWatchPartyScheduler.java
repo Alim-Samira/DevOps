@@ -110,59 +110,72 @@ public class AutoWatchPartyScheduler {
 
     /**
      * Force an immediate update and return a textual report of matches retrieved.
-     * For each auto watch party, the report lists upcoming matches (within daysAhead)
-     * or a message indicating that no match was found.
      */
     public String forceUpdateReport(int daysAhead) {
         StringBuilder report = new StringBuilder();
         report.append("🔄 Forcing immediate update...\n");
 
         for (WatchParty wp : manager.getAllAutoWatchParties()) {
-            try {
-                AutoConfig config = wp.getAutoConfig();
-                if (config == null) {
-                    report.append("[SKIP] ").append(wp.name()).append(" : no auto-config\n");
-                    continue;
-                }
-
-                List<Match> matches;
-                if (config.isTeamBased()) {
-                    matches = apiClient.fetchUpcomingMatchesForTeam(config.getTarget(), daysAhead);
-                } else {
-                    matches = apiClient.fetchUpcomingMatchesForTournament(config.getTarget(), daysAhead);
-                }
-
-                if (matches == null || matches.isEmpty()) {
-                    report.append("[NO MATCH] ").append(wp.name())
-                          .append(" (target='").append(config.getTarget())
-                          .append("') : Aucun match trouvé\n");
-                } else {
-                    report.append("[MATCHES] ").append(wp.name())
-                          .append(" (target='").append(config.getTarget())
-                          .append("') :\n");
-                    for (Match m : matches) {
-                        report.append("  - ").append(m.getTeam1())
-                              .append(" vs ").append(m.getTeam2())
-                              .append(" @ ").append(m.getScheduledTime())
-                              .append(" (").append(m.getTournament()).append(")\n");
-                    }
-                }
-
-                // Also update status based on the next match as before
-                Match nextMatch = (matches == null || matches.isEmpty()) ? null : matches.get(0);
-                if (config.getCurrentMatch() != null) {
-                    apiClient.updateMatchStatus(config.getCurrentMatch());
-                }
-                wp.updateStatus(nextMatch);
-
-            } catch (Exception e) {
-                report.append("[ERROR] ").append(wp.name())
-                      .append(" : ").append(e.getMessage()).append("\n");
-            }
+            processWatchPartyReport(wp, daysAhead, report);
         }
 
         report.append("✅ Auto watch party check complete\n");
         return report.toString();
+    }
+
+    private void processWatchPartyReport(WatchParty wp, int daysAhead, StringBuilder report) {
+        try {
+            AutoConfig config = wp.getAutoConfig();
+            if (config == null) {
+                report.append("[SKIP] ").append(wp.name()).append(" : no auto-config\n");
+                return;
+            }
+
+            List<Match> matches = fetchMatches(config, daysAhead);
+            appendMatchReport(report, wp, config, matches);
+            updateWatchPartyStatus(wp, config, matches);
+
+        } catch (Exception e) {
+            report.append("[ERROR] ").append(wp.name())
+                  .append(" : ").append(e.getMessage()).append("\n");
+        }
+    }
+
+    private List<Match> fetchMatches(AutoConfig config, int daysAhead) {
+        if (config.isTeamBased()) {
+            return apiClient.fetchUpcomingMatchesForTeam(config.getTarget(), daysAhead);
+        }
+        return apiClient.fetchUpcomingMatchesForTournament(config.getTarget(), daysAhead);
+    }
+
+    private void appendMatchReport(StringBuilder report, WatchParty wp, AutoConfig config, List<Match> matches) {
+        if (matches == null || matches.isEmpty()) {
+            report.append("[NO MATCH] ").append(wp.name())
+                  .append(" (target='").append(config.getTarget())
+                  .append("') : Aucun match trouvé\n");
+        } else {
+            report.append("[MATCHES] ").append(wp.name())
+                  .append(" (target='").append(config.getTarget())
+                  .append("') :\n");
+            appendMatchDetails(report, matches);
+        }
+    }
+
+    private void appendMatchDetails(StringBuilder report, List<Match> matches) {
+        for (Match m : matches) {
+            report.append("  - ").append(m.getTeam1())
+                  .append(" vs ").append(m.getTeam2())
+                  .append(" @ ").append(m.getScheduledTime())
+                  .append(" (").append(m.getTournament()).append(")\n");
+        }
+    }
+
+    private void updateWatchPartyStatus(WatchParty wp, AutoConfig config, List<Match> matches) {
+        Match nextMatch = (matches == null || matches.isEmpty()) ? null : matches.get(0);
+        if (config.getCurrentMatch() != null) {
+            apiClient.updateMatchStatus(config.getCurrentMatch());
+        }
+        wp.updateStatus(nextMatch);
     }
     
     /**

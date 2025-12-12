@@ -29,6 +29,9 @@ import java.util.zip.GZIPInputStream;
 public class LeaguepediaClient {
 
     private static final String DEFAULT_API = "https://liquipedia.net/leagueoflegends/api.php";
+    private static final String CARGO_QUERY_KEY = "cargoquery";
+    private static final String FULLTEXT_KEY = "fulltext";
+    
     private final String apiEndpoint;
     private final HttpClient http;
     private final Gson gson;
@@ -52,13 +55,8 @@ public class LeaguepediaClient {
         LocalDateTime now = LocalDateTime.now();
         Match best = null;
         for (Match m : all) {
-            if (m == null) continue;
-            if (m.isFinished() || m.isPast()) continue;
-            if (m.getScheduledTime() == null) continue;
-            if (m.getScheduledTime().isAfter(now)) {
-                if (best == null || m.getScheduledTime().isBefore(best.getScheduledTime())) {
-                    best = m;
-                }
+            if (isValidUpcomingMatch(m, now) && (best == null || m.getScheduledTime().isBefore(best.getScheduledTime()))) {
+                best = m;
             }
         }
         return best;
@@ -72,16 +70,19 @@ public class LeaguepediaClient {
         LocalDateTime now = LocalDateTime.now();
         Match best = null;
         for (Match m : all) {
-            if (m == null) continue;
-            if (m.isFinished() || m.isPast()) continue;
-            if (m.getScheduledTime() == null) continue;
-            if (m.getScheduledTime().isAfter(now)) {
-                if (best == null || m.getScheduledTime().isBefore(best.getScheduledTime())) {
-                    best = m;
-                }
+            if (isValidUpcomingMatch(m, now) && (best == null || m.getScheduledTime().isBefore(best.getScheduledTime()))) {
+                best = m;
             }
         }
         return best;
+    }
+
+    private boolean isValidUpcomingMatch(Match m, LocalDateTime now) {
+        return m != null 
+            && !m.isFinished() 
+            && !m.isPast() 
+            && m.getScheduledTime() != null 
+            && m.getScheduledTime().isAfter(now);
     }
 
     /**
@@ -137,60 +138,82 @@ public class LeaguepediaClient {
             }
 
             JsonObject root = gson.fromJson(respBody, JsonObject.class);
-            JsonArray cargo = null;
-            if (root.has("cargoquery") && root.get("cargoquery").isJsonArray()) {
-                cargo = root.getAsJsonArray("cargoquery");
-            } else if (root.has("query") && root.getAsJsonObject("query").has("pages")) {
-                // fallback: some wikis return different structures
-                // not implemented in-depth here
-            }
+            JsonArray cargo = extractCargoArray(root);
 
             List<Match> result = new ArrayList<>();
             if (cargo == null) return result;
 
             for (JsonElement el : cargo) {
-                try {
-                    JsonObject obj = el.getAsJsonObject();
-                    JsonObject title = obj.has("title") ? obj.getAsJsonObject("title") : null;
-                    JsonObject fields = obj.has("fields") ? obj.getAsJsonObject("fields") : null;
-
-                    String team1 = getFirstNonNull(fields, "Team1", "team1", "team_a", "team1_name");
-                    String team2 = getFirstNonNull(fields, "Team2", "team2", "team_b", "team2_name");
-                    String start = getFirstNonNull(fields, "Start", "start", "StartTime", "start_time");
-                    String event = getFirstNonNull(fields, "Event", "event", "tournament");
-                    String stream = getFirstNonNull(fields, "Stream", "stream", "stream_url");
-                    String bo = getFirstNonNull(fields, "BestOf", "bestof", "BO");
-
-                    if ((team1 == null || team2 == null) && title != null && title.has("fulltext")) {
-                        String ft = title.get("fulltext").getAsString();
-                        // try simple "Team A vs Team B" parse
-                        if (ft.contains(" vs ")) {
-                            String[] parts = ft.split(" vs ", 2);
-                            if (team1 == null) team1 = parts[0].trim();
-                            if (team2 == null && parts.length > 1) team2 = parts[1].trim();
-                        }
-                    }
-
-                    LocalDateTime scheduled = parseDateTime(start);
-                    String id = title != null && title.has("fulltext") ? title.get("fulltext").getAsString() : Integer.toString(obj.hashCode());
-                    if (team1 == null || team2 == null || scheduled == null) {
-                        // skip incomplete entries
-                        continue;
-                    }
-
-                    Match m = new Match(id, team1, team2, scheduled, event == null ? "Unknown" : event, stream == null ? "" : stream, bo == null ? "BO3" : bo);
+                Match m = parseMatchFromElement(el);
+                if (m != null) {
                     result.add(m);
-                } catch (Exception e) {
-                    // Continue on parse errors for individual entries
                 }
             }
 
             return result;
         } catch (IOException | InterruptedException e) {
             Thread.currentThread().interrupt();
-            // Error querying API
             return new ArrayList<>();
         }
+    }
+
+    private JsonArray extractCargoArray(JsonObject root) {
+        if (root.has(CARGO_QUERY_KEY) && root.get(CARGO_QUERY_KEY).isJsonArray()) {
+            return root.getAsJsonArray(CARGO_QUERY_KEY);
+        }
+        return null;
+    }
+
+    private Match parseMatchFromElement(JsonElement el) {
+        try {
+            JsonObject obj = el.getAsJsonObject();
+            JsonObject title = obj.has("title") ? obj.getAsJsonObject("title") : null;
+            JsonObject fields = obj.has("fields") ? obj.getAsJsonObject("fields") : null;
+
+            String team1 = getFirstNonNull(fields, "Team1", "team1", "team_a", "team1_name");
+            String team2 = getFirstNonNull(fields, "Team2", "team2", "team_b", "team2_name");
+            String start = getFirstNonNull(fields, "Start", "start", "StartTime", "start_time");
+            String event = getFirstNonNull(fields, "Event", "event", "tournament");
+            String stream = getFirstNonNull(fields, "Stream", "stream", "stream_url");
+            String bo = getFirstNonNull(fields, "BestOf", "bestof", "BO");
+
+            if ((team1 == null || team2 == null) && title != null && title.has(FULLTEXT_KEY)) {
+                String[] teams = parseTeamsFromFulltext(title.get(FULLTEXT_KEY).getAsString());
+                if (team1 == null) team1 = teams[0];
+                if (team2 == null) team2 = teams[1];
+            }
+
+            LocalDateTime scheduled = parseDateTime(start);
+            String id = extractMatchId(title, obj);
+            
+            if (team1 == null || team2 == null || scheduled == null) {
+                return null;
+            }
+
+            return new Match(id, team1, team2, scheduled, 
+                event == null ? "Unknown" : event, 
+                stream == null ? "" : stream, 
+                bo == null ? "BO3" : bo);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String[] parseTeamsFromFulltext(String fulltext) {
+        String[] result = {null, null};
+        if (fulltext.contains(" vs ")) {
+            String[] parts = fulltext.split(" vs ", 2);
+            result[0] = parts[0].trim();
+            if (parts.length > 1) result[1] = parts[1].trim();
+        }
+        return result;
+    }
+
+    private String extractMatchId(JsonObject title, JsonObject obj) {
+        if (title != null && title.has(FULLTEXT_KEY)) {
+            return title.get(FULLTEXT_KEY).getAsString();
+        }
+        return Integer.toString(obj.hashCode());
     }
 
     private String getFirstNonNull(JsonObject obj, String... keys) {
