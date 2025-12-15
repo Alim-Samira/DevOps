@@ -1,10 +1,14 @@
+// build.gradle.kts (MODIFIÉ)
+
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.jvm.tasks.Jar
+import org.gradle.api.tasks.testing.Test
 
 plugins {
     java
-    application
+    id("org.springframework.boot") version "4.0.0" // Version à conserver si elle compile sans erreur
+    id("io.spring.dependency-management") version "1.1.7"
 }
 
 group = "com.devops"
@@ -14,7 +18,6 @@ repositories {
     mavenCentral()
 }
 
-// Ensure Java 17 toolchain for the project
 configure<JavaPluginExtension> {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(17))
@@ -42,28 +45,20 @@ dependencies {
 }
 // Add JUnit Platform launcher in case Gradle needs it on the runtime classpath
 dependencies {
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.9.3")
+    implementation("org.springframework.boot:spring-boot-starter-web")
+    
+    developmentOnly("org.springframework.boot:spring-boot-devtools")
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
 }
 
 tasks.withType<Test> {
-    useJUnitPlatform()
+    useJUnitPlatform() 
 }
 
-// Configure the application entry point
-application {
-    // Main class is in the default package
-    mainClass.set("Main")
-}
 
-// Make the built JAR executable with `java -jar`
 tasks.named<Jar>("jar") {
-    manifest {
-        attributes["Main-Class"] = "Main"
-    }
 
-}
-
-// Attach standard input to the Gradle run task for interactive apps
-tasks.named<JavaExec>("run") {
-    standardInput = System.`in`
 }
