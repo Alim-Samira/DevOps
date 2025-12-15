@@ -29,6 +29,21 @@ tasks.withType<org.gradle.api.tasks.compile.JavaCompile>().configureEach {
     options.release.set(17)
 }
 
+// Add JUnit 5 for tests
+dependencies {
+    testImplementation("org.junit.jupiter:junit-jupiter:5.9.3")
+}
+
+// JSON parsing for API client
+dependencies {
+    implementation("com.google.code.gson:gson:2.10.1")
+}
+
+// Ensure the Jupiter engine is available at runtime
+dependencies {
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.3")
+}
+// Add JUnit Platform launcher in case Gradle needs it on the runtime classpath
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     

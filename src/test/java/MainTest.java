@@ -12,14 +12,14 @@ import java.util.Collection;
  * Comprehensive test suite for DevOps System
  * Tests: Chat, Betting, Watch Parties, Auto Watch Parties
  */
-public class MainTest {
+class MainTest {
 
     private User admin;
     private User alice;
     private User bob;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         admin = new User("Admin", true);
         alice = new User("Alice", false);
         bob = new User("Bob", false);
@@ -29,7 +29,7 @@ public class MainTest {
 
     @Test
     @DisplayName("Public chat should store messages correctly")
-    public void testPublicChatMessaging() {
+    void testPublicChatMessaging() {
         PublicChat chat = new PublicChat("Public Chat", admin);
         chat.addUser(admin);
         chat.addUser(alice);
@@ -44,7 +44,7 @@ public class MainTest {
 
     @Test
     @DisplayName("Private chat should manage users with points")
-    public void testPrivateChatUserManagement() {
+    void testPrivateChatUserManagement() {
         PrivateChat chat = new PrivateChat("Private Chat", admin);
         chat.addUser(alice);
         
@@ -58,7 +58,7 @@ public class MainTest {
 
     @Test
     @DisplayName("Betting should deduct points when voting")
-    public void testBetVotingDeductsPoints() {
+    void testBetVotingDeductsPoints() {
         Choice choiceA = new Choice("Option A");
         Choice choiceB = new Choice("Option B");
         
@@ -76,7 +76,7 @@ public class MainTest {
 
     @Test
     @DisplayName("Betting should distribute winnings correctly")
-    public void testBetResultDistribution() {
+    void testBetResultDistribution() {
         Choice choiceA = new Choice("A");
         Choice choiceB = new Choice("B");
         
@@ -104,7 +104,7 @@ public class MainTest {
 
     @Test
     @DisplayName("Betting should refund points when canceled")
-    public void testBetCancellation() {
+    void testBetCancellation() {
         Choice choiceA = new Choice("A");
         Collection<Choice> options = new ArrayList<>();
         options.add(choiceA);
@@ -123,7 +123,7 @@ public class MainTest {
 
     @Test
     @DisplayName("Watch party should be added to planned list")
-    public void testWatchPartyPlanning() {
+    void testWatchPartyPlanning() {
         WatchPartyManager manager = new WatchPartyManager();
         WatchParty wp = new WatchParty("Party", LocalDateTime.now().plusDays(1), "Game");
 
@@ -135,7 +135,7 @@ public class MainTest {
 
     @Test
     @DisplayName("Manual watch party should be joinable")
-    public void testManualWatchPartyJoin() {
+    void testManualWatchPartyJoin() {
         WatchPartyManager manager = new WatchPartyManager();
         WatchParty wp = new WatchParty("Manual Party", LocalDateTime.now().plusDays(1), "Game");
         
@@ -150,7 +150,7 @@ public class MainTest {
 
     @Test
     @DisplayName("Auto watch party should be created for team")
-    public void testAutoWatchPartyCreation() {
+    void testAutoWatchPartyCreation() {
         WatchParty wp = WatchParty.createAutoWatchParty(alice, "T1", AutoType.TEAM);
 
         assertTrue(wp.isAutoWatchParty());
@@ -161,7 +161,7 @@ public class MainTest {
 
     @Test
     @DisplayName("Auto watch party should transition through states")
-    public void testAutoWatchPartyStateTransitions() {
+    void testAutoWatchPartyStateTransitions() {
         WatchParty wp = WatchParty.createAutoWatchParty(alice, "Gen.G", AutoType.TEAM);
         
         // Initially waiting
@@ -180,7 +180,7 @@ public class MainTest {
 
     @Test
     @DisplayName("Manager should track auto watch parties")
-    public void testManagerAutoWatchPartyTracking() {
+    void testManagerAutoWatchPartyTracking() {
         WatchPartyManager manager = new WatchPartyManager();
         
         WatchParty wp1 = WatchParty.createAutoWatchParty(alice, "T1", AutoType.TEAM);
@@ -196,7 +196,7 @@ public class MainTest {
 
     @Test
     @DisplayName("Scheduler should start and stop correctly")
-    public void testSchedulerLifecycle() {
+    void testSchedulerLifecycle() {
         WatchPartyManager manager = new WatchPartyManager();
         
         assertFalse(manager.isSchedulerRunning());
@@ -210,7 +210,7 @@ public class MainTest {
 
     @Test
     @DisplayName("Auto watch party should prevent joining when not open")
-    public void testAutoWatchPartyJoinRestrictions() {
+    void testAutoWatchPartyJoinRestrictions() {
         WatchParty wp = WatchParty.createAutoWatchParty(alice, "G2", AutoType.TEAM);
         
         // Initially in WAITING state - cannot join
@@ -226,7 +226,7 @@ public class MainTest {
 
     @Test
     @DisplayName("Users should leave watch parties correctly")
-    public void testWatchPartyLeave() {
+    void testWatchPartyLeave() {
         // Manual watch party - always joinable
         WatchParty wp = new WatchParty("DRX Watch", LocalDateTime.now().plusDays(1), "LoL");
         
@@ -239,7 +239,7 @@ public class MainTest {
 
     @Test
     @DisplayName("Manager should remove watch parties by name")
-    public void testWatchPartyRemoval() {
+    void testWatchPartyRemoval() {
         WatchPartyManager manager = new WatchPartyManager();
         WatchParty wp = WatchParty.createAutoWatchParty(alice, "FNC", AutoType.TEAM);
         
@@ -254,7 +254,7 @@ public class MainTest {
 
     @Test
     @DisplayName("User should maintain consistent points across operations")
-    public void testUserPointsConsistency() {
+    void testUserPointsConsistency() {
         assertEquals(200, alice.getPoints());
         
         // Deduct points
@@ -277,7 +277,7 @@ public class MainTest {
 
     @Test
     @DisplayName("System should handle multiple concurrent watch parties")
-    public void testMultipleWatchPartiesCoexist() {
+    void testMultipleWatchPartiesCoexist() {
         WatchPartyManager manager = new WatchPartyManager();
         
         WatchParty manual = new WatchParty("Manual", LocalDateTime.now().plusDays(1), "Game");

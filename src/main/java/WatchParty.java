@@ -69,34 +69,9 @@ public class WatchParty {
     }
 
     public void planify() {
-        this.planned= true;
-        System.out.println(" WatchParty planifiée : " + name +
-                           " | Jeu : " + game +
-                           " | Date : " + date);    
+        this.planned = true;
     }
 
-    
-    public void displayInfos() {
-        System.out.println("Nom : " + name);
-        System.out.println("date : " + date);
-        System.out.println("jeu : " + game);
-        System.out.println("Planifiee : " + (planned ? "oui" : "non"));
-        
-        // Show match state
-        System.out.println("État du match : " + matchState);
-
-        if (isAutoWatchParty()) {
-            System.out.println("Type : Auto Watch Party (" + autoConfig.getType() + ")");
-            System.out.println("Cible : " + autoConfig.getTarget());
-            System.out.println("Status : " + status);
-            if (autoConfig.getCurrentMatch() != null) {
-                System.out.println("Match actuel : " + autoConfig.getCurrentMatch());
-            }
-        }
-        
-        System.out.println("Participants : " + participants.size());
-    }
-    
     // Factory method to create auto watch party
     public static WatchParty createAutoWatchParty(User creator, String target, AutoType type) {
         String name = type == AutoType.TEAM 
@@ -118,18 +93,15 @@ public class WatchParty {
     // Update status based on match timing
     public void updateStatus(Match upcomingMatch) {
         if (upcomingMatch == null) {
-            // No upcoming match
             if (status == WatchPartyStatus.OPEN) {
                 status = WatchPartyStatus.CLOSED;
                 kickAllParticipants();
-                System.out.println("[X] Watch party '" + name + "' closed - no upcoming match");
             }
             return;
         }
         
         // Safety check: reject past matches
         if (upcomingMatch.isPast()) {
-            System.out.println("[!] Warning: Attempted to set past match for watch party '" + name + "' - ignoring");
             if (status == WatchPartyStatus.OPEN) {
                 status = WatchPartyStatus.CLOSED;
                 kickAllParticipants();
@@ -144,16 +116,12 @@ public class WatchParty {
         // Check if match is starting soon (30 minutes before)
         if (upcomingMatch.isStartingSoon(30) && status != WatchPartyStatus.OPEN) {
             status = WatchPartyStatus.OPEN;
-            System.out.println("[+] Watch party '" + name + "' is now OPEN!");
-            System.out.println("   Match: " + upcomingMatch);
-            System.out.println("   Stream: " + upcomingMatch.getStreamUrl());
         }
         
         // Check if match is finished
         if (upcomingMatch.isFinished() && status == WatchPartyStatus.OPEN) {
             status = WatchPartyStatus.CLOSED;
             kickAllParticipants();
-            System.out.println("[X] Watch party '" + name + "' closed - match finished");
         }
     }
     
@@ -168,10 +136,8 @@ public class WatchParty {
     // Join watch party
     public boolean join(User user) {
         if (!isAutoWatchParty()) {
-            // Manual watch parties are always joinable
             if (!participants.contains(user)) {
                 participants.add(user);
-                System.out.println(user.getName() + " joined watch party: " + name);
                 return true;
             }
             return false;
@@ -179,13 +145,11 @@ public class WatchParty {
         
         // Auto watch parties: only joinable when OPEN
         if (status != WatchPartyStatus.OPEN) {
-            System.out.println("[X] Cannot join - watch party is " + status);
             return false;
         }
         
         if (!participants.contains(user)) {
             participants.add(user);
-            System.out.println("✅ " + user.getName() + " joined watch party: " + name);
             return true;
         }
         return false;
@@ -193,11 +157,7 @@ public class WatchParty {
     
     // Leave watch party
     public boolean leave(User user) {
-        if (participants.remove(user)) {
-            System.out.println(user.getName() + " left watch party: " + name);
-            return true;
-        }
-        return false;
+        return participants.remove(user);
     }
     
     // Check if user is creator/admin
@@ -209,7 +169,6 @@ public class WatchParty {
     public void updateAutoTarget(String newTarget) {
         if (autoConfig != null) {
             autoConfig = new AutoConfig(autoConfig.getType(), newTarget);
-            System.out.println("Updated auto watch party target to: " + newTarget);
         }
     }
     
