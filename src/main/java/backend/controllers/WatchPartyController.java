@@ -16,6 +16,7 @@ import backend.models.AutoType;
 import backend.models.User;
 import backend.models.WatchParty;
 import backend.services.WatchPartyManager;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/api/watchparties")
