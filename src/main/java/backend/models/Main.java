@@ -1,8 +1,11 @@
+package backend.models;
 import java.sql.Time;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Scanner;
+
+import backend.services.WatchPartyManager;
 
 /**
  * Main entry point for the DevOps Chat & Watch Party System

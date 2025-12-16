@@ -1,4 +1,4 @@
-import java.util.List;
+package backend.models;
 
 /**
  * Interface de base pour tous les mini-jeux.

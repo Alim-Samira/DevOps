@@ -1,4 +1,4 @@
-import java.util.Date;
+package backend.models;
 
 
 public class Message {

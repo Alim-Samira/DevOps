@@ -1,3 +1,4 @@
+package backend.models;
 import java.util.Map;
 
 public class PrivateChat extends Chat {

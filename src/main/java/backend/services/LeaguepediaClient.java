@@ -1,8 +1,5 @@
-import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-
+package backend.services;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;
@@ -15,8 +12,15 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
-import java.io.ByteArrayInputStream;
 import java.util.zip.GZIPInputStream;
+
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+
+import backend.models.Match;
+import backend.models.MatchState;
 
 /**
  * Leaguepedia client that queries the Liquipedia/Leaguepedia Cargo API.

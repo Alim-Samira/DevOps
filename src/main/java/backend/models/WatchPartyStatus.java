@@ -1,3 +1,4 @@
+package backend.models;
 /**
  * Status of a watch party
  */

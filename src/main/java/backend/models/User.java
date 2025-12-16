@@ -1,3 +1,4 @@
+package backend.models;
 public class User {
     private String name;
     private boolean isAdmin;

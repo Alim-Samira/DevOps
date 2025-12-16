@@ -1,7 +1,8 @@
-import java.util.ArrayList;
-import java.util.List;
+package backend.models;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 public abstract class Chat {
     protected String name;

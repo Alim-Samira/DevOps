@@ -1,3 +1,4 @@
+package backend.models;
 import java.util.Collection;
 
 public interface Bet {

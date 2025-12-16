@@ -1,3 +1,4 @@
+package backend.models;
 import java.util.ArrayList;
 import java.util.Collection;
 

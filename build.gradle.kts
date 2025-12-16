@@ -1,4 +1,3 @@
-// build.gradle.kts (MODIFIÉ)
 
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.jvm.toolchain.JavaLanguageVersion
@@ -7,7 +6,7 @@ import org.gradle.api.tasks.testing.Test
 
 plugins {
     java
-    id("org.springframework.boot") version "4.0.0" // Version à conserver si elle compile sans erreur
+    id("org.springframework.boot") version "4.0.0" 
     id("io.spring.dependency-management") version "1.1.7"
 }
 
@@ -46,6 +45,7 @@ dependencies {
 // Add JUnit Platform launcher in case Gradle needs it on the runtime classpath
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0")
     
     developmentOnly("org.springframework.boot:spring-boot-devtools")
     testImplementation("org.junit.jupiter:junit-jupiter")

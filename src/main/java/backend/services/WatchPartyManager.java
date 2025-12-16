@@ -1,7 +1,14 @@
+package backend.services;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.stereotype.Service;
+
+import backend.models.MatchState;
+import backend.models.WatchParty;
+
+@Service
 public class WatchPartyManager {
     private List<WatchParty> watchParties;
     private List<WatchParty> watchPartiesPlanned;

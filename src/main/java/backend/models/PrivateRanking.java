@@ -1,24 +1,28 @@
+package backend.models;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.LinkedHashMap;
 import java.util.stream.Collectors;
 
-public class PublicRanking implements Ranking {
+public class PrivateRanking implements Ranking {
+    
+    private final PrivateChat chat;
+
+    public PrivateRanking(PrivateChat chat) {
+        this.chat = chat;
+    }
 
     @Override
     public Map<User, Integer> getRanking(List<User> allUsers) {
-        if (allUsers == null || allUsers.isEmpty()) {
+        if (chat == null) {
             return Collections.emptyMap();
         }
+        
+        Map<User, Integer> chatUsers = chat.users();
 
-        return allUsers.stream()
-                .collect(Collectors.toMap(
-                    user -> user, 
-                    User::getPoints // Use public points
-                ))
-                .entrySet().stream()
+        return chatUsers.entrySet().stream()
                 .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
                 .collect(Collectors.toMap(
                     Map.Entry::getKey, 

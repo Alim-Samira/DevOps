@@ -1,7 +1,8 @@
-import java.util.HashMap;
-import java.util.Map;
-import java.util.List;
+package backend.models;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class QuizGame implements MiniGame {
     private String commandName; // Changed from final constant to variable for better flexibility 

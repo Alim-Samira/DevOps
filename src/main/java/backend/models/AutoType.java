@@ -1,3 +1,4 @@
+package backend.models;
 /**
  * Type of automatic watch party subscription
  */
