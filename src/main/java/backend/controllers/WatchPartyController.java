@@ -19,6 +19,8 @@ import backend.services.WatchPartyManager;
 
 @RestController
 @RequestMapping("/api/watchparties")
+@Tag(name = "WatchParty System", description = "Create and manage watchparties ")
+
 public class WatchPartyController {
 
     private final WatchPartyManager manager;

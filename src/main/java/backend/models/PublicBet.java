@@ -67,5 +67,8 @@ public class PublicBet implements Bet {
         this.state = State.PENDING;
     }
 
+    public Collection getOptions() {
+        return this.options;
+    }
 }
 
