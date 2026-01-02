@@ -1,0 +1,163 @@
+package backend.integration;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api. DisplayName;
+import org.springframework.beans. factory.annotation. Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet. AutoConfigureMockMvc;
+import org.springframework.boot.test. context.SpringBootTest;
+import org. springframework.http.MediaType;
+import org.springframework. test.web.servlet.MockMvc;
+
+import static org.springframework.test.web. servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test. web.servlet.result.MockMvcResultMatchers.*;
+
+@SpringBootTest
+@AutoConfigureMockMvc
+class ControllerIntegrationTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    // ==================== RANKING CONTROLLER TESTS ====================
+
+    @Test
+    @DisplayName("GET /api/ranking should return ranking")
+    void testGetRanking() throws Exception {
+        mockMvc.perform(get("/api/ranking"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+    }
+
+    @Test
+    @DisplayName("GET /api/ranking/detailed should return detailed ranking")
+    void testGetDetailedRanking() throws Exception {
+        mockMvc.perform(get("/api/ranking/detailed"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+    }
+
+    // ==================== QUIZ CONTROLLER TESTS ====================
+
+    @Test
+    @DisplayName("GET /api/quiz/status should return quiz status")
+    void testGetQuizStatus() throws Exception {
+        mockMvc.perform(get("/api/quiz/status"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.active").exists())
+                .andExpect(jsonPath("$.finished").exists());
+    }
+
+    @Test
+    @DisplayName("POST /api/quiz/start should start the quiz")
+    void testStartQuiz() throws Exception {
+        mockMvc.perform(post("/api/quiz/start"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("POST /api/quiz/answer should accept answers")
+    void testSubmitAnswer() throws Exception {
+        // Start quiz first
+        mockMvc.perform(post("/api/quiz/start"));
+
+        mockMvc. perform(post("/api/quiz/answer")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"user\": \"testuser\", \"answer\": \"test\"}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("POST /api/quiz/reset should reset quiz")
+    void testResetQuiz() throws Exception {
+        mockMvc.perform(post("/api/quiz/reset"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("Quiz has been reset! "));
+    }
+
+    @Test
+    @DisplayName("POST /api/quiz/questions should add questions")
+    void testAddQuestion() throws Exception {
+        mockMvc. perform(post("/api/quiz/questions")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"question\": \"Test question?\", \"answer\":  \"test answer\"}"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("Question added successfully!"));
+    }
+
+    // ==================== USER CONTROLLER TESTS ====================
+
+    @Test
+    @DisplayName("GET /api/users should return all users")
+    void testGetAllUsers() throws Exception {
+        mockMvc.perform(get("/api/users"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+    }
+
+    @Test
+    @DisplayName("GET /api/users/{username} should return specific user")
+    void testGetUser() throws Exception {
+        mockMvc.perform(get("/api/users/alice"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("alice"));
+    }
+
+    // ==================== CHAT CONTROLLER TESTS ====================
+
+    @Test
+    @DisplayName("GET /api/chat should return chat history")
+    void testGetChatHistory() throws Exception {
+        mockMvc.perform(get("/api/chat"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType. APPLICATION_JSON));
+    }
+
+    @Test
+    @DisplayName("POST /api/chat should send a message")
+    void testSendMessage() throws Exception {
+        mockMvc.perform(post("/api/chat")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"user\": \"testuser\", \"text\": \"Hello!\"}"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("Message sent"));
+    }
+
+    // ==================== WATCHPARTY CONTROLLER TESTS ====================
+
+    @Test
+    @DisplayName("GET /api/watchparties should return all watch parties")
+    void testGetAllWatchParties() throws Exception {
+        mockMvc.perform(get("/api/watchparties"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+    }
+
+    @Test
+    @DisplayName("POST /api/watchparties should create a watch party")
+    void testCreateWatchParty() throws Exception {
+        mockMvc.perform(post("/api/watchparties")
+                .contentType(MediaType. APPLICATION_JSON)
+                .content("{\"name\": \"TestParty\", \"type\": \"TEAM\"}"))
+                .andExpect(status().isOk());
+    }
+
+    // ==================== BET CONTROLLER TESTS ====================
+
+    @Test
+    @DisplayName("GET /api/bets should return all bets")
+    void testGetAllBets() throws Exception {
+        mockMvc.perform(get("/api/bets"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+    }
+
+    @Test
+    @DisplayName("POST /api/bets should create a bet")
+    void testCreateBet() throws Exception {
+        mockMvc. perform(post("/api/bets")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"question\": \"Who wins?\", \"options\": [\"Team A\", \"Team B\"]}"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("Bet created! "));
+    }
+}
