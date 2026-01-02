@@ -55,7 +55,7 @@ public class LeaguepediaClient {
      * This method will return null if no match can be found or on errors.
      */
     public Match getNextTeamMatch(String teamName) {
-        List<Match> all = fetchUpcomingMatchesForTeam(teamName, 30);
+        List<Match> all = fetchUpcomingMatchesForTeam(teamName);
         LocalDateTime now = LocalDateTime.now();
         Match best = null;
         for (Match m : all) {
@@ -70,7 +70,7 @@ public class LeaguepediaClient {
      * Get the next upcoming match in a tournament
      */
     public Match getNextTournamentMatch(String tournamentName) {
-        List<Match> all = fetchUpcomingMatchesForTournament(tournamentName, 30);
+        List<Match> all = fetchUpcomingMatchesForTournament(tournamentName);
         LocalDateTime now = LocalDateTime.now();
         Match best = null;
         for (Match m : all) {
@@ -90,7 +90,7 @@ public class LeaguepediaClient {
     }
 
     /**
-     * Fetch upcoming matches for a team within `daysAhead` days.
+     * Fetch upcoming matches for a team.
      * Uses a simple Cargo query to Liquipedia's API and attempts to map results.
      */
     public List<Match> fetchUpcomingMatchesForTeam(String teamName) {

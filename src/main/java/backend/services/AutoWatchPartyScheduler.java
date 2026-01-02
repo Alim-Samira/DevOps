@@ -149,9 +149,9 @@ public class AutoWatchPartyScheduler {
 
     private List<Match> fetchMatches(AutoConfig config, int daysAhead) {
         if (config.isTeamBased()) {
-            return apiClient.fetchUpcomingMatchesForTeam(config.getTarget(), daysAhead);
+            return apiClient.fetchUpcomingMatchesForTeam(config.getTarget());
         }
-        return apiClient.fetchUpcomingMatchesForTournament(config.getTarget(), daysAhead);
+        return apiClient.fetchUpcomingMatchesForTournament(config.getTarget());
     }
 
     private void appendMatchReport(StringBuilder report, WatchParty wp, AutoConfig config, List<Match> matches) {

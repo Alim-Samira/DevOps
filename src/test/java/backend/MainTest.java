@@ -44,8 +44,6 @@ class MainTest {
     @DisplayName("Public chat should store messages correctly")
     void testPublicChatMessaging() {
         PublicChat chat = new PublicChat("Public Chat", admin);
-        chat.addUser(admin);
-        chat.addUser(alice);
 
         chat.sendMessage(alice, "Hello everyone");
 
