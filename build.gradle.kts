@@ -28,30 +28,18 @@ tasks.withType<org.gradle.api.tasks.compile.JavaCompile>().configureEach {
     options.release.set(17)
 }
 
-// Add JUnit 5 for tests
-dependencies {
-    testImplementation("org.junit.jupiter:junit-jupiter:5.9.3")
-}
-
-// JSON parsing for API client
-dependencies {
-    implementation("com.google.code.gson:gson:2.10.1")
-}
-
-// Ensure the Jupiter engine is available at runtime
-dependencies {
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.3")
-}
-// Add JUnit Platform launcher in case Gradle needs it on the runtime classpath
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0")
-    
+
+    // JSON parsing for API client
+    implementation("com.google.code.gson:gson:2.10.1")
+
     developmentOnly("org.springframework.boot:spring-boot-devtools")
-    testImplementation("org.junit.jupiter:junit-jupiter")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+
+    // Use Spring Boot's managed test dependencies (keeps JUnit Platform/Jupiter aligned)
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 tasks.withType<Test> {

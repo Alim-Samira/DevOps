@@ -49,10 +49,10 @@ class MainTest {
 
         chat.sendMessage(alice, "Hello everyone");
 
-        assertNotNull(chat.messages);
-        assertEquals(1, chat.messages. size());
-        assertEquals("Hello everyone", chat.messages.get(0).getContent());
-        assertEquals("Alice", chat.messages. get(0).getSender().getName());
+        assertNotNull(chat.getMessages());
+        assertEquals(1, chat.getMessages().size());
+        assertEquals("Hello everyone", chat.getMessages().get(0).getContent());
+        assertEquals("Alice", chat.getMessages().get(0).getSender().getName());
     }
 
     // ==================== BETTING TESTS ====================
@@ -170,7 +170,7 @@ class MainTest {
 
         assertEquals(alice, wp.getCreator());
         assertTrue(wp.isAutoWatchParty());
-        assertEquals("Gen.G", wp.getAutoConfig().getTarget());
+        assertEquals("Gen. G", wp.getAutoConfig().getTarget());
     }
 
     @Test
