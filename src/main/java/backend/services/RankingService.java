@@ -1,13 +1,13 @@
-package backend. services;
+package backend.services;
 
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.springframework. stereotype.Service;
+import org.springframework.stereotype.Service;
 
-import backend.models. User;
+import backend.models.User;
 
 @Service
 public class RankingService {
@@ -39,11 +39,11 @@ public class RankingService {
                 .map(user -> {
                     Map<String, Object> entry = new LinkedHashMap<>();
                     entry.put("username", user.getName());
-                    entry. put("points", user.getPoints());
+                    entry.put("points", user.getPoints());
                     entry.put("isAdmin", user.isAdmin());
                     entry.put("isModerator", user.isModerator());
                     return entry;
                 })
-                .collect(Collectors.toList());
+                .toList();
     }
 }

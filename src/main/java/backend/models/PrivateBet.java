@@ -7,67 +7,95 @@ import java.util.Map;
 
 
 public class PrivateBet implements Bet {
-    private Map<User,Integer> users;
+    private Map<User, Integer> users;
     private String question;
-    private Collection options;
+    private Collection<Choice> options;
     private State state;
     private Time votingTime;
     private PrivateChat chat;
 
-    public PrivateBet(String question, Collection options, Time votingTime, PrivateChat chat) 
+    public PrivateBet(String question, Collection<Choice> options, Time votingTime, PrivateChat chat)
     {
         this.question = question;
         this.options = new ArrayList<>(options);
         this.state = State.VOTING;
         this.votingTime = votingTime;
-        this.chat=chat;
-        this.users=new HashMap<>();
+        this.chat = chat;
+        this.users = new HashMap<>();
     }
 
-    public void options(Collection options){
+    @Override
+    public void options(Collection<Choice> options) {
         this.options = options;
     }
 
-    public void setResult(Choice choice){
+    @Override
+    public void setResult(Choice choice) {
         this.state = State.END;
         int totalPoints = users.values().stream().mapToInt(Integer::intValue).sum();
         int winningPoints = 0;
-        for (User u : users.keySet()) {
-            if (choice.voters().contains(u)) {
-                winningPoints += users.get(u);
+        for (Map.Entry<User, Integer> entry : users.entrySet()) {
+            User user = entry.getKey();
+            int userBet = entry.getValue();
+            if (choice.voters().contains(user)) {
+                winningPoints += userBet;
             }
         }
-        for (User u : users.keySet()) {
-            if (choice.voters().contains(u)) {
-                int userBet = users.get(u);
+        for (Map.Entry<User, Integer> entry : users.entrySet()) {
+            User user = entry.getKey();
+            int userBet = entry.getValue();
+            if (choice.voters().contains(user)) {
                 int reward = (int) ((double) userBet / winningPoints * totalPoints);
-                int current = chat.users().get(u);
-                chat.setPoints(u, current + reward);            
+                int current = chat.users().get(user);
+                chat.setPoints(user, current + reward);
             } 
         }
     }
 
-    
-    public void vote(User user, Choice choice,Integer points){
+    @Override
+    public void vote(User user, Choice choice, Integer points) {
         if (this.state == State.VOTING && options.contains(choice)) {
             choice.newVoter(user);
             this.users.put(user, points);
-           int current = chat.users().get(user);
-            chat.setPoints(user, current - points);        }
-    }
-
-    public void cancel(){
-        this.state = State.CANCELED;
-        for (User u : users.keySet()) {
-            int userBet = users.get(u);
-            int current = chat.users().get(u);
-            chat.setPoints(u, current + userBet);
+            int current = chat.users().get(user);
+            chat.setPoints(user, current - points);
         }
     }
 
-    public void endVoteTime(){
+    @Override
+    public void cancel() {
+        this.state = State.CANCELED;
+        for (Map.Entry<User, Integer> entry : users.entrySet()) {
+            User user = entry.getKey();
+            int userBet = entry.getValue();
+            int current = chat.users().get(user);
+            chat.setPoints(user, current + userBet);
+        }
+    }
+
+    @Override
+    public void endVoteTime() {
         this.state = State.PENDING;
     }
 
+    public String getQuestion() {
+        return question;
+    }
+
+    public Collection<Choice> getOptions() {
+        return options;
+    }
+
+    public State getState() {
+        return state;
+    }
+
+    public Time getVotingTime() {
+        return votingTime;
+    }
+
+    public PrivateChat getChat() {
+        return chat;
+    }
 }
 

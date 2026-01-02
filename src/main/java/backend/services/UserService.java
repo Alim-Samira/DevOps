@@ -23,10 +23,7 @@ public class UserService {
     // Get or Create a user
     public User getUser(String username) {
         String key = username.toLowerCase();
-        if (!users.containsKey(key)) {
-            users.put(key, new User(username, false));
-        }
-        return users.get(key);
+        return users.computeIfAbsent(key, k -> new User(username, false));
     }
 
     public List<User> getAllUsers() {

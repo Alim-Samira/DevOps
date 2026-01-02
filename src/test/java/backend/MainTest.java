@@ -1,25 +1,25 @@
 package backend;
 
-import org.junit.jupiter.api. Test;
-import org.junit.jupiter.api. BeforeEach;
-import org.junit.jupiter.api. DisplayName;
 import static org.junit.jupiter.api.Assertions.*;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 
 import java.sql.Time;
 import java.time.LocalDateTime;
-import java.util. ArrayList;
-import java. util.Collection;
-import java. util.Map;
+import java.util.ArrayList;
+import java.util.Collection;
 
-import backend. models.AutoType;
+import backend.models.AutoType;
 import backend.models.Choice;
-import backend. models.PublicBet;
-import backend.models. PublicChat;
-import backend. models.QuizGame;
+import backend.models.PublicBet;
+import backend.models.PublicChat;
+import backend.models.QuizGame;
 import backend.models.User;
-import backend. models.WatchParty;
+import backend.models.WatchParty;
 import backend.models.WatchPartyStatus;
-import backend. services.WatchPartyManager;
+import backend.services.WatchPartyManager;
 
 /**
  * Comprehensive test suite for DevOps System

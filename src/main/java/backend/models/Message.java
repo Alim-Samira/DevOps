@@ -64,8 +64,8 @@ public class Message {
         if (this.replyTo == null) {
             return "";
         }
-        String content = this.replyTo.getContent();
+        String contenu = this.replyTo.getContent();
         // Truncate the content to a max of 20 characters for a clean reply reference
-        return content.length() > 20 ? content.substring(0, 17) + "..." : content;
+        return contenu.length() > 20 ? contenu.substring(0, 17) + "..." : contenu;
     }
 }

@@ -93,7 +93,7 @@ public class LeaguepediaClient {
      * Fetch upcoming matches for a team within `daysAhead` days.
      * Uses a simple Cargo query to Liquipedia's API and attempts to map results.
      */
-    public List<Match> fetchUpcomingMatchesForTeam(String teamName, int daysAhead) {
+    public List<Match> fetchUpcomingMatchesForTeam(String teamName) {
         String where = URLEncoder.encode(String.format("(Team1 LIKE '%%%s%%' OR Team2 LIKE '%%%s%%')", teamName, teamName), StandardCharsets.UTF_8);
         String q = "action=cargoquery&format=json&tables=match&fields=Start,Team1,Team2,Event,Stream,BestOf&page=Match&where=" + where + "&limit=50";
         return queryCargoForMatches(q);
@@ -102,7 +102,7 @@ public class LeaguepediaClient {
     /**
      * Fetch upcoming matches for a tournament.
      */
-    public List<Match> fetchUpcomingMatchesForTournament(String tournamentName, int daysAhead) {
+    public List<Match> fetchUpcomingMatchesForTournament(String tournamentName) {
         String where = URLEncoder.encode(String.format("Event LIKE '%%%s%%'", tournamentName), StandardCharsets.UTF_8);
         String q = "action=cargoquery&format=json&tables=match&fields=Start,Team1,Team2,Event,Stream,BestOf&page=Match&where=" + where + "&limit=50";
         return queryCargoForMatches(q);

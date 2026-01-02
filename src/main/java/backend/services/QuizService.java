@@ -1,9 +1,9 @@
-package backend. services;
+package backend.services;
 
-import org.springframework.stereotype. Service;
+import org.springframework.stereotype.Service;
 
 import backend.models.QuizGame;
-import backend. models.User;
+import backend.models.User;
 
 @Service
 public class QuizService {
@@ -23,7 +23,7 @@ public class QuizService {
     }
 
     public String submitAnswer(User user, String answer) {
-        if (! currentQuiz.isActive()) {
+        if (!currentQuiz.isActive()) {
             return "No quiz is currently active.  Start one first! ";
         }
         String result = currentQuiz.processInput(user, answer);
@@ -39,15 +39,15 @@ public class QuizService {
     }
 
     public boolean isFinished() {
-        return currentQuiz. isFinished();
+        return currentQuiz.isFinished();
     }
 
     public void resetQuiz() {
-        currentQuiz. reset();
+        currentQuiz.reset();
     }
 
     public void addQuestion(String question, String answer) {
-        currentQuiz. addQuestion(question, answer);
+        currentQuiz.addQuestion(question, answer);
     }
 
     public QuizGame createCustomQuiz(String name) {

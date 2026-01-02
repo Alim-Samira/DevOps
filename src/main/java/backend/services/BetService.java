@@ -38,11 +38,21 @@ public class BetService {
     }
 
     public boolean vote(int betIndex, String username, int choiceIndex, int points) {
-        if (betIndex < 0 || betIndex >= activeBets.size()) return false;
+        if (betIndex < 0 || betIndex >= activeBets.size()) {
+            return false;
+        }
         
         PublicBet bet = activeBets.get(betIndex);
         User user = userService.getUser(username);
-
-        return true; // Placeholder until PublicBet is updated
+        
+        // Get the choice from the bet's options and vote
+        List<Choice> choiceList = new ArrayList<>(bet.getOptions());
+        if (choiceIndex < 0 || choiceIndex >= choiceList.size()) {
+            return false;
+        }
+        
+        Choice selectedChoice = choiceList.get(choiceIndex);
+        bet.vote(user, selectedChoice, points);
+        return true;
     }
 }

@@ -1,18 +1,18 @@
-package backend. controllers;
+package backend.controllers;
 
 import java.util.Map;
 
-import org.springframework.web.bind.annotation. GetMapping;
-import org.springframework.web. bind.annotation.PostMapping;
-import org.springframework.web. bind.annotation.RequestBody;
-import org. springframework.web.bind.annotation.RequestMapping;
-import org. springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import backend. models.User;
-import backend. services.QuizService;
-import backend.services. UserService;
+import backend.models.User;
+import backend.services.QuizService;
+import backend.services.UserService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas. annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/api/quiz")
@@ -31,9 +31,9 @@ public class QuizController {
     @GetMapping("/status")
     public Map<String, Object> getStatus() {
         return Map.of(
-            "active", quizService. isActive(),
-            "finished", quizService. isFinished(),
-            "commandName", quizService. getCurrentQuiz().getCommandName()
+            "active", quizService.isActive(),
+            "finished", quizService.isFinished(),
+            "commandName", quizService.getCurrentQuiz().getCommandName()
         );
     }
 
