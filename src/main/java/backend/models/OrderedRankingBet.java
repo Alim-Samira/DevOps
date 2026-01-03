@@ -18,6 +18,20 @@ import java.util.Map;
  */
 public class OrderedRankingBet extends Bet {
     
+    private static final String ERROR_VOTING_CLOSED = "❌ Le vote est fermé";
+    private static final String ERROR_MUST_BE_LIST = "❌ Le classement doit être une liste";
+    private static final String ERROR_WRONG_SIZE = "❌ Le classement doit contenir %d éléments";
+    private static final String ERROR_INVALID_ITEMS = "❌ Le classement contient des éléments invalides. Éléments attendus: %s";
+    private static final String ERROR_INSUFFICIENT_POINTS = "❌ Points insuffisants ou vote déjà enregistré";
+    private static final String ERROR_NOT_PENDING = "❌ Le pari doit être en attente pour être résolu";
+    private static final String ERROR_INVALID_RANKING = "❌ Le classement correct est invalide";
+    private static final String SUCCESS_VOTE = "✅ Classement enregistré: %s (%d points)";
+    private static final String SUCCESS_PERFECT = "✅ Pari résolu! %d classement(s) parfait(s) | %d points chacun\nClassement: %s";
+    private static final String SUCCESS_KENDALL = "✅ Pari résolu! Classement: %s\nTop %d parieurs (30%%):\n";
+    private static final String WINNER_DETAIL_FORMAT = "  • %s: %s (distance: %.0f) → +%d pts%n";
+    private static final int MIN_ITEMS = 2;
+    private static final double TOP_PERCENT = 0.30;
+    
     private List<String> items;                          // Les éléments à classer (ex: joueurs)
     private Map<User, List<String>> userRankings;        // User -> son classement
     private List<String> correctRanking;                 // Le classement correct
@@ -30,8 +44,8 @@ public class OrderedRankingBet extends Bet {
                             LocalDateTime votingEndTime, List<String> items) {
         super(question, creator, watchParty, votingEndTime);
         
-        if (items == null || items.size() < 2) {
-            throw new IllegalArgumentException("Au moins 2 éléments requis pour un classement");
+        if (items == null || items.size() < MIN_ITEMS) {
+            throw new IllegalArgumentException("Au moins " + MIN_ITEMS + " éléments requis pour un classement");
         }
         
         this.items = new ArrayList<>(items);
@@ -42,19 +56,35 @@ public class OrderedRankingBet extends Bet {
     @Override
     public String vote(User user, Object votedValue, int points) {
         if (!isVotingOpen()) {
-            return "❌ Le vote est fermé";
+            return ERROR_VOTING_CLOSED;
         }
         
         if (!(votedValue instanceof List)) {
-            return "❌ Le classement doit être une liste";
+            return ERROR_MUST_BE_LIST;
         }
         
         @SuppressWarnings("unchecked")
         List<String> ranking = (List<String>) votedValue;
         
-        // Valider que le classement contient exactement les mêmes éléments
+        String validationError = validateRanking(ranking);
+        if (validationError != null) {
+            return validationError;
+        }
+        
+        if (!deductPoints(user, points)) {
+            return ERROR_INSUFFICIENT_POINTS;
+        }
+        
+        userRankings.put(user, new ArrayList<>(ranking));
+        return String.format(SUCCESS_VOTE, String.join(" > ", ranking), points);
+    }
+    
+    /**
+     * Valide qu'un classement contient exactement les bons éléments
+     */
+    private String validateRanking(List<String> ranking) {
         if (ranking.size() != items.size()) {
-            return "❌ Le classement doit contenir " + items.size() + " éléments";
+            return String.format(ERROR_WRONG_SIZE, items.size());
         }
         
         List<String> sortedRanking = new ArrayList<>(ranking);
@@ -63,66 +93,65 @@ public class OrderedRankingBet extends Bet {
         Collections.sort(sortedItems);
         
         if (!sortedRanking.equals(sortedItems)) {
-            return "❌ Le classement contient des éléments invalides. Éléments attendus: " 
-                   + String.join(", ", items);
+            return String.format(ERROR_INVALID_ITEMS, String.join(", ", items));
         }
         
-        if (!deductPoints(user, points)) {
-            return "❌ Points insuffisants ou vote déjà enregistré";
-        }
-        
-        userRankings.put(user, new ArrayList<>(ranking));
-        return "✅ Classement enregistré: " + String.join(" > ", ranking) + " (" + points + " points)";
+        return null;
     }
     
     @Override
     public String resolve(Object correctValue) {
         if (state != State.PENDING) {
-            return "❌ Le pari doit être en attente pour être résolu";
+            return ERROR_NOT_PENDING;
         }
         
         if (!(correctValue instanceof List)) {
-            return "❌ Le classement correct doit être une liste";
+            return ERROR_MUST_BE_LIST;
         }
         
         @SuppressWarnings("unchecked")
         List<String> ranking = (List<String>) correctValue;
         
-        // Valider le classement correct
-        List<String> sortedRanking = new ArrayList<>(ranking);
-        List<String> sortedItems = new ArrayList<>(items);
-        Collections.sort(sortedRanking);
-        Collections.sort(sortedItems);
-        
-        if (!sortedRanking.equals(sortedItems)) {
-            return "❌ Le classement correct est invalide";
+        String validationError = validateRanking(ranking);
+        if (validationError != null) {
+            return ERROR_INVALID_RANKING;
         }
         
         this.correctRanking = new ArrayList<>(ranking);
         state = State.RESOLVED;
         
         int totalPot = getTotalPot();
+        List<User> perfectMatches = findPerfectMatches();
         
-        // Vérifier s'il y a des classements parfaits
+        if (!perfectMatches.isEmpty()) {
+            return distributePerfectMatchRewards(perfectMatches, totalPot);
+        }
+        
+        return resolveByKendallDistance(totalPot);
+    }
+    
+    /**
+     * Trouve les utilisateurs avec un classement parfait
+     */
+    private List<User> findPerfectMatches() {
         List<User> perfectMatches = new ArrayList<>();
         for (Map.Entry<User, List<String>> entry : userRankings.entrySet()) {
             if (entry.getValue().equals(correctRanking)) {
                 perfectMatches.add(entry.getKey());
             }
         }
-        
-        // Si classements parfaits trouvés, répartition équitable
-        if (!perfectMatches.isEmpty()) {
-            int rewardPerWinner = totalPot / perfectMatches.size();
-            for (User winner : perfectMatches) {
-                winner.setPoints(winner.getPoints() + rewardPerWinner);
-            }
-            return String.format("✅ Pari résolu! %d classement(s) parfait(s) | %d points chacun\nClassement: %s",
-                               perfectMatches.size(), rewardPerWinner, String.join(" > ", correctRanking));
+        return perfectMatches;
+    }
+    
+    /**
+     * Distribue les récompenses pour les matchs parfaits
+     */
+    private String distributePerfectMatchRewards(List<User> winners, int totalPot) {
+        int rewardPerWinner = totalPot / winners.size();
+        for (User winner : winners) {
+            winner.setPoints(winner.getPoints() + rewardPerWinner);
         }
-        
-        // Sinon, calcul des distances Kendall tau et répartition top 30%
-        return resolveByKendallDistance(totalPot);
+        return String.format(SUCCESS_PERFECT, winners.size(), rewardPerWinner, String.join(" > ", correctRanking));
     }
     
     /**
@@ -140,7 +169,7 @@ public class OrderedRankingBet extends Bet {
         Collections.sort(distances, Comparator.comparingDouble(urd -> urd.distance));
         
         // Sélectionner le top 30% (arrondi supérieur)
-        int winnerCount = (int) Math.ceil(distances.size() * 0.30);
+        int winnerCount = (int) Math.ceil(distances.size() * TOP_PERCENT);
         List<UserRankingDistance> winners = distances.subList(0, Math.min(winnerCount, distances.size()));
         
         // Calculer les poids (inverse de la distance normalisée)
@@ -158,15 +187,14 @@ public class OrderedRankingBet extends Bet {
         
         // Distribuer le pot proportionnellement aux poids
         StringBuilder result = new StringBuilder();
-        result.append(String.format("✅ Pari résolu! Classement: %s\nTop %d parieurs (30%%):\n",
-                                   String.join(" > ", correctRanking), winners.size()));
+        result.append(String.format(SUCCESS_KENDALL, String.join(" > ", correctRanking), winners.size()));
         
         for (UserRankingDistance urd : winners) {
             double weight = weights.get(urd.user);
             int reward = (int) ((weight / totalWeight) * totalPot);
             urd.user.setPoints(urd.user.getPoints() + reward);
             
-            result.append(String.format("  • %s: %s (distance: %.0f) → +%d pts\n",
+            result.append(String.format(WINNER_DETAIL_FORMAT,
                                       urd.user.getName(),
                                       String.join(" > ", urd.ranking),
                                       urd.distance,

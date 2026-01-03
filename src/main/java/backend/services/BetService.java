@@ -22,6 +22,11 @@ import backend.models.WatchParty;
 @Service
 public class BetService {
     
+    private static final String ADMIN_REQUIRED_ERROR = "❌ Seuls les admins peuvent créer des paris";
+    private static final String WATCH_PARTY_NOT_FOUND = "❌ Watch party introuvable: ";
+    private static final String ACTIVE_BET_EXISTS = "❌ Un pari est déjà actif pour cette watch party";
+    private static final String NO_ACTIVE_BET = "❌ Aucun pari actif pour cette watch party";
+    
     private final WatchPartyManager watchPartyManager;
     private final UserService userService;
 
@@ -31,23 +36,37 @@ public class BetService {
     }
 
     /**
+     * Valide les conditions communes pour créer un pari
+     * @return Message d'erreur ou null si validation réussie
+     */
+    private String validateBetCreation(User admin, WatchParty wp, String watchPartyName) {
+        if (!admin.isAdmin()) {
+            return ADMIN_REQUIRED_ERROR;
+        }
+        
+        if (wp == null) {
+            return WATCH_PARTY_NOT_FOUND + watchPartyName;
+        }
+        
+        if (wp.hasActiveBet()) {
+            return ACTIVE_BET_EXISTS;
+        }
+        
+        return null;
+    }
+
+    /**
      * Crée un pari à choix discrets (2-4 options)
      */
     public String createDiscreteChoiceBet(String watchPartyName, String adminName, 
                                          String question, List<String> choices, 
                                          int votingMinutes) {
         User admin = userService.getUser(adminName);
-        if (!admin.isAdmin()) {
-            return "❌ Seuls les admins peuvent créer des paris";
-        }
-        
         WatchParty wp = watchPartyManager.getWatchPartyByName(watchPartyName);
-        if (wp == null) {
-            return "❌ Watch party introuvable: " + watchPartyName;
-        }
         
-        if (wp.hasActiveBet()) {
-            return "❌ Un pari est déjà actif pour cette watch party";
+        String validationError = validateBetCreation(admin, wp, watchPartyName);
+        if (validationError != null) {
+            return validationError;
         }
         
         LocalDateTime votingEndTime = LocalDateTime.now().plusMinutes(votingMinutes);
@@ -64,17 +83,11 @@ public class BetService {
                                        Double minValue, Double maxValue,
                                        int votingMinutes) {
         User admin = userService.getUser(adminName);
-        if (!admin.isAdmin()) {
-            return "❌ Seuls les admins peuvent créer des paris";
-        }
-        
         WatchParty wp = watchPartyManager.getWatchPartyByName(watchPartyName);
-        if (wp == null) {
-            return "❌ Watch party introuvable: " + watchPartyName;
-        }
         
-        if (wp.hasActiveBet()) {
-            return "❌ Un pari est déjà actif pour cette watch party";
+        String validationError = validateBetCreation(admin, wp, watchPartyName);
+        if (validationError != null) {
+            return validationError;
         }
         
         LocalDateTime votingEndTime = LocalDateTime.now().plusMinutes(votingMinutes);
@@ -91,17 +104,11 @@ public class BetService {
                                          String question, List<String> items,
                                          int votingMinutes) {
         User admin = userService.getUser(adminName);
-        if (!admin.isAdmin()) {
-            return "❌ Seuls les admins peuvent créer des paris";
-        }
-        
         WatchParty wp = watchPartyManager.getWatchPartyByName(watchPartyName);
-        if (wp == null) {
-            return "❌ Watch party introuvable: " + watchPartyName;
-        }
         
-        if (wp.hasActiveBet()) {
-            return "❌ Un pari est déjà actif pour cette watch party";
+        String validationError = validateBetCreation(admin, wp, watchPartyName);
+        if (validationError != null) {
+            return validationError;
         }
         
         LocalDateTime votingEndTime = LocalDateTime.now().plusMinutes(votingMinutes);
@@ -116,11 +123,11 @@ public class BetService {
     public String vote(String watchPartyName, String username, Object votedValue, int points) {
         WatchParty wp = watchPartyManager.getWatchPartyByName(watchPartyName);
         if (wp == null) {
-            return "❌ Watch party introuvable: " + watchPartyName;
+            return WATCH_PARTY_NOT_FOUND + watchPartyName;
         }
         
         if (!wp.hasActiveBet()) {
-            return "❌ Aucun pari actif pour cette watch party";
+            return NO_ACTIVE_BET;
         }
         
         User user = userService.getUser(username);
@@ -140,7 +147,7 @@ public class BetService {
         
         WatchParty wp = watchPartyManager.getWatchPartyByName(watchPartyName);
         if (wp == null) {
-            return "❌ Watch party introuvable: " + watchPartyName;
+            return WATCH_PARTY_NOT_FOUND + watchPartyName;
         }
         
         return wp.closeActiveBet();
@@ -157,11 +164,11 @@ public class BetService {
         
         WatchParty wp = watchPartyManager.getWatchPartyByName(watchPartyName);
         if (wp == null) {
-            return "❌ Watch party introuvable: " + watchPartyName;
+            return WATCH_PARTY_NOT_FOUND + watchPartyName;
         }
         
         if (!wp.hasActiveBet()) {
-            return "❌ Aucun pari actif pour cette watch party";
+            return NO_ACTIVE_BET;
         }
         
         Bet bet = wp.getActiveBet();
@@ -179,11 +186,11 @@ public class BetService {
         
         WatchParty wp = watchPartyManager.getWatchPartyByName(watchPartyName);
         if (wp == null) {
-            return "❌ Watch party introuvable: " + watchPartyName;
+            return WATCH_PARTY_NOT_FOUND + watchPartyName;
         }
         
         if (!wp.hasActiveBet()) {
-            return "❌ Aucun pari actif pour cette watch party";
+            return NO_ACTIVE_BET;
         }
         
         Bet bet = wp.getActiveBet();

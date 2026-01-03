@@ -18,6 +18,21 @@ import java.util.Map;
  */
 public class NumericValueBet extends Bet {
     
+    private static final String ERROR_VOTING_CLOSED = "❌ Le vote est fermé";
+    private static final String ERROR_INVALID_NUMBER = "❌ La valeur doit être un nombre";
+    private static final String ERROR_NUMBER_FORMAT = "❌ Format de nombre invalide";
+    private static final String ERROR_MUST_BE_INTEGER = "❌ La valeur doit être un entier";
+    private static final String ERROR_VALUE_TOO_SMALL = "❌ Valeur trop petite (min: %s)";
+    private static final String ERROR_VALUE_TOO_LARGE = "❌ Valeur trop grande (max: %s)";
+    private static final String ERROR_INSUFFICIENT_POINTS = "❌ Points insuffisants ou vote déjà enregistré";
+    private static final String ERROR_NOT_PENDING = "❌ Le pari doit être en attente pour être résolu";
+    private static final String SUCCESS_VOTE = "✅ Vote enregistré: %s (%d points)";
+    private static final String SUCCESS_EXACT_MATCH = "✅ Pari résolu! Valeur exacte: %s | %d gagnants exacts | %d points chacun";
+    private static final String SUCCESS_PROXIMITY = "✅ Pari résolu! Valeur: %s | Top %d parieurs (30%%):\n";
+    private static final String WINNER_DETAIL_FORMAT = "  • %s: %s (écart: %s) → +%d pts%n";
+    private static final double TOLERANCE = 0.0001;
+    private static final double TOP_PERCENT = 0.30;
+    
     private Map<User, Double> userValues;      // User -> valeur prédite
     private Double correctValue;               // La valeur correcte (après résolution)
     private boolean isInteger;                 // true = entier, false = flottant
@@ -44,87 +59,108 @@ public class NumericValueBet extends Bet {
     @Override
     public String vote(User user, Object votedValue, int points) {
         if (!isVotingOpen()) {
-            return "❌ Le vote est fermé";
+            return ERROR_VOTING_CLOSED;
         }
         
-        Double value;
-        try {
-            if (votedValue instanceof Number) {
-                value = ((Number) votedValue).doubleValue();
-            } else if (votedValue instanceof String) {
-                value = Double.parseDouble((String) votedValue);
-            } else {
-                return "❌ La valeur doit être un nombre";
-            }
-        } catch (NumberFormatException e) {
-            return "❌ Format de nombre invalide";
+        Double value = parseNumericValue(votedValue);
+        if (value == null) {
+            return ERROR_INVALID_NUMBER;
         }
         
-        // Validation des contraintes
-        if (isInteger && value != Math.floor(value)) {
-            return "❌ La valeur doit être un entier";
-        }
-        
-        if (minValue != null && value < minValue) {
-            return "❌ Valeur trop petite (min: " + minValue + ")";
-        }
-        
-        if (maxValue != null && value > maxValue) {
-            return "❌ Valeur trop grande (max: " + maxValue + ")";
+        String validationError = validateValue(value);
+        if (validationError != null) {
+            return validationError;
         }
         
         if (!deductPoints(user, points)) {
-            return "❌ Points insuffisants ou vote déjà enregistré";
+            return ERROR_INSUFFICIENT_POINTS;
         }
         
         userValues.put(user, value);
-        return "✅ Vote enregistré: " + formatValue(value) + " (" + points + " points)";
+        return String.format(SUCCESS_VOTE, formatValue(value), points);
+    }
+    
+    /**
+     * Parse une valeur numérique depuis différents types
+     */
+    private Double parseNumericValue(Object value) {
+        try {
+            if (value instanceof Number number) {
+                return number.doubleValue();
+            } else if (value instanceof String str) {
+                return Double.parseDouble(str);
+            }
+        } catch (NumberFormatException e) {
+            return null;
+        }
+        return null;
+    }
+    
+    /**
+     * Valide les contraintes sur la valeur
+     */
+    private String validateValue(double value) {
+        if (isInteger && value != Math.floor(value)) {
+            return ERROR_MUST_BE_INTEGER;
+        }
+        
+        if (minValue != null && value < minValue) {
+            return String.format(ERROR_VALUE_TOO_SMALL, minValue);
+        }
+        
+        if (maxValue != null && value > maxValue) {
+            return String.format(ERROR_VALUE_TOO_LARGE, maxValue);
+        }
+        
+        return null;
     }
     
     @Override
     public String resolve(Object correctValue) {
         if (state != State.PENDING) {
-            return "❌ Le pari doit être en attente pour être résolu";
+            return ERROR_NOT_PENDING;
         }
         
-        Double value;
-        try {
-            if (correctValue instanceof Number) {
-                value = ((Number) correctValue).doubleValue();
-            } else if (correctValue instanceof String) {
-                value = Double.parseDouble((String) correctValue);
-            } else {
-                return "❌ La valeur doit être un nombre";
-            }
-        } catch (NumberFormatException e) {
-            return "❌ Format de nombre invalide";
+        Double value = parseNumericValue(correctValue);
+        if (value == null) {
+            return ERROR_NUMBER_FORMAT;
         }
         
         this.correctValue = value;
         state = State.RESOLVED;
         
         int totalPot = getTotalPot();
+        List<User> exactMatches = findExactMatches(value);
         
-        // Vérifier s'il y a des valeurs exactes
+        if (!exactMatches.isEmpty()) {
+            return distributeExactMatchRewards(exactMatches, totalPot, value);
+        }
+        
+        return resolveByProximity(value, totalPot);
+    }
+    
+    /**
+     * Trouve les utilisateurs avec une valeur exacte
+     */
+    private List<User> findExactMatches(double correctValue) {
         List<User> exactMatches = new ArrayList<>();
         for (Map.Entry<User, Double> entry : userValues.entrySet()) {
-            if (Math.abs(entry.getValue() - value) < 0.0001) { // Tolérance pour flottants
+            if (Math.abs(entry.getValue() - correctValue) < TOLERANCE) {
                 exactMatches.add(entry.getKey());
             }
         }
-        
-        // Si valeurs exactes trouvées, répartition équitable
-        if (!exactMatches.isEmpty()) {
-            int rewardPerWinner = totalPot / exactMatches.size();
-            for (User winner : exactMatches) {
-                winner.setPoints(winner.getPoints() + rewardPerWinner);
-            }
-            return String.format("✅ Pari résolu! Valeur exacte: %s | %d gagnants exacts | %d points chacun",
-                               formatValue(value), exactMatches.size(), rewardPerWinner);
+        return exactMatches;
+    }
+    
+    /**
+     * Distribue les récompenses pour les matchs exacts
+     */
+    private String distributeExactMatchRewards(List<User> winners, int totalPot, double value) {
+        int rewardPerWinner = totalPot / winners.size();
+        for (User winner : winners) {
+            winner.setPoints(winner.getPoints() + rewardPerWinner);
         }
-        
-        // Sinon, calcul des distances et répartition top 30%
-        return resolveByProximity(value, totalPot);
+        return String.format(SUCCESS_EXACT_MATCH, formatValue(value), winners.size(), rewardPerWinner);
     }
     
     /**
@@ -142,7 +178,7 @@ public class NumericValueBet extends Bet {
         Collections.sort(distances, Comparator.comparingDouble(ud -> ud.distance));
         
         // Sélectionner le top 30% (arrondi supérieur)
-        int winnerCount = (int) Math.ceil(distances.size() * 0.30);
+        int winnerCount = (int) Math.ceil(distances.size() * TOP_PERCENT);
         List<UserDistance> winners = distances.subList(0, Math.min(winnerCount, distances.size()));
         
         // Calculer les poids (inverse de la distance normalisée)
@@ -160,15 +196,14 @@ public class NumericValueBet extends Bet {
         
         // Distribuer le pot proportionnellement aux poids
         StringBuilder result = new StringBuilder();
-        result.append(String.format("✅ Pari résolu! Valeur: %s | Top %d parieurs (30%%):\n",
-                                   formatValue(correctValue), winners.size()));
+        result.append(String.format(SUCCESS_PROXIMITY, formatValue(correctValue), winners.size()));
         
         for (UserDistance ud : winners) {
             double weight = weights.get(ud.user);
             int reward = (int) ((weight / totalWeight) * totalPot);
             ud.user.setPoints(ud.user.getPoints() + reward);
             
-            result.append(String.format("  • %s: %s (écart: %s) → +%d pts\n",
+            result.append(String.format(WINNER_DETAIL_FORMAT,
                                       ud.user.getName(),
                                       formatValue(ud.predictedValue),
                                       formatValue(ud.distance),

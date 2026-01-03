@@ -7,7 +7,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -116,11 +115,11 @@ class MainTest {
     @DisplayName("Only admin can create discrete bet")
     void testDiscreteBetAdminOnly() {
         List<String> choices = Arrays.asList("A", "B");
+        LocalDateTime votingEnd = LocalDateTime.now().plusMinutes(10);
         
-        assertThrows(IllegalArgumentException.class, () -> {
-            new DiscreteChoiceBet("Test?", alice, watchParty,
-                LocalDateTime.now().plusMinutes(10), choices);
-        });
+        assertThrows(IllegalArgumentException.class, () -> 
+            new DiscreteChoiceBet("Test?", alice, watchParty, votingEnd, choices)
+        );
     }
 
     // ==================== NUMERIC VALUE BET TESTS ====================
