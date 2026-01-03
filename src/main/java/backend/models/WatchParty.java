@@ -18,6 +18,9 @@ public class WatchParty {
     
     // Match state management (admin features)
     private MatchState matchState;
+    
+    // Betting system - one active bet per watch party
+    private Bet activeBet;
 
     // Constructor for manual watch parties (existing)
     public WatchParty(String name, LocalDateTime date, String game) {
@@ -182,5 +185,53 @@ public class WatchParty {
     public boolean canLaunchMiniGame() {
         // Only when the match is paused
         return matchState == MatchState.PAUSED;
+    }
+    
+    // ==================== BETTING SYSTEM ====================
+    
+    /**
+     * Crée et associe un pari à cette watch party
+     * @return message de succès ou d'erreur
+     */
+    public String createBet(Bet bet) {
+        if (activeBet != null && activeBet.getState() != Bet.State.RESOLVED 
+            && activeBet.getState() != Bet.State.CANCELED) {
+            return "❌ Un pari est déjà actif pour cette watch party";
+        }
+        
+        if (!bet.getCreator().isAdmin()) {
+            return "❌ Seuls les admins peuvent créer des paris";
+        }
+        
+        activeBet = bet;
+        return "✅ Pari créé: " + bet.getQuestion();
+    }
+    
+    /**
+     * Obtient le pari actif
+     */
+    public Bet getActiveBet() {
+        return activeBet;
+    }
+    
+    /**
+     * Vérifie si un pari est actif
+     */
+    public boolean hasActiveBet() {
+        return activeBet != null && (activeBet.getState() == Bet.State.VOTING 
+                                   || activeBet.getState() == Bet.State.PENDING);
+    }
+    
+    /**
+     * Ferme le pari actif
+     */
+    public String closeActiveBet() {
+        if (activeBet == null) {
+            return "❌ Aucun pari actif";
+        }
+        if (activeBet.getState() != Bet.State.VOTING) {
+            return "❌ Le pari n'est pas en phase de vote";
+        }
+        return activeBet.endVoting();
     }
 }
