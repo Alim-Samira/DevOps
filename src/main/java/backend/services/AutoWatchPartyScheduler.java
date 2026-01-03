@@ -33,13 +33,10 @@ public class AutoWatchPartyScheduler {
      */
     public void start() {
         if (running) {
-            System.out.println("[!] Scheduler already running");
             return;
         }
         
         running = true;
-        System.out.println("🚀 Auto Watch Party Scheduler started");
-        System.out.println("   Checking for updates every 5 minutes...");
         
         // Run immediately, then every 5 minutes
         scheduler.scheduleAtFixedRate(
@@ -64,7 +61,6 @@ public class AutoWatchPartyScheduler {
             if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
                 scheduler.shutdownNow();
             }
-            System.out.println("🛑 Auto Watch Party Scheduler stopped");
         } catch (InterruptedException e) {
             scheduler.shutdownNow();
             Thread.currentThread().interrupt();
@@ -75,17 +71,13 @@ public class AutoWatchPartyScheduler {
      * Check all auto watch parties and update their status
      */
     private void updateAllAutoWatchParties() {
-        System.out.println("\n🔄 Checking auto watch parties...");
-        
         for (WatchParty wp : manager.getAllAutoWatchParties()) {
             try {
                 updateWatchParty(wp);
             } catch (Exception e) {
-                System.err.println("[X] Error updating watch party '" + wp.name() + "': " + e.getMessage());
+                // Ignore errors for individual watch parties
             }
         }
-        
-        System.out.println("✅ Auto watch party check complete\n");
     }
     
     /**
@@ -125,7 +117,6 @@ public class AutoWatchPartyScheduler {
      * Force an immediate update (useful for testing)
      */
     public void forceUpdate() {
-        System.out.println("🔄 Forcing immediate update...");
         updateAllAutoWatchParties();
     }
 

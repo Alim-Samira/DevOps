@@ -24,7 +24,6 @@ public abstract class Chat {
     // Send a message to the Chat
     public void sendMessage(User sender, String content) {
         if (sender == null || content == null || content.isEmpty()) {
-            System.out.println("Invalid message details.");
             return;
         }
 
@@ -34,51 +33,7 @@ public abstract class Chat {
     }
 
     public void listMessages() {
-        System.out.println("\n--- Messages in " + this.name + " ---");
-        
-        if (activeGame != null) {
-            System.out.println("[GAME] **MINI-JEU ACTIF: " + activeGame.getCommandName().toUpperCase() + " en cours!** Utilisez la commande '!" + activeGame.getCommandName() + " exit' pour l'arreter.");
-        } else {
-            System.out.print("[INFO] Jeux dispos: ");
-            for (MiniGame game : availableGames) {
-                System.out.print(game.getCommandName() + " ");
-            }
-            System.out.println("\n------------------------------------");
-        }
-        
-        if (messages.isEmpty()) {
-            System.out.println("No messages yet.");
-        } else {
-            for (Message message : messages) {
-                String senderName = message.getSender().getName();
-                String messageIdSnippet = String.valueOf(message.getTimestamp().hashCode() & 0xFFFF); 
-                String displaySender;
-                String senderIcon;
-
-                if (senderName.equals("RB")) {
-                    displaySender = "[BOT] RB";
-                    senderIcon = ""; 
-                } else if (senderName.equals("RB")) {
-                    displaySender = "[GAME] RB";
-                    senderIcon = ""; 
-                } else {
-                    displaySender = message.getSender().getName();
-                    senderIcon = ""; 
-                }
-
-                String replyIndicator = "";
-                if (message.getReplyTo() != null) {
-                    replyIndicator = " \n    [REPLY to: " + message.getReplyTo().getSender().getName() + ": '" + message.getReplyContentSnippet() + "']";
-                }
-
-                System.out.println(String.format(" %s | ID: %s", message.getTimestamp(), messageIdSnippet));
-                System.out.println(String.format(" %s %s: %s", senderIcon, displaySender, message.getContent()));
-                System.out.println(replyIndicator);
-                System.out.println(String.format("   [LIKES] %d | [REPORTS] %d", message.getLikes(), message.getReports()));
-                System.out.println("------------------------------------");
-            }
-        }
-        System.out.println("------------------------------------");
+        // Messages listing delegated to UI layer
     }
 
     public String launchGame(User launcher, String gameCommand) {
@@ -112,7 +67,7 @@ public abstract class Chat {
 
         String gameResponse = activeGame.processInput(user, input);
         
-        if (activeGame != null && activeGame.isFinished()) {
+        if (activeGame.isFinished()) {
             activeGame = null; 
         }
         return gameResponse;
@@ -136,7 +91,6 @@ public abstract class Chat {
     public void deleteMessage(User remover, String messageShortId) {
         Message message = findMessageById(messageShortId);
         if (message == null) {
-            System.out.println("[X] Message non trouve avec l'ID court: " + messageShortId);
             return;
         }
 
@@ -145,19 +99,11 @@ public abstract class Chat {
 
         if (isSender || isAdminOrMod) {
             messages.remove(message);
-            System.out.println("[OK] Message (ID court: " + messageShortId + ") de " + message.getSender().getName() + " supprime par " + remover.getName() + ".");
-        } else {
-            System.out.println("[X] Vous n'avez pas la permission de supprimer ce message.");
         }
     }
 
     public void removeMessage(Message message) {
-        if (messages.contains(message)) {
-            messages.remove(message);
-            System.out.println("[OK] Message removed from chat history.");
-        } else {
-            System.out.println("[X] Error: Message not found in chat history for removal.");
-        }
+        messages.remove(message);
     }
 
     public String getName() {
@@ -174,7 +120,6 @@ public abstract class Chat {
     
     public void registerGame(MiniGame game) {
         this.availableGames.add(game);
-        System.out.println("✨ Nouveau jeu ajouté au " + this.name + " : " + game.getCommandName());
     }
     
     public List<MiniGame> getAvailableGames() {
