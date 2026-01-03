@@ -59,19 +59,12 @@ public class WatchPartyController {
     }
 
     // 3. DELETE (Remove)
-    @DeleteMapping("/{name}")
+    @DeleteMapping(value = "/{name}", produces = "text/plain")
     public String deleteWatchParty(@PathVariable String name) {
         boolean removed = manager.removeWatchParty(name);
         if (removed) {
-            return "🗑️ Deleted: " + sanitize(name);
+            return "🗑️ Deleted: ";
         }
-        return "⚠️ Not found: " + sanitize(name);
-    }
-
-    private String sanitize(String input) {
-        if (input == null) {
-            return "";
-        }
-        return input.replaceAll("[<>\"'&]", "");
+        return "⚠️ Not found: ";
     }
 }

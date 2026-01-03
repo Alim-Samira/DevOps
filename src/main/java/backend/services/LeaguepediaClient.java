@@ -159,7 +159,7 @@ public class LeaguepediaClient {
             return new ArrayList<>();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            return new ArrayList<>();
+            throw new IllegalStateException("Thread interrupted while querying Leaguepedia", e);
         }
     }
 
