@@ -160,12 +160,18 @@ class ControllerIntegrationTest {
     }
 
     @Test
-    @DisplayName("POST /api/bets should create a bet")
-    void testCreateBet() throws Exception {
-        mockMvc. perform(post("/api/bets")
+    @DisplayName("POST /api/bets/discrete should create a discrete choice bet")
+    void testCreateDiscreteBet() throws Exception {
+        // First create a watch party
+        mockMvc.perform(post("/api/watchparties")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"question\": \"Who wins?\", \"options\": [\"Team A\", \"Team B\"]}"))
-                .andExpect(status().isOk())
-                .andExpect(content().string("Bet created!"));
+                .content("{\"name\": \"Test WP\", \"type\": \"TEAM\"}"))
+                .andExpect(status().isOk());
+
+        // Then create a bet for that watch party
+        mockMvc.perform(post("/api/bets/discrete")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"watchParty\": \"Auto WP: Team Test WP\", \"admin\": \"AdminAPI\", \"question\": \"Who wins?\", \"choices\": [\"Team A\", \"Team B\"], \"votingMinutes\": 10}"))
+                .andExpect(status().isOk());
     }
 }

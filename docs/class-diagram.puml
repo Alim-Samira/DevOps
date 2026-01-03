@@ -61,33 +61,63 @@ class Choice {
   + voters() : Collection<User>
 }
 
-interface Bet {
-  + setResult(Choice)
-  + vote(User, Choice, Integer)
-  + cancel()
-  + endVoteTime()
-  + options(Collection<Choice>)
+' ========== NEW BETTING SYSTEM ==========
+enum BetType {
+  DISCRETE_CHOICE
+  NUMERIC_VALUE
+  ORDERED_RANKING
 }
-class PublicBet {
-  - Map<User, Integer> users
-  - Collection<Choice> options
-  - State state
-  - Time votingTime
+
+abstract class Bet {
+  # String question
+  # User creator
+  # WatchParty watchParty
+  # State state
+  # LocalDateTime votingEndTime
+  # Map<User, Integer> userBets
+  + {abstract} vote(User, Object, int) : String
+  + {abstract} resolve(Object) : String
+  + cancel() : String
+  + endVoting() : String
+  + getTotalPot() : int
+  + getType() : BetType
 }
-class PrivateBet {
-  - Map<User, Integer> users
-  - Collection<Choice> options
-  - State state
-  - Time votingTime
-  - PrivateChat chat
+
+class DiscreteChoiceBet {
+  - List<String> choices
+  - Map<User, String> userChoices
+  - String correctChoice
+  + vote(User, Object, int) : String
+  + resolve(Object) : String
+  + getVoteDistribution() : Map<String, Integer>
 }
-Bet <|.. PublicBet
-Bet <|.. PrivateBet
-PublicBet o-- Choice
-PrivateBet o-- Choice
-PublicBet o-- User
-PrivateBet o-- User
-PrivateBet o-- PrivateChat
+
+class NumericValueBet {
+  - Map<User, Double> userValues
+  - Double correctValue
+  - boolean isInteger
+  - Double minValue
+  - Double maxValue
+  + vote(User, Object, int) : String
+  + resolve(Object) : String
+  - resolveByProximity(double, int) : String
+}
+
+class OrderedRankingBet {
+  - List<String> items
+  - Map<User, List<String>> userRankings
+  - List<String> correctRanking
+  + vote(User, Object, int) : String
+  + resolve(Object) : String
+  - resolveByKendallDistance(int) : String
+  - calculateKendallTauDistance(List, List) : double
+}
+
+Bet <|-- DiscreteChoiceBet
+Bet <|-- NumericValueBet
+Bet <|-- OrderedRankingBet
+Bet o-- User
+Bet o-- WatchParty
 
 class Match {
   - String id
@@ -118,12 +148,17 @@ class WatchParty {
   - MatchState matchState
   - AutoConfig autoConfig
   - List<User> participants
+  - Bet activeBet
   + updateStatus(Match)
   + canLaunchMiniGame()
+  + createBet(Bet) : String
+  + hasActiveBet() : boolean
+  + getActiveBet() : Bet
 }
 WatchParty o-- AutoConfig
 WatchParty o-- Match
 WatchParty o-- User
+WatchParty o-- Bet
 
 ' Services
 class UserService {
@@ -136,9 +171,16 @@ class ChatService {
   + createPrivateChat(String, User)
 }
 class BetService {
-  - Map<String, PublicBet> publicBets
-  + createBet(...)
-  + vote(...)
+  - WatchPartyManager watchPartyManager
+  - UserService userService
+  + createDiscreteChoiceBet(...) : String
+  + createNumericValueBet(...) : String
+  + createOrderedRankingBet(...) : String
+  + vote(...) : String
+  + endVoting(...) : String
+  + resolveBet(...) : String
+  + cancelBet(...) : String
+  + getAllActiveBets() : List<Bet>
 }
 class RankingService {
   + getRanking()
@@ -179,6 +221,7 @@ class UserController
 class WatchPartyController
 
 BetController --> BetService
+BetController --> UserService
 ChatController --> ChatService
 QuizController --> QuizService
 RankingController --> RankingService
@@ -186,7 +229,8 @@ UserController --> UserService
 WatchPartyController --> WatchPartyManager
 
 ' Domain links
-BetService o-- PublicBet
+BetService o-- Bet
+BetService o-- WatchPartyManager
 BetService o-- UserService
 ChatService o-- UserService
 QuizService o-- QuizGame

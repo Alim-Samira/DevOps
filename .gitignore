@@ -18,3 +18,5 @@ build/
 out/
 bin/
 .git
+
+copilot-instructions.md
