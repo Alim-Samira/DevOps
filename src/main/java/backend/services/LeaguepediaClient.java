@@ -55,30 +55,40 @@ public class LeaguepediaClient {
      * This method will return null if no match can be found or on errors.
      */
     public Match getNextTeamMatch(String teamName) {
-        List<Match> all = fetchUpcomingMatchesForTeam(teamName);
-        LocalDateTime now = LocalDateTime.now();
-        Match best = null;
-        for (Match m : all) {
-            if (isValidUpcomingMatch(m, now) && (best == null || m.getScheduledTime().isBefore(best.getScheduledTime()))) {
-                best = m;
+        try {
+            List<Match> all = fetchUpcomingMatchesForTeam(teamName);
+            LocalDateTime now = LocalDateTime.now();
+            Match best = null;
+            for (Match m : all) {
+                if (isValidUpcomingMatch(m, now) && (best == null || m.getScheduledTime().isBefore(best.getScheduledTime()))) {
+                    best = m;
+                }
             }
+            return best;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted while fetching team matches", e);
         }
-        return best;
     }
 
     /**
      * Get the next upcoming match in a tournament
      */
     public Match getNextTournamentMatch(String tournamentName) {
-        List<Match> all = fetchUpcomingMatchesForTournament(tournamentName);
-        LocalDateTime now = LocalDateTime.now();
-        Match best = null;
-        for (Match m : all) {
-            if (isValidUpcomingMatch(m, now) && (best == null || m.getScheduledTime().isBefore(best.getScheduledTime()))) {
-                best = m;
+        try {
+            List<Match> all = fetchUpcomingMatchesForTournament(tournamentName);
+            LocalDateTime now = LocalDateTime.now();
+            Match best = null;
+            for (Match m : all) {
+                if (isValidUpcomingMatch(m, now) && (best == null || m.getScheduledTime().isBefore(best.getScheduledTime()))) {
+                    best = m;
+                }
             }
+            return best;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted while fetching tournament matches", e);
         }
-        return best;
     }
 
     private boolean isValidUpcomingMatch(Match m, LocalDateTime now) {
@@ -93,74 +103,75 @@ public class LeaguepediaClient {
      * Fetch upcoming matches for a team.
      * Uses a simple Cargo query to Liquipedia's API and attempts to map results.
      */
-    public List<Match> fetchUpcomingMatchesForTeam(String teamName) {
-        String where = URLEncoder.encode(String.format("(Team1 LIKE '%%%s%%' OR Team2 LIKE '%%%s%%')", teamName, teamName), StandardCharsets.UTF_8);
-        String q = "action=cargoquery&format=json&tables=match&fields=Start,Team1,Team2,Event,Stream,BestOf&page=Match&where=" + where + "&limit=50";
-        return queryCargoForMatches(q);
+    public List<Match> fetchUpcomingMatchesForTeam(String teamName) throws InterruptedException {
+        try {
+            String where = URLEncoder.encode(String.format("(Team1 LIKE '%%%s%%' OR Team2 LIKE '%%%s%%')", teamName, teamName), StandardCharsets.UTF_8);
+            String q = "action=cargoquery&format=json&tables=match&fields=Start,Team1,Team2,Event,Stream,BestOf&page=Match&where=" + where + "&limit=50";
+            return queryCargoForMatches(q);
+        } catch (IOException e) {
+            return new ArrayList<>();
+        }
     }
 
     /**
      * Fetch upcoming matches for a tournament.
      */
-    public List<Match> fetchUpcomingMatchesForTournament(String tournamentName) {
-        String where = URLEncoder.encode(String.format("Event LIKE '%%%s%%'", tournamentName), StandardCharsets.UTF_8);
-        String q = "action=cargoquery&format=json&tables=match&fields=Start,Team1,Team2,Event,Stream,BestOf&page=Match&where=" + where + "&limit=50";
-        return queryCargoForMatches(q);
-    }
-
-    private List<Match> queryCargoForMatches(String query) {
+    public List<Match> fetchUpcomingMatchesForTournament(String tournamentName) throws InterruptedException {
         try {
-            String uri = apiEndpoint + "?" + query;
-                    HttpRequest req = HttpRequest.newBuilder()
-                        .uri(URI.create(uri))
-                        .GET()
-                        .header("User-Agent", "DevOps-Client/0.2.0")
-                        .header("Accept", "application/json, text/javascript, */*; q=0.01")
-                        .header("Accept-Encoding", "gzip, deflate, br")
-                        .header("Referer", "https://liquipedia.net/leagueoflegends/")
-                        .header("X-Requested-With", "XMLHttpRequest")
-                        .build();
-
-            HttpResponse<byte[]> resp = http.send(req, HttpResponse.BodyHandlers.ofByteArray());
-            int status = resp.statusCode();
-            byte[] respBytes = resp.body();
-
-            String respBody;
-            String contentEncoding = resp.headers().firstValue("Content-Encoding").orElse("").toLowerCase();
-            if (contentEncoding.contains("gzip")) {
-                try (ByteArrayInputStream bais = new ByteArrayInputStream(respBytes);
-                     GZIPInputStream gzis = new GZIPInputStream(bais)) {
-                    respBody = new String(gzis.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
-                }
-            } else {
-                respBody = new String(respBytes, java.nio.charset.StandardCharsets.UTF_8);
-            }
-
-            if (status != 200) {
-                // Non-200 response - log details for debugging
-                return new ArrayList<>();
-            }
-
-            JsonObject root = gson.fromJson(respBody, JsonObject.class);
-            JsonArray cargo = extractCargoArray(root);
-
-            List<Match> result = new ArrayList<>();
-            if (cargo == null) return result;
-
-            for (JsonElement el : cargo) {
-                Match m = parseMatchFromElement(el);
-                if (m != null) {
-                    result.add(m);
-                }
-            }
-
-            return result;
+            String where = URLEncoder.encode(String.format("Event LIKE '%%%s%%'", tournamentName), StandardCharsets.UTF_8);
+            String q = "action=cargoquery&format=json&tables=match&fields=Start,Team1,Team2,Event,Stream,BestOf&page=Match&where=" + where + "&limit=50";
+            return queryCargoForMatches(q);
         } catch (IOException e) {
             return new ArrayList<>();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException("Thread interrupted while querying Leaguepedia", e);
         }
+    }
+
+    private List<Match> queryCargoForMatches(String query) throws IOException, InterruptedException {
+        String uri = apiEndpoint + "?" + query;
+                HttpRequest req = HttpRequest.newBuilder()
+                    .uri(URI.create(uri))
+                    .GET()
+                    .header("User-Agent", "DevOps-Client/0.2.0")
+                    .header("Accept", "application/json, text/javascript, */*; q=0.01")
+                    .header("Accept-Encoding", "gzip, deflate, br")
+                    .header("Referer", "https://liquipedia.net/leagueoflegends/")
+                    .header("X-Requested-With", "XMLHttpRequest")
+                    .build();
+
+        HttpResponse<byte[]> resp = http.send(req, HttpResponse.BodyHandlers.ofByteArray());
+        int status = resp.statusCode();
+        byte[] respBytes = resp.body();
+
+        String respBody;
+        String contentEncoding = resp.headers().firstValue("Content-Encoding").orElse("").toLowerCase();
+        if (contentEncoding.contains("gzip")) {
+            try (ByteArrayInputStream bais = new ByteArrayInputStream(respBytes);
+                 GZIPInputStream gzis = new GZIPInputStream(bais)) {
+                respBody = new String(gzis.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+            }
+        } else {
+            respBody = new String(respBytes, java.nio.charset.StandardCharsets.UTF_8);
+        }
+
+        if (status != 200) {
+            // Non-200 response - log details for debugging
+            return new ArrayList<>();
+        }
+
+        JsonObject root = gson.fromJson(respBody, JsonObject.class);
+        JsonArray cargo = extractCargoArray(root);
+
+        List<Match> result = new ArrayList<>();
+        if (cargo == null) return result;
+
+        for (JsonElement el : cargo) {
+            Match m = parseMatchFromElement(el);
+            if (m != null) {
+                result.add(m);
+            }
+        }
+
+        return result;
     }
 
     private JsonArray extractCargoArray(JsonObject root) {

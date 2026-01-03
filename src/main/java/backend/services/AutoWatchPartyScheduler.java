@@ -8,6 +8,7 @@ import backend.models.Match;
 import backend.models.WatchParty;
 
 import java.util.List;
+import java.util.Collections;
 
 /**
  * Scheduler that automatically opens/closes watch parties based on match timing
@@ -148,10 +149,15 @@ public class AutoWatchPartyScheduler {
     }
 
     private List<Match> fetchMatches(AutoConfig config) {
-        if (config.isTeamBased()) {
-            return apiClient.fetchUpcomingMatchesForTeam(config.getTarget());
+        try {
+            if (config.isTeamBased()) {
+                return apiClient.fetchUpcomingMatchesForTeam(config.getTarget());
+            }
+            return apiClient.fetchUpcomingMatchesForTournament(config.getTarget());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return Collections.emptyList();
         }
-        return apiClient.fetchUpcomingMatchesForTournament(config.getTarget());
     }
 
     private void appendMatchReport(StringBuilder report, WatchParty wp, AutoConfig config, List<Match> matches) {
