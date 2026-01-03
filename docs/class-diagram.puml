@@ -1,0 +1,196 @@
+@startuml
+left to right direction
+skinparam classAttributeIconSize 0
+
+class User {
+  - String name
+  - int points
+  - boolean admin
+  - boolean moderator
+}
+
+class Message {
+  - User sender
+  - String content
+  - String timestamp
+}
+
+abstract class Chat {
+  - String name
+  - List<Message> messages
+  - User admin
+  - MiniGame activeGame
+  + sendMessage(User, String)
+  + launchGame(User, String)
+  + processGameInput(User, String)
+  + getActiveGame()
+}
+class PublicChat
+class PrivateChat {
+  - Map<User, Integer> users
+  + setPoints(User, int)
+  + users() : Map<User, Integer>
+}
+Chat <|-- PublicChat
+Chat <|-- PrivateChat
+Chat o-- Message
+Chat o-- MiniGame
+PrivateChat o-- User
+
+interface MiniGame {
+  + getCommandName()
+  + start()
+  + processInput(User, String)
+  + isFinished()
+  + getResults()
+  + reset()
+}
+class QuizGame {
+  - Map<User, Integer> scores
+  - List<QuizQuestion> questions
+  - int currentQuestionIndex
+  - boolean isActive
+}
+MiniGame <|.. QuizGame
+QuizGame o-- User
+
+class Choice {
+  - String text
+  - Collection<User> voters
+  + newVoter(User)
+  + voters() : Collection<User>
+}
+
+interface Bet {
+  + setResult(Choice)
+  + vote(User, Choice, Integer)
+  + cancel()
+  + endVoteTime()
+  + options(Collection<Choice>)
+}
+class PublicBet {
+  - Map<User, Integer> users
+  - Collection<Choice> options
+  - State state
+  - Time votingTime
+}
+class PrivateBet {
+  - Map<User, Integer> users
+  - Collection<Choice> options
+  - State state
+  - Time votingTime
+  - PrivateChat chat
+}
+Bet <|.. PublicBet
+Bet <|.. PrivateBet
+PublicBet o-- Choice
+PrivateBet o-- Choice
+PublicBet o-- User
+PrivateBet o-- User
+PrivateBet o-- PrivateChat
+
+class Match {
+  - String id
+  - String team1
+  - String team2
+  - LocalDateTime scheduledTime
+  - String tournament
+  - String stream
+  - String bestOf
+  + isPast()
+  + isFinished()
+}
+class MatchState <<enum>>
+class WatchPartyStatus <<enum>>
+class AutoType <<enum>>
+
+class AutoConfig {
+  - AutoType type
+  - String target
+  - Match currentMatch
+  + isTeamBased()
+  + isTournamentBased()
+}
+
+class WatchParty {
+  - String name
+  - WatchPartyStatus status
+  - MatchState matchState
+  - AutoConfig autoConfig
+  - List<User> participants
+  + updateStatus(Match)
+  + canLaunchMiniGame()
+}
+WatchParty o-- AutoConfig
+WatchParty o-- Match
+WatchParty o-- User
+
+' Services
+class UserService {
+  - Map<String, User> users
+  + getUser(String)
+}
+class ChatService {
+  - Map<String, Chat> chats
+  + createPublicChat(String, User)
+  + createPrivateChat(String, User)
+}
+class BetService {
+  - Map<String, PublicBet> publicBets
+  + createBet(...)
+  + vote(...)
+}
+class RankingService {
+  + getRanking()
+}
+class QuizService {
+  + answer(...)
+}
+class LeaguepediaClient {
+  - String apiEndpoint
+  - HttpClient http
+  - Gson gson
+  + fetchUpcomingMatchesForTeam(String)
+  + fetchUpcomingMatchesForTournament(String)
+}
+class AutoWatchPartyScheduler {
+  - WatchPartyManager manager
+  - LeaguepediaClient apiClient
+  + updateAllAutoWatchParties()
+}
+class WatchPartyManager {
+  - List<WatchParty> watchParties
+  - List<WatchParty> watchPartiesPlanned
+  - AutoWatchPartyScheduler scheduler
+  + addWatchParty(WatchParty)
+  + planifyWatchParty(WatchParty)
+  + changeMatchState(...)
+}
+WatchPartyManager o-- WatchParty
+WatchPartyManager o-- AutoWatchPartyScheduler
+AutoWatchPartyScheduler o-- LeaguepediaClient
+
+' Controllers -> Services
+class BetController
+class ChatController
+class QuizController
+class RankingController
+class UserController
+class WatchPartyController
+
+BetController --> BetService
+ChatController --> ChatService
+QuizController --> QuizService
+RankingController --> RankingService
+UserController --> UserService
+WatchPartyController --> WatchPartyManager
+
+' Domain links
+BetService o-- PublicBet
+BetService o-- UserService
+ChatService o-- UserService
+QuizService o-- QuizGame
+RankingService o-- UserService
+WatchPartyManager o-- LeaguepediaClient
+
+@enduml
