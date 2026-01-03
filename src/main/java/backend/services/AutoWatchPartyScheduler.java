@@ -93,10 +93,15 @@ public class AutoWatchPartyScheduler {
         
         // Find next match based on type
         Match nextMatch = null;
-        if (config.isTeamBased()) {
-            nextMatch = apiClient.getNextTeamMatch(config.getTarget());
-        } else if (config.isTournamentBased()) {
-            nextMatch = apiClient.getNextTournamentMatch(config.getTarget());
+        try {
+            if (config.isTeamBased()) {
+                nextMatch = apiClient.getNextTeamMatch(config.getTarget());
+            } else if (config.isTournamentBased()) {
+                nextMatch = apiClient.getNextTournamentMatch(config.getTarget());
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return;
         }
         
         // Update match status if we have a current match

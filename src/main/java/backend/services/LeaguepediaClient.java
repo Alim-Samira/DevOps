@@ -54,41 +54,31 @@ public class LeaguepediaClient {
      * Get the next upcoming match for a specific team using a Cargo query.
      * This method will return null if no match can be found or on errors.
      */
-    public Match getNextTeamMatch(String teamName) {
-        try {
-            List<Match> all = fetchUpcomingMatchesForTeam(teamName);
-            LocalDateTime now = LocalDateTime.now();
-            Match best = null;
-            for (Match m : all) {
-                if (isValidUpcomingMatch(m, now) && (best == null || m.getScheduledTime().isBefore(best.getScheduledTime()))) {
-                    best = m;
-                }
+    public Match getNextTeamMatch(String teamName) throws InterruptedException {
+        List<Match> all = fetchUpcomingMatchesForTeam(teamName);
+        LocalDateTime now = LocalDateTime.now();
+        Match best = null;
+        for (Match m : all) {
+            if (isValidUpcomingMatch(m, now) && (best == null || m.getScheduledTime().isBefore(best.getScheduledTime()))) {
+                best = m;
             }
-            return best;
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException("Interrupted while fetching team matches", e);
         }
+        return best;
     }
 
     /**
      * Get the next upcoming match in a tournament
      */
-    public Match getNextTournamentMatch(String tournamentName) {
-        try {
-            List<Match> all = fetchUpcomingMatchesForTournament(tournamentName);
-            LocalDateTime now = LocalDateTime.now();
-            Match best = null;
-            for (Match m : all) {
-                if (isValidUpcomingMatch(m, now) && (best == null || m.getScheduledTime().isBefore(best.getScheduledTime()))) {
-                    best = m;
-                }
+    public Match getNextTournamentMatch(String tournamentName) throws InterruptedException {
+        List<Match> all = fetchUpcomingMatchesForTournament(tournamentName);
+        LocalDateTime now = LocalDateTime.now();
+        Match best = null;
+        for (Match m : all) {
+            if (isValidUpcomingMatch(m, now) && (best == null || m.getScheduledTime().isBefore(best.getScheduledTime()))) {
+                best = m;
             }
-            return best;
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException("Interrupted while fetching tournament matches", e);
         }
+        return best;
     }
 
     private boolean isValidUpcomingMatch(Match m, LocalDateTime now) {
