@@ -2,6 +2,7 @@ package backend.services;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+// import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -138,7 +139,6 @@ public class WatchPartyManager {
 
     /**
      * Force an immediate scheduler update and return a textual report of found matches.
-     * @param daysAhead number of days ahead to search for upcoming matches
      * @return textual report (per watch party) listing matches or a "no match" message
      */
     public String forceSchedulerUpdateReport() {

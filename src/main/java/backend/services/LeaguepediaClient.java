@@ -8,9 +8,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.zip.GZIPInputStream;
 
@@ -23,49 +22,34 @@ import backend.models.Match;
 import backend.models.MatchState;
 
 /**
- * Leaguepedia client that queries the Liquipedia/Leaguepedia Cargo API.
- *
- * NOTE: This is a simple implementation that attempts to map Cargo query
- * results into the project's `Match` model. Field names on the Cargo side
- * vary between wikis; this client tries several common keys and falls back
- * gracefully when values are missing.
+ * Client to fetch League of Legends esports match data
+ * Uses mock data for MVP, will connect to Leaguepedia API later
  */
 public class LeaguepediaClient {
-
-    private static final String DEFAULT_API = "https://liquipedia.net/leagueoflegends/api.php";
-    private static final String CARGO_QUERY_KEY = "cargoquery";
-    private static final String FULLTEXT_KEY = "fulltext";
     
-    private final String apiEndpoint;
-    private final HttpClient http;
-    private final Gson gson;
-
+    private List<Match> mockMatches;
+    
     public LeaguepediaClient() {
-        this(DEFAULT_API);
+        initializeMockData();
     }
-
-    public LeaguepediaClient(String apiEndpoint) {
-        this.apiEndpoint = apiEndpoint;
-        this.http = HttpClient.newHttpClient();
-        this.gson = new Gson();
-    }
-
+    
     /**
-     * Get the next upcoming match for a specific team using a Cargo query.
-     * This method will return null if no match can be found or on errors.
+     * Get the next upcoming match for a specific team
      */
     public Match getNextTeamMatch(String teamName) throws InterruptedException {
         List<Match> all = fetchUpcomingMatchesForTeam(teamName);
         LocalDateTime now = LocalDateTime.now();
-        Match best = null;
-        for (Match m : all) {
-            if (isValidUpcomingMatch(m, now) && (best == null || m.getScheduledTime().isBefore(best.getScheduledTime()))) {
-                best = m;
-            }
-        }
-        return best;
+        
+        return mockMatches.stream()
+            .filter(m -> !m.isFinished())
+            .filter(m -> !m.isPast()) 
+            .filter(m -> m.getTeam1().equalsIgnoreCase(teamName) || 
+                        m.getTeam2().equalsIgnoreCase(teamName))
+            .filter(m -> m.getScheduledTime().isAfter(now))
+            .min((m1, m2) -> m1.getScheduledTime().compareTo(m2.getScheduledTime()))
+            .orElse(null);
     }
-
+    
     /**
      * Get the next upcoming match in a tournament
      */
@@ -104,7 +88,7 @@ public class LeaguepediaClient {
     }
 
     /**
-     * Fetch upcoming matches for a tournament.
+     * Get all upcoming matches for a team
      */
     public List<Match> fetchUpcomingMatchesForTournament(String tournamentName) throws InterruptedException {
         try {
@@ -215,67 +199,103 @@ public class LeaguepediaClient {
         }
         return result;
     }
-
-    private String extractMatchId(JsonObject title, JsonObject obj) {
-        if (title != null && title.has(FULLTEXT_KEY)) {
-            return title.get(FULLTEXT_KEY).getAsString();
-        }
-        return Integer.toString(obj.hashCode());
-    }
-
-    private String getFirstNonNull(JsonObject obj, String... keys) {
-        if (obj == null) return null;
-        for (String k : keys) {
-            if (obj.has(k) && !obj.get(k).isJsonNull()) {
-                return obj.get(k).getAsString();
-            }
-        }
-        return null;
-    }
-
-    private LocalDateTime parseDateTime(String s) {
-        if (s == null) return null;
-        s = s.trim();
-        // Try several common formats
-        DateTimeFormatter[] fmts = new DateTimeFormatter[] {
-            DateTimeFormatter.ISO_DATE_TIME,
-            DateTimeFormatter.ISO_LOCAL_DATE_TIME,
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"),
-            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'")
-        };
-        for (DateTimeFormatter f : fmts) {
-            try {
-                return LocalDateTime.parse(s, f);
-            } catch (DateTimeParseException ignored) {
-                // Format not matching - try next format
-            }
-        }
-
-        // Try parsing epoch seconds
-        try {
-            long epoch = Long.parseLong(s);
-            return LocalDateTime.ofEpochSecond(epoch, 0, java.time.ZoneOffset.UTC);
-        } catch (Exception ignored) {
-            // Not a valid epoch timestamp
-        }
-
-        return null;
-    }
-
+    
     /**
-     * Update match status locally based on current time. Kept for compatibility.
+     * Initialize mock data for testing
+     * In production, this would query Leaguepedia's Cargo API
+     */
+    private void initializeMockData() {
+        LocalDateTime now = LocalDateTime.now();
+        
+        mockMatches = new ArrayList<>(Arrays.asList(
+            // Upcoming matches (for testing auto watch parties)
+            new Match(
+                "worlds2025_t1_geng_1",
+                "T1",
+                "Gen.G",
+                now.plusMinutes(25), // 25min from now - should open soon!
+                "Worlds 2025",
+                "https://twitch.tv/riotgames",
+                "BO5"
+            ),
+            new Match(
+                "lck2025_t1_dk_1",
+                "T1",
+                "Dplus KIA",
+                now.plusHours(3),
+                "LCK Spring 2025",
+                "https://twitch.tv/lck",
+                "BO3"
+            ),
+            new Match(
+                "lec2025_g2_fnc_1",
+                "G2 Esports",
+                "Fnatic",
+                now.plusHours(5),
+                "LEC Spring 2025",
+                "https://twitch.tv/lec",
+                "BO1"
+            ),
+            new Match(
+                "worlds2025_geng_blg_1",
+                "Gen.G",
+                "BiliBili Gaming",
+                now.plusDays(1),
+                "Worlds 2025",
+                "https://twitch.tv/riotgames",
+                "BO5"
+            ),
+            new Match(
+                "lck2025_dk_kt_1",
+                "Dplus KIA",
+                "KT Rolster",
+                now.plusDays(2),
+                "LCK Spring 2025",
+                "https://twitch.tv/lck",
+                "BO3"
+            ),
+            
+            // Past matches (finished)
+            new Match(
+                "worlds2024_t1_blg_finals",
+                "T1",
+                "BiliBili Gaming",
+                now.minusDays(30),
+                "Worlds 2024",
+                "https://twitch.tv/riotgames",
+                "BO5"
+            )
+        ));
+        
+        // Mark past match as finished
+        mockMatches.get(mockMatches.size() - 1).setStatus(MatchState.FINISHED);
+    }
+    
+    /**
+     * Simulate checking if a match status has changed
+     * In production, this would query live match data
      */
     public void updateMatchStatus(Match match) {
         if (match == null) return;
+        
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime matchEnd = match.getScheduledTime().plusHours(match.getEstimatedDurationHours());
+        
+        // Auto-mark past matches as finished to prevent stale data
         if (match.isPast() && match.getStatus() != MatchState.FINISHED) {
             match.setStatus(MatchState.FINISHED);
+            System.out.println("[!] Auto-marked past match as finished: " + match.getId());
         } else if (now.isAfter(match.getScheduledTime()) && now.isBefore(matchEnd)) {
             match.setStatus(MatchState.IN_PROGRESS);
         } else if (now.isAfter(matchEnd)) {
             match.setStatus(MatchState.FINISHED);
         }
     }
-
+    
+    /**
+     * Get all mock matches (for debugging)
+     */
+    public List<Match> getAllMatches() {
+        return new ArrayList<>(mockMatches);
+    }
 }
