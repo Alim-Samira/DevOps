@@ -117,19 +117,19 @@ public class AutoWatchPartyScheduler {
     /**
      * Force an immediate update and return a textual report of matches retrieved.
      */
-    public String forceUpdateReport(int daysAhead) {
+    public String forceUpdateReport() {
         StringBuilder report = new StringBuilder();
         report.append("🔄 Forcing immediate update...\n");
 
         for (WatchParty wp : manager.getAllAutoWatchParties()) {
-            processWatchPartyReport(wp, daysAhead, report);
+            processWatchPartyReport(wp, report);
         }
 
         report.append("✅ Auto watch party check complete\n");
         return report.toString();
     }
 
-    private void processWatchPartyReport(WatchParty wp, int daysAhead, StringBuilder report) {
+    private void processWatchPartyReport(WatchParty wp, StringBuilder report) {
         try {
             AutoConfig config = wp.getAutoConfig();
             if (config == null) {
@@ -137,7 +137,7 @@ public class AutoWatchPartyScheduler {
                 return;
             }
 
-            List<Match> matches = fetchMatches(config, daysAhead);
+            List<Match> matches = fetchMatches(config);
             appendMatchReport(report, wp, config, matches);
             updateWatchPartyStatus(wp, config, matches);
 
@@ -147,7 +147,7 @@ public class AutoWatchPartyScheduler {
         }
     }
 
-    private List<Match> fetchMatches(AutoConfig config, int daysAhead) {
+    private List<Match> fetchMatches(AutoConfig config) {
         if (config.isTeamBased()) {
             return apiClient.fetchUpcomingMatchesForTeam(config.getTarget());
         }

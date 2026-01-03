@@ -88,11 +88,11 @@ public class WatchPartyManager {
         for (int i = 0; i < watchParties.size(); i++) {
             if (watchParties.get(i).name().equals(name)) {
                 watchParties.remove(i);
-                log.info("Removed watch party: {}", name);
+                log.info("Watch party removed");
                 return true;
             }
         }
-        log.warn("Watch party not found: {}", name);
+        log.warn("Watch party not found");
         return false;
     }
     
@@ -141,8 +141,8 @@ public class WatchPartyManager {
      * @param daysAhead number of days ahead to search for upcoming matches
      * @return textual report (per watch party) listing matches or a "no match" message
      */
-    public String forceSchedulerUpdateReport(int daysAhead) {
-        return scheduler.forceUpdateReport(daysAhead);
+    public String forceSchedulerUpdateReport() {
+        return scheduler.forceUpdateReport();
     }
     
     /**

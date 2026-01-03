@@ -155,7 +155,9 @@ public class LeaguepediaClient {
             }
 
             return result;
-        } catch (IOException | InterruptedException e) {
+        } catch (IOException e) {
+            return new ArrayList<>();
+        } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return new ArrayList<>();
         }

@@ -63,8 +63,15 @@ public class WatchPartyController {
     public String deleteWatchParty(@PathVariable String name) {
         boolean removed = manager.removeWatchParty(name);
         if (removed) {
-            return "🗑️ Deleted: " + name;
+            return "🗑️ Deleted: " + sanitize(name);
         }
-        return "⚠️ Not found: " + name;
+        return "⚠️ Not found: " + sanitize(name);
+    }
+
+    private String sanitize(String input) {
+        if (input == null) {
+            return "";
+        }
+        return input.replaceAll("[<>\"'&]", "");
     }
 }
