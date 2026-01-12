@@ -11,17 +11,23 @@ jobs:
   convert-to-pdf:
     runs-on: ubuntu-latest
     steps:
+      # Récupération du code (v4 pour éviter les erreurs futures)
       - uses: actions/checkout@v4
 
+      # Génération du PDF
       - name: Build PDF
         uses: BaileyJM02/markdown-to-pdf@v1
         with:
-          input_dir: docs   # It looks for MD files here
-          output_dir: pdfs  # It saves the PDF here
-          images_dir: docs/images # Explicitly tell it where images are (optional but safe)
+          input_dir: docs
+          output_dir: pdfs
+          # ASTUCE : En mettant 'docs' ici, l'action copie tout le dossier.
+          # Cela permet d'utiliser le lien standard 'images/mon-image.png'
+          images_dir: docs 
           
+      # Upload du résultat (v4 pour corriger ton erreur précédente)
       - name: Upload PDF Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Documentation
+          name: Documentation-Projet
           path: pdfs/*.pdf
+          overwrite: true
