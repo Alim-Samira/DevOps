@@ -1,4 +1,4 @@
-name: Generate PDF with Pandoc
+name: Generate PDF
 
 on:
   push:
@@ -12,23 +12,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      # Cette action utilise Pandoc et gère mieux les images
-      - name: Build PDF using Pandoc
-        uses: docker://pandoc/core:2.9
+
+      # ÉTAPE CRITIQUE : Vérifie que les fichiers sont bien là
+      - name: Debug - Verify Files
+        run: |
+          echo "Contenu du dossier docs :"
+          ls -R docs/
+
+      # Utilisation de l'image COMPLÈTE (latex) au lieu de core
+      - name: Build PDF using Pandoc LaTeX
+        uses: docker://pandoc/latex:latest
         with:
           args: >-
-            -f markdown
-            -t html5
             --output=doc.pdf
             docs/doc.md
             --resource-path=docs
-            --standalone
-            --css=.github/style.css
+            -V geometry:margin=1in
             
-      # Note : Pandoc génère le PDF à la racine ici (ou là où on lui dit)
       - name: Upload PDF Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Documentation-Projet
           path: doc.pdf
+          overwrite: true
