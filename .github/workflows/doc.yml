@@ -1,8 +1,8 @@
-name: Generate PDF
+name: Generate PDF with Pandoc
 
 on:
   push:
-    branches: [ documentation_auto ]
+    branches: [ main ]
 
 permissions:
   contents: write
@@ -11,22 +11,24 @@ jobs:
   convert-to-pdf:
     runs-on: ubuntu-latest
     steps:
-      # 1. Récupère le code (Version v4 à jour)
       - uses: actions/checkout@v4
-
-      # 2. Convertit le Markdown en PDF
-      - name: Build PDF
-        uses: BaileyJM02/markdown-to-pdf@v1
+      
+      # Cette action utilise Pandoc et gère mieux les images
+      - name: Build PDF using Pandoc
+        uses: docker://pandoc/core:2.9
         with:
-          input_dir: docs
-          output_dir: pdfs
-          # Ici, on dit au script que les images sont au même endroit que le md
-          images_dir: docs
-          
-      # 3. Sauvegarde le PDF pour que tu puisses le télécharger
+          args: >-
+            -f markdown
+            -t html5
+            --output=doc.pdf
+            docs/doc.md
+            --resource-path=docs
+            --standalone
+            --css=.github/style.css
+            
+      # Note : Pandoc génère le PDF à la racine ici (ou là où on lui dit)
       - name: Upload PDF Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Documentation-Projet
-          path: pdfs/*.pdf
-          overwrite: true
+          path: doc.pdf
