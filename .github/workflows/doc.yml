@@ -21,7 +21,7 @@ jobs:
           images_dir: docs/images # Explicitly tell it where images are (optional but safe)
           
       - name: Upload PDF Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Documentation
           path: pdfs/*.pdf
