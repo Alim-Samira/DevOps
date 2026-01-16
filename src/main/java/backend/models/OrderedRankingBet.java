@@ -150,6 +150,7 @@ public class OrderedRankingBet extends Bet {
         int rewardPerWinner = totalPot / winners.size();
         for (User winner : winners) {
             creditUserPoints(winner, rewardPerWinner);
+            recordWin(winner);
             if (isOffersTicket()) {
                 watchParty.grantTicket(winner, TicketType.ORDERED_RANKING);
                 if (Math.random() < 0.10) {
@@ -199,6 +200,7 @@ public class OrderedRankingBet extends Bet {
             double weight = weights.get(urd.user);
             int reward = (int) ((weight / totalWeight) * totalPot);
             creditUserPoints(urd.user, reward);
+            recordWin(urd.user);
             if (isOffersTicket()) {
                 watchParty.grantTicket(urd.user, TicketType.ORDERED_RANKING);
                 if (Math.random() < 0.10) {

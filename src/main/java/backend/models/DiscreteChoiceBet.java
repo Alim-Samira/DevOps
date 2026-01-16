@@ -95,6 +95,7 @@ public class DiscreteChoiceBet extends Bet {
         int rewardPerWinner = totalPot / winners.size();
         for (User winner : winners) {
             creditUserPoints(winner, rewardPerWinner);
+            recordWin(winner);
             // Tickets
             if (isOffersTicket()) {
                 watchParty.grantTicket(winner, TicketType.DISCRETE_CHOICE);

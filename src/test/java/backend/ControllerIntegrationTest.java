@@ -29,17 +29,17 @@ class ControllerIntegrationTest {
     // ==================== RANKING CONTROLLER TESTS ====================
 
     @Test
-    @DisplayName("GET /api/ranking should return ranking")
-    void testGetRanking() throws Exception {
-        mockMvc.perform(get("/api/ranking"))
+    @DisplayName("GET /api/rankings/public/points should return ranking")
+    void testGetPublicPointsRanking() throws Exception {
+        mockMvc.perform(get("/api/rankings/public/points"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }
 
     @Test
-    @DisplayName("GET /api/ranking/detailed should return detailed ranking")
-    void testGetDetailedRanking() throws Exception {
-        mockMvc.perform(get("/api/ranking/detailed"))
+    @DisplayName("GET /api/rankings/public/wins should return ranking")
+    void testGetPublicWinsRanking() throws Exception {
+        mockMvc.perform(get("/api/rankings/public/wins"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }

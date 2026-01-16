@@ -180,6 +180,17 @@ public abstract class Bet {
             user.addPointsForWatchParty(watchParty.name(), points);
         }
     }
+
+    /**
+     * Enregistre une victoire pour l'utilisateur selon le type de watchparty.
+     */
+    protected void recordWin(User user) {
+        if (watchParty.isPublic()) {
+            user.addPublicWin();
+        } else {
+            user.addWinForWatchParty(watchParty.name());
+        }
+    }
     
     // Getters
     public BetType getType() {

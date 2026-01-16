@@ -14,13 +14,15 @@ public class User {
     // Clé: nom de la watchparty
     private Map<String, Integer> pointsByWatchParty;
 
-    //Master Constructor (Sets everything)
+    // Master Constructor (Sets everything)
     public User(String name, boolean isAdmin, boolean isModerator) {
         this.name = name;
         this.isAdmin = isAdmin;
         this.isModerator = isModerator;
         this.publicPoints = 200; // Default starting public points
         this.pointsByWatchParty = new HashMap<>();
+        this.publicWins = 0;
+        this.winsByWatchParty = new HashMap<>();
     }
 
     // Automatically sets isModerator to false.
@@ -91,6 +93,31 @@ public class User {
 
     public Map<String, Integer> getPointsByWatchParty() {
         return new HashMap<>(pointsByWatchParty);
+    }
+
+    // Victoires
+    private int publicWins;
+    private Map<String, Integer> winsByWatchParty;
+
+    public int getPublicWins() {
+        return publicWins;
+    }
+
+    public void addPublicWin() {
+        this.publicWins = Math.max(0, this.publicWins + 1);
+    }
+
+    public int getWinsForWatchParty(String watchPartyName) {
+        return winsByWatchParty.getOrDefault(watchPartyName, 0);
+    }
+
+    public void addWinForWatchParty(String watchPartyName) {
+        int current = winsByWatchParty.getOrDefault(watchPartyName, 0);
+        winsByWatchParty.put(watchPartyName, Math.max(0, current + 1));
+    }
+
+    public Map<String, Integer> getWinsByWatchParty() {
+        return new HashMap<>(winsByWatchParty);
     }
 }
 // 

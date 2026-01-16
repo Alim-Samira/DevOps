@@ -159,6 +159,7 @@ public class NumericValueBet extends Bet {
         int rewardPerWinner = totalPot / winners.size();
         for (User winner : winners) {
             creditUserPoints(winner, rewardPerWinner);
+            recordWin(winner);
             if (isOffersTicket()) {
                 watchParty.grantTicket(winner, TicketType.NUMERIC_VALUE);
                 if (Math.random() < 0.10) {
@@ -208,6 +209,7 @@ public class NumericValueBet extends Bet {
             double weight = weights.get(ud.user);
             int reward = (int) ((weight / totalWeight) * totalPot);
             creditUserPoints(ud.user, reward);
+            recordWin(ud.user);
             if (isOffersTicket()) {
                 watchParty.grantTicket(ud.user, TicketType.NUMERIC_VALUE);
                 if (Math.random() < 0.10) {
