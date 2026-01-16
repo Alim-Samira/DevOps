@@ -18,7 +18,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
-@RequestMapping("/api/bets")
+@RequestMapping("/api")
 @Tag(name = "Betting System", description = "Système de paris pour watch parties")
 public class BetController {
 
@@ -50,19 +50,19 @@ public class BetController {
 
     // ==================== GET OPERATIONS ====================
 
-    @GetMapping
+    @GetMapping("/bets/all")
     @Operation(summary = "Liste tous les paris actifs")
     public List<Bet> getAllActiveBets() {
         return betService.getAllActiveBets();
     }
 
-    @GetMapping("/watchparty/{wpName}")
+    @GetMapping("/watchparties/{name}/bets")
     @Operation(summary = "Récupère le pari actif d'une watch party")
-    public Bet getActiveBet(@PathVariable String wpName) {
-        return betService.getActiveBet(wpName);
+    public Bet getActiveBet(@PathVariable String name) {
+        return betService.getActiveBet(name);
     }
 
-    @GetMapping("/users")
+    @GetMapping("/bets/users")
     @Operation(summary = "Liste tous les utilisateurs avec leurs points")
     public List<User> getUsersPoints() {
         return userService.getAllUsers();
@@ -70,11 +70,10 @@ public class BetController {
 
     // ==================== CREATE BETS ====================
 
-    @PostMapping("/discrete")
+    @PostMapping("/watchparties/{name}/bets/discrete")
     @Operation(summary = "Crée un pari à choix discrets",
-               description = "Payload: { \"watchParty\": \"WP1\", \"admin\": \"alice\", \"question\": \"Qui gagne?\", \"choices\": [\"T1\", \"GenG\"], \"votingMinutes\": 10 }")
-    public String createDiscreteChoiceBet(@RequestBody Map<String, Object> payload) {
-        String wpName = (String) payload.get(KEY_WATCH_PARTY);
+               description = "Payload: { \"admin\": \"alice\", \"question\": \"Qui gagne?\", \"choices\": [\"T1\", \"GenG\"], \"votingMinutes\": 10 }")
+    public String createDiscreteChoiceBet(@PathVariable String name, @RequestBody Map<String, Object> payload) {
         String admin = (String) payload.get(KEY_ADMIN);
         String question = (String) payload.get(KEY_QUESTION);
         @SuppressWarnings("unchecked")
@@ -83,25 +82,24 @@ public class BetController {
             ? (int) payload.get(KEY_VOTING_MINUTES) 
             : DEFAULT_VOTING_MINUTES;
 
-        if (wpName == null || admin == null || question == null || choices == null) {
+        if (admin == null || question == null || choices == null) {
             return ERROR_MISSING_DATA;
         }
 
-        String result = betService.createDiscreteChoiceBet(wpName, admin, question, choices, votingMinutes);
+        String result = betService.createDiscreteChoiceBet(name, admin, question, choices, votingMinutes);
         // offersTicket will be processed within BetService via active bet
         if (Boolean.TRUE.equals(payload.get(KEY_OFFERS_TICKET))) {
             // Set flag on the newly created bet if present
-            backend.models.Bet active = betService.getActiveBet(wpName);
+            backend.models.Bet active = betService.getActiveBet(name);
             if (active != null) active.setOffersTicket(true);
         }
         return result;
     }
 
-    @PostMapping("/numeric")
+    @PostMapping("/watchparties/{name}/bets/numeric")
     @Operation(summary = "Crée un pari sur une valeur numérique",
-               description = "Payload: { \"watchParty\": \"WP1\", \"admin\": \"alice\", \"question\": \"Nombre de kills?\", \"isInteger\": true, \"minValue\": 0, \"maxValue\": 100, \"votingMinutes\": 10 }")
-    public String createNumericValueBet(@RequestBody Map<String, Object> payload) {
-        String wpName = (String) payload.get(KEY_WATCH_PARTY);
+               description = "Payload: { \"admin\": \"alice\", \"question\": \"Nombre de kills?\", \"isInteger\": true, \"minValue\": 0, \"maxValue\": 100, \"votingMinutes\": 10 }")
+    public String createNumericValueBet(@PathVariable String name, @RequestBody Map<String, Object> payload) {
         String admin = (String) payload.get(KEY_ADMIN);
         String question = (String) payload.get(KEY_QUESTION);
         Boolean isInteger = (Boolean) payload.get("isInteger");
@@ -115,24 +113,23 @@ public class BetController {
             ? (int) payload.get(KEY_VOTING_MINUTES) 
             : DEFAULT_VOTING_MINUTES;
 
-        if (wpName == null || admin == null || question == null || isInteger == null) {
+        if (admin == null || question == null || isInteger == null) {
             return ERROR_MISSING_DATA;
         }
 
-        String result = betService.createNumericValueBet(wpName, admin, question, isInteger, 
+        String result = betService.createNumericValueBet(name, admin, question, isInteger, 
                                                minValue, maxValue, votingMinutes);
         if (Boolean.TRUE.equals(payload.get(KEY_OFFERS_TICKET))) {
-            backend.models.Bet active = betService.getActiveBet(wpName);
+            backend.models.Bet active = betService.getActiveBet(name);
             if (active != null) active.setOffersTicket(true);
         }
         return result;
     }
 
-    @PostMapping("/ranking")
+    @PostMapping("/watchparties/{name}/bets/ranking")
     @Operation(summary = "Crée un pari de classement ordonné",
-               description = "Payload: { \"watchParty\": \"WP1\", \"admin\": \"alice\", \"question\": \"Top 5 joueurs?\", \"items\": [\"Faker\", \"Chovy\", \"ShowMaker\", \"Doran\", \"Zeus\"], \"votingMinutes\": 10 }")
-    public String createOrderedRankingBet(@RequestBody Map<String, Object> payload) {
-        String wpName = (String) payload.get(KEY_WATCH_PARTY);
+               description = "Payload: { \"admin\": \"alice\", \"question\": \"Top 5 joueurs?\", \"items\": [\"Faker\", \"Chovy\", \"ShowMaker\", \"Doran\", \"Zeus\"], \"votingMinutes\": 10 }")
+    public String createOrderedRankingBet(@PathVariable String name, @RequestBody Map<String, Object> payload) {
         String admin = (String) payload.get(KEY_ADMIN);
         String question = (String) payload.get(KEY_QUESTION);
         @SuppressWarnings("unchecked")
@@ -141,13 +138,13 @@ public class BetController {
             ? (int) payload.get(KEY_VOTING_MINUTES) 
             : DEFAULT_VOTING_MINUTES;
 
-        if (wpName == null || admin == null || question == null || items == null) {
+        if (admin == null || question == null || items == null) {
             return ERROR_MISSING_DATA;
         }
 
-        String result = betService.createOrderedRankingBet(wpName, admin, question, items, votingMinutes);
+        String result = betService.createOrderedRankingBet(name, admin, question, items, votingMinutes);
         if (Boolean.TRUE.equals(payload.get(KEY_OFFERS_TICKET))) {
-            backend.models.Bet active = betService.getActiveBet(wpName);
+            backend.models.Bet active = betService.getActiveBet(name);
             if (active != null) active.setOffersTicket(true);
         }
         return result;
@@ -155,14 +152,14 @@ public class BetController {
 
     // ==================== VOTING ====================
 
-    @PostMapping("/{wpName}/vote")
+    @PostMapping("/watchparties/{name}/bets/vote")
     @Operation(summary = "Vote sur le pari actif d'une watch party",
                description = """
                    Payload varie selon le type:
                    - Discret: { "user": "bob", "value": "T1", "points": 50 }
                    - Numérique: { "user": "bob", "value": 35, "points": 50 }
                    - Classement: { "user": "bob", "value": ["Faker", "Chovy", ...], "points": 50 }""")
-    public String vote(@PathVariable String wpName, @RequestBody Map<String, Object> payload) {
+    public String vote(@PathVariable String name, @RequestBody Map<String, Object> payload) {
         String username = (String) payload.get(KEY_USER);
         Object value = payload.get(KEY_VALUE);
         int points = payload.get(KEY_POINTS) != null 
@@ -173,29 +170,29 @@ public class BetController {
             return ERROR_MISSING_DATA;
         }
 
-        return betService.vote(wpName, username, value, points);
+        return betService.vote(name, username, value, points);
     }
 
     // ==================== BET MANAGEMENT ====================
 
-    @PostMapping("/{wpName}/end-voting")
+    @PostMapping("/watchparties/{name}/bets/end-voting")
     @Operation(summary = "Ferme la phase de vote (admin uniquement)")
-    public String endVoting(@PathVariable String wpName, @RequestBody Map<String, String> payload) {
+    public String endVoting(@PathVariable String name, @RequestBody Map<String, String> payload) {
         String admin = payload.get(KEY_ADMIN);
         if (admin == null) {
             return ERROR_ADMIN_REQUIRED;
         }
-        return betService.endVoting(wpName, admin);
+        return betService.endVoting(name, admin);
     }
 
-    @PostMapping("/{wpName}/resolve")
+    @PostMapping("/watchparties/{name}/bets/resolve")
     @Operation(summary = "Résout le pari avec la valeur correcte (admin uniquement)",
                description = """
                    Payload varie selon le type:
                    - Discret: { "admin": "alice", "correctValue": "T1" }
                    - Numérique: { "admin": "alice", "correctValue": 35 }
                    - Classement: { "admin": "alice", "correctValue": ["Faker", "Chovy", ...] }""")
-    public String resolveBet(@PathVariable String wpName, @RequestBody Map<String, Object> payload) {
+    public String resolveBet(@PathVariable String name, @RequestBody Map<String, Object> payload) {
         String admin = (String) payload.get(KEY_ADMIN);
         Object correctValue = payload.get(KEY_CORRECT_VALUE);
 
@@ -203,25 +200,25 @@ public class BetController {
             return ERROR_MISSING_DATA;
         }
 
-        return betService.resolveBet(wpName, admin, correctValue);
+        return betService.resolveBet(name, admin, correctValue);
     }
 
-    @PostMapping("/{wpName}/cancel")
+    @PostMapping("/watchparties/{name}/bets/cancel")
     @Operation(summary = "Annule le pari et rembourse les parieurs (admin uniquement)")
-    public String cancelBet(@PathVariable String wpName, @RequestBody Map<String, String> payload) {
+    public String cancelBet(@PathVariable String name, @RequestBody Map<String, String> payload) {
         String admin = payload.get(KEY_ADMIN);
         if (admin == null) {
             return ERROR_ADMIN_REQUIRED;
         }
-        return betService.cancelBet(wpName, admin);
+        return betService.cancelBet(name, admin);
     }
 
     // ==================== TICKET USAGE ====================
 
-    @PostMapping("/{wpName}/use-ticket")
+    @PostMapping("/watchparties/{name}/bets/use-ticket")
     @Operation(summary = "Utilise un ticket sur le pari actif (état PENDING)",
                description = "Payload: { \"user\": \"bob\", \"ticketType\": \"IN_OR_OUT\", \"newPoints\": 0 } ou selon le type de pari: newValue")
-    public String useTicket(@PathVariable String wpName, @RequestBody Map<String, Object> payload) {
+    public String useTicket(@PathVariable String name, @RequestBody Map<String, Object> payload) {
         String username = (String) payload.get(KEY_USER);
         String ticketTypeStr = (String) payload.get(KEY_TICKET_TYPE);
         Object newValue = payload.get(KEY_NEW_VALUE);
@@ -232,7 +229,7 @@ public class BetController {
             return ERROR_MISSING_DATA;
         }
 
-        backend.models.Bet bet = betService.getActiveBet(wpName);
+        backend.models.Bet bet = betService.getActiveBet(name);
         if (bet == null) return "❌ Aucun pari actif";
         if (bet.getState() != backend.models.Bet.State.PENDING) return "❌ Le pari doit être en attente (PENDING)";
         if (bet.isOffersTicket()) return "❌ Impossible d'utiliser un ticket sur un pari qui offre un ticket";
