@@ -41,7 +41,7 @@ public class WatchParty {
         this.participants = new ArrayList<>();
         this.creator = null;
         this.matchState = MatchState.PRE_MATCH; // initial state
-        this.chat = new PartyChat(name + " Chat", new User("system", true));
+        this.chat = new Chat(name + " Chat", new User("system", true));
         this.userTickets = new HashMap<>();
     }
     
@@ -56,7 +56,7 @@ public class WatchParty {
         this.participants = new ArrayList<>();
         this.creator = creator;
         this.matchState = MatchState.PRE_MATCH; // initial state
-        this.chat = new PartyChat(name + " Chat", creator != null ? creator : new User("system", true));
+        this.chat = new Chat(name + " Chat", creator != null ? creator : new User("system", true));
         this.userTickets = new HashMap<>();
     }
 

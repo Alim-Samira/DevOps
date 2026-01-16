@@ -14,7 +14,7 @@ import backend.models.AutoType;
 import backend.models.DiscreteChoiceBet;
 import backend.models.NumericValueBet;
 import backend.models.OrderedRankingBet;
-import backend.models.PublicChat;
+import backend.models.Chat;
 import backend.models.QuizGame;
 import backend.models.User;
 import backend.models.WatchParty;
@@ -43,9 +43,9 @@ class MainTest {
     // ==================== CHAT TESTS ====================
 
     @Test
-    @DisplayName("Public chat should store messages correctly")
+    @DisplayName("Chat should store messages correctly")
     void testPublicChatMessaging() {
-        PublicChat chat = new PublicChat("Public Chat", admin);
+        Chat chat = new Chat("Chat", admin);
 
         chat.sendMessage(alice, "Hello everyone");
 
