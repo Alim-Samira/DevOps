@@ -158,7 +158,13 @@ public class NumericValueBet extends Bet {
     private String distributeExactMatchRewards(List<User> winners, int totalPot, double value) {
         int rewardPerWinner = totalPot / winners.size();
         for (User winner : winners) {
-            winner.setPoints(winner.getPoints() + rewardPerWinner);
+            creditUserPoints(winner, rewardPerWinner);
+            if (isOffersTicket()) {
+                watchParty.grantTicket(winner, TicketType.NUMERIC_VALUE);
+                if (Math.random() < 0.10) {
+                    watchParty.grantTicket(winner, TicketType.IN_OR_OUT);
+                }
+            }
         }
         return String.format(SUCCESS_EXACT_MATCH, formatValue(value), winners.size(), rewardPerWinner);
     }
@@ -201,7 +207,13 @@ public class NumericValueBet extends Bet {
         for (UserDistance ud : winners) {
             double weight = weights.get(ud.user);
             int reward = (int) ((weight / totalWeight) * totalPot);
-            ud.user.setPoints(ud.user.getPoints() + reward);
+            creditUserPoints(ud.user, reward);
+            if (isOffersTicket()) {
+                watchParty.grantTicket(ud.user, TicketType.NUMERIC_VALUE);
+                if (Math.random() < 0.10) {
+                    watchParty.grantTicket(ud.user, TicketType.IN_OR_OUT);
+                }
+            }
             
             result.append(String.format(WINNER_DETAIL_FORMAT,
                                       ud.user.getName(),
@@ -244,4 +256,17 @@ public class NumericValueBet extends Bet {
     public boolean isInteger() { return isInteger; }
     public Double getMinValue() { return minValue; }
     public Double getMaxValue() { return maxValue; }
+
+    /**
+     * Permet de modifier la valeur d'un utilisateur pendant PENDING via ticket.
+     */
+    public String modifyValue(User user, Double newValue) {
+        if (state != State.PENDING) return "❌ Le pari doit être en attente (PENDING)";
+        if (!userValues.containsKey(user)) return "❌ Aucun vote enregistré";
+        if (newValue == null) return "❌ Valeur invalide";
+        String err = validateValue(newValue);
+        if (err != null) return err;
+        userValues.put(user, newValue);
+        return "✅ Valeur modifiée";
+    }
 }
