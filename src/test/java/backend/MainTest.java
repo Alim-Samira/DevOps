@@ -67,9 +67,9 @@ class MainTest {
         );
         watchParty.createBet(bet);
 
-        assertEquals(200, alice.getPoints());
+        assertEquals(200, alice.getPublicPoints());
         bet.vote(alice, "T1", 50);
-        assertEquals(150, alice.getPoints());
+        assertEquals(150, alice.getPublicPoints());
     }
 
     @Test
@@ -84,15 +84,15 @@ class MainTest {
         bet.vote(alice, "A", 50);
         bet.vote(bob, "A", 50);
         
-        assertEquals(150, alice.getPoints());
-        assertEquals(150, bob.getPoints());
+        assertEquals(150, alice.getPublicPoints());
+        assertEquals(150, bob.getPublicPoints());
 
         bet.endVoting();
         bet.resolve("A");
 
         // Total pot = 100, split equally between 2 winners = 50 each
-        assertEquals(200, alice.getPoints()); // 150 + 50
-        assertEquals(200, bob.getPoints());   // 150 + 50
+        assertEquals(200, alice.getPublicPoints()); // 150 + 50
+        assertEquals(200, bob.getPublicPoints());   // 150 + 50
     }
 
     @Test
@@ -105,10 +105,10 @@ class MainTest {
         );
 
         bet.vote(alice, "A", 50);
-        assertEquals(150, alice.getPoints());
+        assertEquals(150, alice.getPublicPoints());
 
         bet.cancel();
-        assertEquals(200, alice.getPoints());
+        assertEquals(200, alice.getPublicPoints());
     }
 
     @Test
@@ -134,7 +134,7 @@ class MainTest {
 
         String result = bet.vote(alice, 35, 50);
         assertTrue(result.contains("✅"));
-        assertEquals(150, alice.getPoints());
+        assertEquals(150, alice.getPublicPoints());
     }
 
     @Test
@@ -152,8 +152,8 @@ class MainTest {
         String result = bet.resolve(35);
 
         assertTrue(result.contains("✅"));
-        assertEquals(200, alice.getPoints()); // 150 + 50
-        assertEquals(200, bob.getPoints());
+        assertEquals(200, alice.getPublicPoints()); // 150 + 50
+        assertEquals(200, bob.getPublicPoints());
     }
 
     @Test
@@ -177,7 +177,7 @@ class MainTest {
 
         assertTrue(result.contains("✅"));
         // Top 30% de 4 = 2 gagnants (bob et alice ou charlie)
-        assertTrue(bob.getPoints() > 150); // Bob devrait gagner plus (plus proche)
+        assertTrue(bob.getPublicPoints() > 150); // Bob devrait gagner plus (plus proche)
     }
 
     // ==================== ORDERED RANKING BET TESTS ====================
@@ -195,7 +195,7 @@ class MainTest {
         String result = bet.vote(alice, ranking, 50);
 
         assertTrue(result.contains("✅"));
-        assertEquals(150, alice.getPoints());
+        assertEquals(150, alice.getPublicPoints());
     }
 
     @Test
@@ -215,8 +215,8 @@ class MainTest {
         String result = bet.resolve(perfect);
 
         assertTrue(result.contains("parfait"));
-        assertEquals(200, alice.getPoints());
-        assertEquals(200, bob.getPoints());
+        assertEquals(200, alice.getPublicPoints());
+        assertEquals(200, bob.getPublicPoints());
     }
 
     @Test
@@ -236,7 +236,7 @@ class MainTest {
 
         assertTrue(result.contains("✅"));
         // Alice devrait gagner plus (distance = 0)
-        assertTrue(alice.getPoints() >= bob.getPoints());
+        assertTrue(alice.getPublicPoints() >= bob.getPublicPoints());
     }
 
     // ==================== WATCH PARTY BETTING TESTS ====================

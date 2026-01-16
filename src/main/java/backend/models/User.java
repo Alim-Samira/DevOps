@@ -47,16 +47,6 @@ public class User {
         return isModerator;
     }
 
-    // Ancien alias pour compatibilité (utilise désormais publicPoints)
-    public int getPoints() {
-        return publicPoints;
-    }
-
-    // Ancien alias pour compatibilité (met à jour publicPoints)
-    public void setPoints(int points) {
-        this.publicPoints = points;
-    }
-
     public void setName(String name) {
         this.name = name;
     }
@@ -69,7 +59,7 @@ public class User {
         this.isModerator = isModerator;
     }
 
-    // Nouveau système: helpers
+    // Public points system
     public int getPublicPoints() {
         return publicPoints;
     }
@@ -95,7 +85,7 @@ public class User {
         return new HashMap<>(pointsByWatchParty);
     }
 
-    // Victoires
+    // Wins system
     private int publicWins;
     private Map<String, Integer> winsByWatchParty;
 

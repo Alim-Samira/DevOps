@@ -24,10 +24,19 @@ public class BetController {
 
     private static final String ERROR_MISSING_DATA = "❌ Données manquantes";
     private static final String ERROR_ADMIN_REQUIRED = "❌ Admin requis";
+    private static final String ERROR_NO_ACTIVE_BET = "❌ Aucun pari actif";
+    private static final String ERROR_BET_NOT_PENDING = "❌ Le pari doit être en attente (PENDING)";
+    private static final String ERROR_OFFERS_TICKET = "❌ Impossible d'utiliser un ticket sur un pari qui offre un ticket";
+    private static final String ERROR_INVALID_TICKET_TYPE = "❌ Type de ticket invalide";
+    private static final String ERROR_NO_TICKET = "❌ L'utilisateur ne possède pas ce ticket";
+    private static final String ERROR_INCOMPATIBLE_TICKET = "❌ Ticket incompatible avec le type de pari";
+    private static final String ERROR_MISSING_NEW_POINTS = "❌ Champ newPoints requis pour IN_OR_OUT";
+    private static final String ERROR_MISSING_VALUE = "❌ newValue requis (String)";
+    private static final String ERROR_INVALID_VALUE = "❌ newValue invalide";
+    private static final String SUCCESS_PREFIX = "✅";
     private static final int DEFAULT_VOTING_MINUTES = 10;
     private static final int DEFAULT_POINTS = 10;
     
-    private static final String KEY_WATCH_PARTY = "watchParty";
     private static final String KEY_ADMIN = "admin";
     private static final String KEY_QUESTION = "question";
     private static final String KEY_VOTING_MINUTES = "votingMinutes";
@@ -222,17 +231,17 @@ public class BetController {
         String username = (String) payload.get(KEY_USER);
         String ticketTypeStr = (String) payload.get(KEY_TICKET_TYPE);
         Object newValue = payload.get(KEY_NEW_VALUE);
-        Integer newPoints = payload.get(KEY_NEW_POINTS) instanceof Number 
-            ? ((Number) payload.get(KEY_NEW_POINTS)).intValue() : null;
+        Integer newPoints = parseNewPoints(payload);
 
         if (username == null || ticketTypeStr == null) {
             return ERROR_MISSING_DATA;
         }
 
         backend.models.Bet bet = betService.getActiveBet(name);
-        if (bet == null) return "❌ Aucun pari actif";
-        if (bet.getState() != backend.models.Bet.State.PENDING) return "❌ Le pari doit être en attente (PENDING)";
-        if (bet.isOffersTicket()) return "❌ Impossible d'utiliser un ticket sur un pari qui offre un ticket";
+        String betValidationError = validateBet(bet);
+        if (betValidationError != null) {
+            return betValidationError;
+        }
 
         backend.models.WatchParty wp = bet.getWatchParty();
         backend.models.User user = userService.getUser(username);
@@ -241,49 +250,119 @@ public class BetController {
         try {
             type = backend.models.TicketType.valueOf(ticketTypeStr);
         } catch (IllegalArgumentException e) {
-            return "❌ Type de ticket invalide";
+            return ERROR_INVALID_TICKET_TYPE;
         }
 
         if (!wp.hasTicket(user, type)) {
-            return "❌ L'utilisateur ne possède pas ce ticket";
+            return ERROR_NO_TICKET;
         }
 
-        // Appliquer selon type
-        switch (type) {
-            case IN_OR_OUT:
-                if (newPoints == null) return "❌ Champ newPoints requis pour IN_OR_OUT";
-                String res = bet.adjustBetPoints(user, newPoints);
-                if (res.startsWith("✅")) wp.consumeTicket(user, type);
-                return res;
-            case DISCRETE_CHOICE:
-                if (!(bet instanceof backend.models.DiscreteChoiceBet)) return "❌ Ticket incompatible avec le type de pari";
-                if (!(newValue instanceof String)) return "❌ newValue requis (String)";
-                backend.models.DiscreteChoiceBet dcb = (backend.models.DiscreteChoiceBet) bet;
-                String choice = (String) newValue;
-                String msgChoice = dcb.modifyChoice(user, choice);
-                if (msgChoice.startsWith("✅")) wp.consumeTicket(user, type);
-                return msgChoice;
-            case NUMERIC_VALUE:
-                if (!(bet instanceof backend.models.NumericValueBet)) return "❌ Ticket incompatible avec le type de pari";
-                backend.models.NumericValueBet nvb = (backend.models.NumericValueBet) bet;
-                Double val = null;
-                if (newValue instanceof Number) val = ((Number) newValue).doubleValue();
-                else if (newValue instanceof String) try { val = Double.parseDouble((String) newValue); } catch (Exception e) { val = null; }
-                if (val == null) return "❌ newValue invalide";
-                String msgVal = nvb.modifyValue(user, val);
-                if (msgVal.startsWith("✅")) wp.consumeTicket(user, type);
-                return msgVal;
-            case ORDERED_RANKING:
-                if (!(bet instanceof backend.models.OrderedRankingBet)) return "❌ Ticket incompatible avec le type de pari";
-                if (!(newValue instanceof java.util.List)) return "❌ newValue requis (List<String>)";
-                @SuppressWarnings("unchecked")
-                java.util.List<String> ranking = (java.util.List<String>) newValue;
-                backend.models.OrderedRankingBet orb = (backend.models.OrderedRankingBet) bet;
-                String msgRank = orb.modifyRanking(user, ranking);
-                if (msgRank.startsWith("✅")) wp.consumeTicket(user, type);
-                return msgRank;
-            default:
-                return "❌ Type de ticket non supporté";
+        return handleTicketUsage(bet, user, type, wp, newValue, newPoints);
+    }
+
+    private Integer parseNewPoints(Map<String, Object> payload) {
+        Object obj = payload.get(KEY_NEW_POINTS);
+        if (obj instanceof Number num) {
+            return num.intValue();
         }
+        return null;
+    }
+
+    private String validateBet(backend.models.Bet bet) {
+        if (bet == null) {
+            return ERROR_NO_ACTIVE_BET;
+        }
+        if (bet.getState() != backend.models.Bet.State.PENDING) {
+            return ERROR_BET_NOT_PENDING;
+        }
+        if (bet.isOffersTicket()) {
+            return ERROR_OFFERS_TICKET;
+        }
+        return null;
+    }
+
+    private String handleTicketUsage(backend.models.Bet bet, backend.models.User user, 
+                                     backend.models.TicketType type, backend.models.WatchParty wp,
+                                     Object newValue, Integer newPoints) {
+        return switch (type) {
+            case IN_OR_OUT -> handleInOrOutTicket(bet, user, wp, newPoints);
+            case DISCRETE_CHOICE -> handleDiscreteChoiceTicket(bet, user, wp, newValue);
+            case NUMERIC_VALUE -> handleNumericValueTicket(bet, user, wp, newValue);
+            case ORDERED_RANKING -> handleOrderedRankingTicket(bet, user, wp, newValue);
+        };
+    }
+
+    private String handleInOrOutTicket(backend.models.Bet bet, backend.models.User user, 
+                                       backend.models.WatchParty wp, Integer newPoints) {
+        if (newPoints == null) {
+            return ERROR_MISSING_NEW_POINTS;
+        }
+        String res = bet.adjustBetPoints(user, newPoints);
+        if (res.startsWith(SUCCESS_PREFIX)) {
+            wp.consumeTicket(user, backend.models.TicketType.IN_OR_OUT);
+        }
+        return res;
+    }
+
+    private String handleDiscreteChoiceTicket(backend.models.Bet bet, backend.models.User user,
+                                              backend.models.WatchParty wp, Object newValue) {
+        if (!(bet instanceof backend.models.DiscreteChoiceBet dcb)) {
+            return ERROR_INCOMPATIBLE_TICKET;
+        }
+        if (!(newValue instanceof String choice)) {
+            return ERROR_MISSING_VALUE;
+        }
+        String msgChoice = dcb.modifyChoice(user, choice);
+        if (msgChoice.startsWith(SUCCESS_PREFIX)) {
+            wp.consumeTicket(user, backend.models.TicketType.DISCRETE_CHOICE);
+        }
+        return msgChoice;
+    }
+
+    private String handleNumericValueTicket(backend.models.Bet bet, backend.models.User user,
+                                            backend.models.WatchParty wp, Object newValue) {
+        if (!(bet instanceof backend.models.NumericValueBet nvb)) {
+            return ERROR_INCOMPATIBLE_TICKET;
+        }
+        Double val = parseDoubleValue(newValue);
+        if (val == null) {
+            return ERROR_INVALID_VALUE;
+        }
+        String msgVal = nvb.modifyValue(user, val);
+        if (msgVal.startsWith(SUCCESS_PREFIX)) {
+            wp.consumeTicket(user, backend.models.TicketType.NUMERIC_VALUE);
+        }
+        return msgVal;
+    }
+
+    private String handleOrderedRankingTicket(backend.models.Bet bet, backend.models.User user,
+                                              backend.models.WatchParty wp, Object newValue) {
+        if (!(bet instanceof backend.models.OrderedRankingBet orb)) {
+            return ERROR_INCOMPATIBLE_TICKET;
+        }
+        if (!(newValue instanceof java.util.List<?> ranking)) {
+            return "❌ newValue requis (List<String>)";
+        }
+        @SuppressWarnings("unchecked")
+        java.util.List<String> typedRanking = (java.util.List<String>) ranking;
+        String msgRank = orb.modifyRanking(user, typedRanking);
+        if (msgRank.startsWith(SUCCESS_PREFIX)) {
+            wp.consumeTicket(user, backend.models.TicketType.ORDERED_RANKING);
+        }
+        return msgRank;
+    }
+
+    private Double parseDoubleValue(Object newValue) {
+        if (newValue instanceof Number num) {
+            return num.doubleValue();
+        }
+        if (newValue instanceof String str) {
+            try {
+                return Double.parseDouble(str);
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return null;
     }
 }

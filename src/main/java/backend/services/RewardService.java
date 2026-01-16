@@ -73,13 +73,13 @@ public class RewardService {
 
     private List<String> awardTop3(String category, Map<String, Integer> ranking) {
         if (ranking == null || ranking.isEmpty()) return Collections.emptyList();
-        List<Map.Entry<String, Integer>> top = ranking.entrySet().stream().limit(3).collect(Collectors.toList());
+        List<Map.Entry<String, Integer>> top = ranking.entrySet().stream().limit(3).toList();
         List<String> msgs = new ArrayList<>();
         for (int i = 0; i < top.size(); i++) {
             Map.Entry<String, Integer> entry = top.get(i);
             String msg = String.format("🏅 [%s] #%d %s (%d)", category, i + 1, entry.getKey(), entry.getValue());
             msgs.add(msg);
-            log.info(msg + " — reward placeholder (color/title TBD)");
+            log.info(() -> msg + " — reward placeholder (color/title TBD)");
         }
         return msgs;
     }

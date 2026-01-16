@@ -152,26 +152,26 @@ class ControllerIntegrationTest {
     // ==================== BET CONTROLLER TESTS ====================
 
     @Test
-    @DisplayName("GET /api/bets should return all bets")
+    @DisplayName("GET /api/bets/all should return all bets")
     void testGetAllBets() throws Exception {
-        mockMvc.perform(get("/api/bets"))
+        mockMvc.perform(get("/api/bets/all"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }
 
     @Test
-    @DisplayName("POST /api/bets/discrete should create a discrete choice bet")
+    @DisplayName("POST /api/watchparties/{name}/bets/discrete should create a discrete choice bet")
     void testCreateDiscreteBet() throws Exception {
         // First create a watch party
         mockMvc.perform(post("/api/watchparties")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"name\": \"Test WP\", \"type\": \"TEAM\"}"))
+                .content("{\"name\": \"TestWP\", \"type\": \"TEAM\"}"))
                 .andExpect(status().isOk());
 
         // Then create a bet for that watch party
-        mockMvc.perform(post("/api/bets/discrete")
+        mockMvc.perform(post("/api/watchparties/Auto WP: Team TestWP/bets/discrete")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"watchParty\": \"Auto WP: Team Test WP\", \"admin\": \"AdminAPI\", \"question\": \"Who wins?\", \"choices\": [\"Team A\", \"Team B\"], \"votingMinutes\": 10}"))
+                .content("{\"admin\": \"AdminAPI\", \"question\": \"Who wins?\", \"choices\": [\"Team A\", \"Team B\"], \"votingMinutes\": 10}"))
                 .andExpect(status().isOk());
     }
 }

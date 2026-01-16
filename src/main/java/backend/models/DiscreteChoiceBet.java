@@ -100,7 +100,7 @@ public class DiscreteChoiceBet extends Bet {
             if (isOffersTicket()) {
                 watchParty.grantTicket(winner, TicketType.DISCRETE_CHOICE);
                 // 10% de chance d'un ticket IN_OR_OUT additionnel
-                if (Math.random() < 0.10) {
+                if (Math.random() < 0.10) { //NOSONAR S2245: Random is acceptable for game mechanics
                     watchParty.grantTicket(winner, TicketType.IN_OR_OUT);
                 }
             }

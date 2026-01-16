@@ -162,7 +162,7 @@ public class NumericValueBet extends Bet {
             recordWin(winner);
             if (isOffersTicket()) {
                 watchParty.grantTicket(winner, TicketType.NUMERIC_VALUE);
-                if (Math.random() < 0.10) {
+                if (Math.random() < 0.10) { //NOSONAR S2245: Random is acceptable for game mechanics
                     watchParty.grantTicket(winner, TicketType.IN_OR_OUT);
                 }
             }
@@ -212,7 +212,7 @@ public class NumericValueBet extends Bet {
             recordWin(ud.user);
             if (isOffersTicket()) {
                 watchParty.grantTicket(ud.user, TicketType.NUMERIC_VALUE);
-                if (Math.random() < 0.10) {
+                if (Math.random() < 0.10) { //NOSONAR S2245: Random is acceptable for game mechanics
                     watchParty.grantTicket(ud.user, TicketType.IN_OR_OUT);
                 }
             }

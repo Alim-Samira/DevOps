@@ -153,7 +153,7 @@ public class OrderedRankingBet extends Bet {
             recordWin(winner);
             if (isOffersTicket()) {
                 watchParty.grantTicket(winner, TicketType.ORDERED_RANKING);
-                if (Math.random() < 0.10) {
+                if (Math.random() < 0.10) { //NOSONAR S2245: Random is acceptable for game mechanics
                     watchParty.grantTicket(winner, TicketType.IN_OR_OUT);
                 }
             }
@@ -203,7 +203,7 @@ public class OrderedRankingBet extends Bet {
             recordWin(urd.user);
             if (isOffersTicket()) {
                 watchParty.grantTicket(urd.user, TicketType.ORDERED_RANKING);
-                if (Math.random() < 0.10) {
+                if (Math.random() < 0.10) { //NOSONAR S2245: Random is acceptable for game mechanics
                     watchParty.grantTicket(urd.user, TicketType.IN_OR_OUT);
                 }
             }
