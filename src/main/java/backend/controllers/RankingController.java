@@ -61,6 +61,6 @@ public class RankingController {
     @PostMapping("/watchparties/{name}/rankings/refresh")
     public String refreshWatchParty(@PathVariable String name) {
         rankingService.refreshWatchParty(name);
-        return "✅ Cache de classement rafraîchi pour " + name;
+        return "✅ Cache de classement rafraîchi";
     }
 }
