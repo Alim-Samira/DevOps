@@ -94,7 +94,16 @@ public class DiscreteChoiceBet extends Bet {
         // Répartition équitable du pot
         int rewardPerWinner = totalPot / winners.size();
         for (User winner : winners) {
-            winner.setPoints(winner.getPoints() + rewardPerWinner);
+            creditUserPoints(winner, rewardPerWinner);
+            recordWin(winner);
+            // Tickets
+            if (isOffersTicket()) {
+                watchParty.grantTicket(winner, TicketType.DISCRETE_CHOICE);
+                // 10% de chance d'un ticket IN_OR_OUT additionnel
+                if (Math.random() < 0.10) { //NOSONAR S2245: Random is acceptable for game mechanics
+                    watchParty.grantTicket(winner, TicketType.IN_OR_OUT);
+                }
+            }
         }
         
         return String.format("✅ Pari résolu! Réponse: %s | %d gagnants | %d points chacun",
@@ -121,4 +130,15 @@ public class DiscreteChoiceBet extends Bet {
     public List<String> getChoices() { return new ArrayList<>(choices); }
     public String getCorrectChoice() { return correctChoice; }
     public Map<User, String> getUserChoices() { return new HashMap<>(userChoices); }
+
+    /**
+     * Permet de modifier le choix d'un utilisateur pendant PENDING via ticket.
+     */
+    public String modifyChoice(User user, String newChoice) {
+        if (state != State.PENDING) return "❌ Le pari doit être en attente (PENDING)";
+        if (!userChoices.containsKey(user)) return "❌ Aucun vote enregistré";
+        if (newChoice == null || !choices.contains(newChoice)) return "❌ Choix invalide";
+        userChoices.put(user, newChoice);
+        return "✅ Choix modifié";
+    }
 }

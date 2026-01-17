@@ -149,7 +149,14 @@ public class OrderedRankingBet extends Bet {
     private String distributePerfectMatchRewards(List<User> winners, int totalPot) {
         int rewardPerWinner = totalPot / winners.size();
         for (User winner : winners) {
-            winner.setPoints(winner.getPoints() + rewardPerWinner);
+            creditUserPoints(winner, rewardPerWinner);
+            recordWin(winner);
+            if (isOffersTicket()) {
+                watchParty.grantTicket(winner, TicketType.ORDERED_RANKING);
+                if (Math.random() < 0.10) { //NOSONAR S2245: Random is acceptable for game mechanics
+                    watchParty.grantTicket(winner, TicketType.IN_OR_OUT);
+                }
+            }
         }
         return String.format(SUCCESS_PERFECT, winners.size(), rewardPerWinner, String.join(" > ", correctRanking));
     }
@@ -192,7 +199,14 @@ public class OrderedRankingBet extends Bet {
         for (UserRankingDistance urd : winners) {
             double weight = weights.get(urd.user);
             int reward = (int) ((weight / totalWeight) * totalPot);
-            urd.user.setPoints(urd.user.getPoints() + reward);
+            creditUserPoints(urd.user, reward);
+            recordWin(urd.user);
+            if (isOffersTicket()) {
+                watchParty.grantTicket(urd.user, TicketType.ORDERED_RANKING);
+                if (Math.random() < 0.10) { //NOSONAR S2245: Random is acceptable for game mechanics
+                    watchParty.grantTicket(urd.user, TicketType.IN_OR_OUT);
+                }
+            }
             
             result.append(String.format(WINNER_DETAIL_FORMAT,
                                       urd.user.getName(),
@@ -269,5 +283,20 @@ public class OrderedRankingBet extends Bet {
     public Map<User, List<String>> getUserRankings() { return new HashMap<>(userRankings); }
     public List<String> getCorrectRanking() { 
         return correctRanking != null ? new ArrayList<>(correctRanking) : null; 
+    }
+
+    /**
+     * Permet de modifier le classement d'un utilisateur pendant PENDING via ticket.
+     */
+    public String modifyRanking(User user, List<String> ranking) {
+        if (state != State.PENDING) return "❌ Le pari doit être en attente (PENDING)";
+        if (!userRankings.containsKey(user)) return "❌ Aucun vote enregistré";
+        if (ranking == null) return "❌ Classement invalide";
+        String validationError = validateRanking(ranking);
+        if (validationError != null) {
+            return validationError;
+        }
+        userRankings.put(user, new ArrayList<>(ranking));
+        return "✅ Classement modifié";
     }
 }
