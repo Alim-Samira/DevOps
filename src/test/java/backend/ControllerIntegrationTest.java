@@ -174,4 +174,5 @@ class ControllerIntegrationTest {
                 .content("{\"admin\": \"AdminAPI\", \"question\": \"Who wins?\", \"choices\": [\"Team A\", \"Team B\"], \"votingMinutes\": 10}"))
                 .andExpect(status().isOk());
     }
+
 }

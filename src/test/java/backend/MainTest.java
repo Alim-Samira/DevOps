@@ -20,6 +20,9 @@ import backend.models.User;
 import backend.models.WatchParty;
 import backend.models.WatchPartyStatus;
 import backend.services.WatchPartyManager;
+import backend.services.RankingService;
+import backend.services.UserService;
+import backend.services.RewardService;
 
 /**
  * Suite de tests complète pour le système DevOps
@@ -478,5 +481,51 @@ class MainTest {
         
         assertEquals(3, manager.getAllWatchParties().size());
         assertEquals(2, manager.getAllAutoWatchParties().size());
+    }
+
+    // ==================== USER POINTS AND WINS TESTS ====================
+
+    @Test
+    @DisplayName("User points accumulation should work")
+    void testUserPointsAccumulation() {
+        User pointUser = new User("PointAccumulator", false);
+
+        int initialPoints = pointUser.getPublicPoints();
+        pointUser.addPublicPoints(100);
+
+        assertEquals(initialPoints + 100, pointUser.getPublicPoints());
+    }
+
+    @Test
+    @DisplayName("User wins tracking should work")
+    void testUserWinsTracking() {
+        User winUser = new User("WinTracker", false);
+
+        int initialWins = winUser.getPublicWins();
+        winUser.addPublicWin();
+
+        assertEquals(initialWins + 1, winUser.getPublicWins());
+    }
+
+    @Test
+    @DisplayName("User per-watch-party wins should work")
+    void testUserWinsPerWatchParty() {
+        User partyUser = new User("PartyWinner", false);
+
+        partyUser.addWinForWatchParty("TestParty");
+        int wins = partyUser.getWinsForWatchParty("TestParty");
+
+        assertEquals(1, wins);
+    }
+
+    @Test
+    @DisplayName("User per-watch-party points should work")
+    void testUserPointsPerWatchParty() {
+        User partyPointUser = new User("PartyPoints", false);
+
+        partyPointUser.addPointsForWatchParty("Party2", 250);
+        int points = partyPointUser.getPointsForWatchParty("Party2");
+
+        assertEquals(250, points);
     }
 }
