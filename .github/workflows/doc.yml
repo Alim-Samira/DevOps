@@ -2,7 +2,7 @@ name: Generate PDF
 
 on:
   push:
-    branches: [ documentation_auto ]
+    branches: [ main ]
 
 permissions:
   contents: write
