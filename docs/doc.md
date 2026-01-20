@@ -3,6 +3,7 @@
 # Projet
 ## Nom
 /alll en référence aux premières lettres de nos prénoms et /all couramment utilisé pour désigner l’ensemble des personnes présentes dans une room.
+
 ## Objectif
 L’objectif est de proposer un environnement interactif autour d’un match e‑sport, en combinant plusieurs fonctionnalités dont des paris par exemple. L’application vise à offrir une expérience immersive et communautaire.
 
