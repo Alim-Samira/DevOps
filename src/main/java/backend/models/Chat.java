@@ -4,14 +4,14 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-public abstract class Chat {
+public class Chat {
     protected String name;
     protected List<Message> messages;
     protected User admin;
     private MiniGame activeGame;
     private final List<MiniGame> availableGames;
 
-    protected Chat(String name, User admin) {
+    public Chat(String name, User admin) {
         this.name = name;
         this.admin = admin;
         this.messages = new ArrayList<>();

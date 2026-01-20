@@ -10,6 +10,7 @@ import backend.models.Bet;
 import backend.models.DiscreteChoiceBet;
 import backend.models.NumericValueBet;
 import backend.models.OrderedRankingBet;
+import backend.models.TicketType;
 import backend.models.User;
 import backend.models.WatchParty;
 
@@ -172,7 +173,35 @@ public class BetService {
         }
         
         Bet bet = wp.getActiveBet();
-        return bet.resolve(correctValue);
+        String result = bet.resolve(correctValue);
+        
+        // Distribuer les tickets aux gagnants
+        if (bet.isOffersTicket()) {
+            TicketType ticketType = getTicketTypeForBet(bet);
+            for (User winner : bet.getLastWinners()) {
+                wp.grantTicket(winner, ticketType);
+                // 10% de chance d'un ticket IN_OR_OUT additionnel
+                if (Math.random() < 0.10) { //NOSONAR S2245: Random is acceptable for game mechanics
+                    wp.grantTicket(winner, TicketType.IN_OR_OUT);
+                }
+            }
+        }
+        
+        return result;
+    }
+    
+    /**
+     * Détermine le type de ticket à offrir selon le type de pari
+     */
+    private TicketType getTicketTypeForBet(Bet bet) {
+        if (bet instanceof DiscreteChoiceBet) {
+            return TicketType.DISCRETE_CHOICE;
+        } else if (bet instanceof NumericValueBet) {
+            return TicketType.NUMERIC_VALUE;
+        } else if (bet instanceof OrderedRankingBet) {
+            return TicketType.ORDERED_RANKING;
+        }
+        return TicketType.DISCRETE_CHOICE; // default
     }
     
     /**

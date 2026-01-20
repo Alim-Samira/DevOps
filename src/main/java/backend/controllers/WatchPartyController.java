@@ -2,6 +2,8 @@ package backend.controllers;
 
 import java.util.List;
 import java.util.Map;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -58,6 +60,18 @@ public class WatchPartyController {
         }
     }
 
+    // 2b. POST manual public watchparty
+    @PostMapping("/public")
+    public String createPublicWatchParty(@RequestBody Map<String, String> payload) {
+        return createManualWatchParty(payload, true);
+    }
+
+    // 2c. POST manual private watchparty
+    @PostMapping("/private")
+    public String createPrivateWatchParty(@RequestBody Map<String, String> payload) {
+        return createManualWatchParty(payload, false);
+    }
+
     // 3. DELETE (Remove)
     @DeleteMapping(value = "/{name}", produces = "text/plain")
     public String deleteWatchParty(@PathVariable String name) {
@@ -66,5 +80,29 @@ public class WatchPartyController {
             return "🗑️ Deleted: ";
         }
         return "⚠️ Not found: ";
+    }
+
+    // Helpers
+    private String createManualWatchParty(Map<String, String> payload, boolean isPublic) {
+        String name = payload.get("name");
+        if (name == null || name.isBlank()) return "❌ Missing name";
+
+        String game = payload.getOrDefault("game", "League of Legends");
+        String dateStr = payload.get("date");
+        LocalDateTime date = null;
+        if (dateStr != null && !dateStr.isBlank()) {
+            try {
+                date = LocalDateTime.parse(dateStr);
+            } catch (DateTimeParseException e) {
+                return "❌ Invalid date format. Use ISO-8601 (e.g., 2026-01-17T20:00:00)";
+            }
+        } else {
+            date = LocalDateTime.now().plusDays(1);
+        }
+
+        WatchParty wp = new WatchParty(name, date, game);
+        wp.setPublic(isPublic);
+        manager.addWatchParty(wp);
+        return (isPublic ? "✅ Public" : "✅ Private") + " watchparty created: " + name;
     }
 }

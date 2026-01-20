@@ -2,6 +2,7 @@ package backend.models;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -20,10 +21,12 @@ public abstract class Bet {
     
     protected String question;
     protected User creator;          // Admin qui a créé le pari
-    protected WatchParty watchParty; // Watch party associée
+    protected String watchPartyName; // Nom de la watch party
+    protected boolean isPublic;      // Si la watch party est publique
     protected State state;
     protected LocalDateTime votingEndTime;
     protected Map<User, Integer> userBets; // User -> points misés
+    protected boolean offersTicket;        // Ce pari offre-t-il un ticket aux gagnants ?
     
     /**
      * Constructeur protégé - utiliser les factory methods des sous-classes
@@ -34,10 +37,12 @@ public abstract class Bet {
         }
         this.question = question;
         this.creator = creator;
-        this.watchParty = watchParty;
+        this.watchPartyName = watchParty.name();
+        this.isPublic = watchParty.isPublic();
         this.state = State.VOTING;
         this.votingEndTime = votingEndTime;
         this.userBets = new HashMap<>();
+        this.offersTicket = false;
     }
     
     /**
@@ -53,6 +58,12 @@ public abstract class Bet {
     public abstract String resolve(Object correctValue);
     
     /**
+     * Récupère la liste des gagnants après résolution
+     * @return liste des utilisateurs gagnants (vide si pas encore résolu)
+     */
+    public abstract List<User> getLastWinners();
+    
+    /**
      * Annule le pari et rembourse tous les parieurs
      */
     public String cancel() {
@@ -66,7 +77,7 @@ public abstract class Bet {
         for (Map.Entry<User, Integer> entry : userBets.entrySet()) {
             User user = entry.getKey();
             int betAmount = entry.getValue();
-            user.setPoints(user.getPoints() + betAmount);
+            creditUserPoints(user, betAmount);
         }
         
         return "✅ Pari annulé, " + userBets.size() + " parieurs remboursés";
@@ -104,16 +115,90 @@ public abstract class Bet {
         if (points <= 0) {
             return false;
         }
-        if (user.getPoints() < points) {
+        if (!hasSufficientPoints(user, points)) {
             return false;
         }
         if (userBets.containsKey(user)) {
             return false; // Un seul vote par utilisateur
         }
         
-        user.setPoints(user.getPoints() - points);
+        debitUserPoints(user, points);
         userBets.put(user, points);
         return true;
+    }
+
+    /**
+     * Permet d'ajuster la mise d'un utilisateur pendant l'état PENDING (utilisation de ticket IN_OR_OUT).
+     */
+    public String adjustBetPoints(User user, int newPoints) {
+        if (state != State.PENDING) {
+            return "❌ Le pari doit être en attente (PENDING)";
+        }
+        Integer current = userBets.get(user);
+        if (current == null) {
+            return "❌ Aucun vote enregistré pour l'utilisateur";
+        }
+        if (newPoints < 0) {
+            return "❌ La mise doit être >= 0";
+        }
+        if (newPoints == current) {
+            return "ℹ️ Mise inchangée";
+        }
+        if (newPoints == 0) {
+            // Se retirer du pari: rembourser la mise actuelle
+            creditUserPoints(user, current);
+            userBets.remove(user);
+            return "✅ Retrait du pari, " + current + " points remboursés";
+        }
+        if (newPoints > current) {
+            int delta = newPoints - current;
+            if (!hasSufficientPoints(user, delta)) {
+                return "❌ Points insuffisants pour augmenter la mise";
+            }
+            debitUserPoints(user, delta);
+            userBets.put(user, newPoints);
+            return "✅ Mise augmentée de " + delta + " points";
+        } else {
+            int delta = current - newPoints;
+            // Rembourser la différence
+            creditUserPoints(user, delta);
+            userBets.put(user, newPoints);
+            return "✅ Mise diminuée de " + delta + " points";
+        }
+    }
+
+    protected boolean hasSufficientPoints(User user, int points) {
+        if (isPublic) {
+            return user.getPublicPoints() >= points;
+        }
+        return user.getPointsForWatchParty(watchPartyName) >= points;
+    }
+
+    protected void debitUserPoints(User user, int points) {
+        if (isPublic) {
+            user.addPublicPoints(-points);
+        } else {
+            user.addPointsForWatchParty(watchPartyName, -points);
+        }
+    }
+
+    protected void creditUserPoints(User user, int points) {
+        if (isPublic) {
+            user.addPublicPoints(points);
+        } else {
+            user.addPointsForWatchParty(watchPartyName, points);
+        }
+    }
+
+    /**
+     * Enregistre une victoire pour l'utilisateur selon le type de watchparty.
+     */
+    protected void recordWin(User user) {
+        if (isPublic) {
+            user.addPublicWin();
+        } else {
+            user.addWinForWatchParty(watchPartyName);
+        }
     }
     
     // Getters
@@ -126,11 +211,14 @@ public abstract class Bet {
     
     public String getQuestion() { return question; }
     public User getCreator() { return creator; }
-    public WatchParty getWatchParty() { return watchParty; }
     public State getState() { return state; }
     public LocalDateTime getVotingEndTime() { return votingEndTime; }
     public Map<User, Integer> getUserBets() { return new HashMap<>(userBets); }
     public int getParticipantCount() { return userBets.size(); }
+    public boolean isOffersTicket() { return offersTicket; }
+    public void setOffersTicket(boolean offersTicket) { this.offersTicket = offersTicket; }
+    public String getWatchPartyName() { return watchPartyName; }
+    public boolean isPublic() { return isPublic; }
 }
 
 

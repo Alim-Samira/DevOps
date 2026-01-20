@@ -18,6 +18,7 @@ public class DiscreteChoiceBet extends Bet {
     private List<String> choices;                    // Les options disponibles
     private Map<User, String> userChoices;           // User -> choix sélectionné
     private String correctChoice;                    // La réponse correcte (après résolution)
+    private List<User> lastWinners;                  // Les gagnants après résolution
     
     /**
      * Crée un pari à choix discrets
@@ -34,6 +35,7 @@ public class DiscreteChoiceBet extends Bet {
         this.choices = new ArrayList<>(choices);
         this.userChoices = new HashMap<>();
         this.correctChoice = null;
+        this.lastWinners = new ArrayList<>();
     }
     
     @Override
@@ -93,12 +95,19 @@ public class DiscreteChoiceBet extends Bet {
         
         // Répartition équitable du pot
         int rewardPerWinner = totalPot / winners.size();
+        this.lastWinners = new ArrayList<>(winners);
         for (User winner : winners) {
-            winner.setPoints(winner.getPoints() + rewardPerWinner);
+            creditUserPoints(winner, rewardPerWinner);
+            recordWin(winner);
         }
         
         return String.format("✅ Pari résolu! Réponse: %s | %d gagnants | %d points chacun",
                            correctChoice, winners.size(), rewardPerWinner);
+    }
+    
+    @Override
+    public List<User> getLastWinners() {
+        return new ArrayList<>(lastWinners);
     }
     
     /**
@@ -121,4 +130,15 @@ public class DiscreteChoiceBet extends Bet {
     public List<String> getChoices() { return new ArrayList<>(choices); }
     public String getCorrectChoice() { return correctChoice; }
     public Map<User, String> getUserChoices() { return new HashMap<>(userChoices); }
+
+    /**
+     * Permet de modifier le choix d'un utilisateur pendant PENDING via ticket.
+     */
+    public String modifyChoice(User user, String newChoice) {
+        if (state != State.PENDING) return "❌ Le pari doit être en attente (PENDING)";
+        if (!userChoices.containsKey(user)) return "❌ Aucun vote enregistré";
+        if (newChoice == null || !choices.contains(newChoice)) return "❌ Choix invalide";
+        userChoices.put(user, newChoice);
+        return "✅ Choix modifié";
+    }
 }

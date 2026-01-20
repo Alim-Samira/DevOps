@@ -14,12 +14,15 @@ import backend.models.AutoType;
 import backend.models.DiscreteChoiceBet;
 import backend.models.NumericValueBet;
 import backend.models.OrderedRankingBet;
-import backend.models.PublicChat;
+import backend.models.Chat;
 import backend.models.QuizGame;
 import backend.models.User;
 import backend.models.WatchParty;
 import backend.models.WatchPartyStatus;
 import backend.services.WatchPartyManager;
+import backend.services.RankingService;
+import backend.services.UserService;
+import backend.services.RewardService;
 
 /**
  * Suite de tests complète pour le système DevOps
@@ -43,9 +46,9 @@ class MainTest {
     // ==================== CHAT TESTS ====================
 
     @Test
-    @DisplayName("Public chat should store messages correctly")
+    @DisplayName("Chat should store messages correctly")
     void testPublicChatMessaging() {
-        PublicChat chat = new PublicChat("Public Chat", admin);
+        Chat chat = new Chat("Chat", admin);
 
         chat.sendMessage(alice, "Hello everyone");
 
@@ -67,9 +70,9 @@ class MainTest {
         );
         watchParty.createBet(bet);
 
-        assertEquals(200, alice.getPoints());
+        assertEquals(200, alice.getPublicPoints());
         bet.vote(alice, "T1", 50);
-        assertEquals(150, alice.getPoints());
+        assertEquals(150, alice.getPublicPoints());
     }
 
     @Test
@@ -84,15 +87,15 @@ class MainTest {
         bet.vote(alice, "A", 50);
         bet.vote(bob, "A", 50);
         
-        assertEquals(150, alice.getPoints());
-        assertEquals(150, bob.getPoints());
+        assertEquals(150, alice.getPublicPoints());
+        assertEquals(150, bob.getPublicPoints());
 
         bet.endVoting();
         bet.resolve("A");
 
         // Total pot = 100, split equally between 2 winners = 50 each
-        assertEquals(200, alice.getPoints()); // 150 + 50
-        assertEquals(200, bob.getPoints());   // 150 + 50
+        assertEquals(200, alice.getPublicPoints()); // 150 + 50
+        assertEquals(200, bob.getPublicPoints());   // 150 + 50
     }
 
     @Test
@@ -105,10 +108,10 @@ class MainTest {
         );
 
         bet.vote(alice, "A", 50);
-        assertEquals(150, alice.getPoints());
+        assertEquals(150, alice.getPublicPoints());
 
         bet.cancel();
-        assertEquals(200, alice.getPoints());
+        assertEquals(200, alice.getPublicPoints());
     }
 
     @Test
@@ -134,7 +137,7 @@ class MainTest {
 
         String result = bet.vote(alice, 35, 50);
         assertTrue(result.contains("✅"));
-        assertEquals(150, alice.getPoints());
+        assertEquals(150, alice.getPublicPoints());
     }
 
     @Test
@@ -152,8 +155,8 @@ class MainTest {
         String result = bet.resolve(35);
 
         assertTrue(result.contains("✅"));
-        assertEquals(200, alice.getPoints()); // 150 + 50
-        assertEquals(200, bob.getPoints());
+        assertEquals(200, alice.getPublicPoints()); // 150 + 50
+        assertEquals(200, bob.getPublicPoints());
     }
 
     @Test
@@ -177,7 +180,7 @@ class MainTest {
 
         assertTrue(result.contains("✅"));
         // Top 30% de 4 = 2 gagnants (bob et alice ou charlie)
-        assertTrue(bob.getPoints() > 150); // Bob devrait gagner plus (plus proche)
+        assertTrue(bob.getPublicPoints() > 150); // Bob devrait gagner plus (plus proche)
     }
 
     // ==================== ORDERED RANKING BET TESTS ====================
@@ -195,7 +198,7 @@ class MainTest {
         String result = bet.vote(alice, ranking, 50);
 
         assertTrue(result.contains("✅"));
-        assertEquals(150, alice.getPoints());
+        assertEquals(150, alice.getPublicPoints());
     }
 
     @Test
@@ -215,8 +218,8 @@ class MainTest {
         String result = bet.resolve(perfect);
 
         assertTrue(result.contains("parfait"));
-        assertEquals(200, alice.getPoints());
-        assertEquals(200, bob.getPoints());
+        assertEquals(200, alice.getPublicPoints());
+        assertEquals(200, bob.getPublicPoints());
     }
 
     @Test
@@ -236,7 +239,7 @@ class MainTest {
 
         assertTrue(result.contains("✅"));
         // Alice devrait gagner plus (distance = 0)
-        assertTrue(alice.getPoints() >= bob.getPoints());
+        assertTrue(alice.getPublicPoints() >= bob.getPublicPoints());
     }
 
     // ==================== WATCH PARTY BETTING TESTS ====================
@@ -478,5 +481,51 @@ class MainTest {
         
         assertEquals(3, manager.getAllWatchParties().size());
         assertEquals(2, manager.getAllAutoWatchParties().size());
+    }
+
+    // ==================== USER POINTS AND WINS TESTS ====================
+
+    @Test
+    @DisplayName("User points accumulation should work")
+    void testUserPointsAccumulation() {
+        User pointUser = new User("PointAccumulator", false);
+
+        int initialPoints = pointUser.getPublicPoints();
+        pointUser.addPublicPoints(100);
+
+        assertEquals(initialPoints + 100, pointUser.getPublicPoints());
+    }
+
+    @Test
+    @DisplayName("User wins tracking should work")
+    void testUserWinsTracking() {
+        User winUser = new User("WinTracker", false);
+
+        int initialWins = winUser.getPublicWins();
+        winUser.addPublicWin();
+
+        assertEquals(initialWins + 1, winUser.getPublicWins());
+    }
+
+    @Test
+    @DisplayName("User per-watch-party wins should work")
+    void testUserWinsPerWatchParty() {
+        User partyUser = new User("PartyWinner", false);
+
+        partyUser.addWinForWatchParty("TestParty");
+        int wins = partyUser.getWinsForWatchParty("TestParty");
+
+        assertEquals(1, wins);
+    }
+
+    @Test
+    @DisplayName("User per-watch-party points should work")
+    void testUserPointsPerWatchParty() {
+        User partyPointUser = new User("PartyPoints", false);
+
+        partyPointUser.addPointsForWatchParty("Party2", 250);
+        int points = partyPointUser.getPointsForWatchParty("Party2");
+
+        assertEquals(250, points);
     }
 }

@@ -4,9 +4,16 @@ skinparam classAttributeIconSize 0
 
 class User {
   - String name
-  - int points
   - boolean admin
   - boolean moderator
+  - int publicPoints
+  - Map<String, Integer> pointsByWatchParty
+  - int publicWins
+  - Map<String, Integer> winsByWatchParty
+  + addPublicPoints(int)
+  + addPointsForWatchParty(String, int)
+  + addPublicWin()
+  + addWinForWatchParty(String)
 }
 
 class Message {
@@ -15,27 +22,20 @@ class Message {
   - String timestamp
 }
 
-abstract class Chat {
+class Chat {
   - String name
   - List<Message> messages
   - User admin
   - MiniGame activeGame
+  - List<MiniGame> availableGames
   + sendMessage(User, String)
   + launchGame(User, String)
   + processGameInput(User, String)
+  + registerGame(MiniGame)
   + getActiveGame()
 }
-class PublicChat
-class PrivateChat {
-  - Map<User, Integer> users
-  + setPoints(User, int)
-  + users() : Map<User, Integer>
-}
-Chat <|-- PublicChat
-Chat <|-- PrivateChat
 Chat o-- Message
 Chat o-- MiniGame
-PrivateChat o-- User
 
 interface MiniGame {
   + getCommandName()
@@ -54,73 +54,59 @@ class QuizGame {
 MiniGame <|.. QuizGame
 QuizGame o-- User
 
-class Choice {
-  - String text
-  - Collection<User> voters
-  + newVoter(User)
-  + voters() : Collection<User>
-}
-
-' ========== NEW BETTING SYSTEM ==========
-enum BetType {
+enum TicketType {
   DISCRETE_CHOICE
   NUMERIC_VALUE
   ORDERED_RANKING
+  IN_OR_OUT
 }
 
-abstract class Bet {
-  # String question
-  # User creator
-  # WatchParty watchParty
-  # State state
-  # LocalDateTime votingEndTime
-  # Map<User, Integer> userBets
-  + {abstract} vote(User, Object, int) : String
-  + {abstract} resolve(Object) : String
-  + cancel() : String
-  + endVoting() : String
-  + getTotalPot() : int
-  + getType() : BetType
+class WatchParty {
+  - String name
+  - LocalDateTime date
+  - String game
+  - boolean isPublic
+  - boolean planned
+  - AutoConfig autoConfig
+  - WatchPartyStatus status
+  - MatchState matchState
+  - List<User> participants
+  - User creator
+  - Chat chat
+  - Map<User, EnumSet<TicketType>> userTickets
+  - Bet activeBet
+  + static createAutoWatchParty(User, String, AutoType)
+  + join(User)
+  + leave(User)
+  + updateStatus(Match)
+  + createBet(Bet) : String
+  + closeActiveBet() : String
+  + grantTicket(User, TicketType)
 }
+WatchParty o-- AutoConfig
+WatchParty o-- Chat
+WatchParty o-- User
+WatchParty o-- Bet
+WatchParty o-- Match
+WatchParty o-- TicketType
+WatchParty o-- WatchPartyStatus
+WatchParty o-- MatchState
 
-class DiscreteChoiceBet {
-  - List<String> choices
-  - Map<User, String> userChoices
-  - String correctChoice
-  + vote(User, Object, int) : String
-  + resolve(Object) : String
-  + getVoteDistribution() : Map<String, Integer>
+class AutoConfig {
+  - AutoType type
+  - String target
+  - Match currentMatch
+  - LocalDateTime lastChecked
+  + isTeamBased()
+  + isTournamentBased()
+  + updateLastChecked()
 }
-
-class NumericValueBet {
-  - Map<User, Double> userValues
-  - Double correctValue
-  - boolean isInteger
-  - Double minValue
-  - Double maxValue
-  + vote(User, Object, int) : String
-  + resolve(Object) : String
-  - resolveByProximity(double, int) : String
-}
-
-class OrderedRankingBet {
-  - List<String> items
-  - Map<User, List<String>> userRankings
-  - List<String> correctRanking
-  + vote(User, Object, int) : String
-  + resolve(Object) : String
-  - resolveByKendallDistance(int) : String
-  - calculateKendallTauDistance(List, List) : double
-}
-
-Bet <|-- DiscreteChoiceBet
-Bet <|-- NumericValueBet
-Bet <|-- OrderedRankingBet
-Bet o-- User
-Bet o-- WatchParty
+AutoConfig o-- AutoType
+enum AutoType
+enum WatchPartyStatus
+enum MatchState
 
 class Match {
-  - String id
   - String team1
   - String team2
   - LocalDateTime scheduledTime
@@ -128,113 +114,176 @@ class Match {
   - String stream
   - String bestOf
   + isPast()
+  + isStartingSoon(int)
   + isFinished()
 }
-class MatchState <<enum>>
-class WatchPartyStatus <<enum>>
-class AutoType <<enum>>
 
-class AutoConfig {
-  - AutoType type
-  - String target
-  - Match currentMatch
-  + isTeamBased()
-  + isTournamentBased()
+enum BetType
+class Bet {
+  # String question
+  # User creator
+  # String watchPartyName
+  # boolean isPublic
+  # State state
+  # LocalDateTime votingEndTime
+  # Map<User, Integer> userBets
+  # boolean offersTicket
+  + {abstract} vote(User, Object, int) : String
+  + {abstract} resolve(Object) : String
+  + {abstract} getLastWinners() : List<User>
+  + cancel() : String
+  + endVoting() : String
+  + adjustBetPoints(User, int) : String
+  + getTotalPot() : int
+  + recordWin(User)
+  + getType() : BetType
+  + getWatchPartyName() : String
+  + isPublic() : boolean
 }
-
-class WatchParty {
-  - String name
-  - WatchPartyStatus status
-  - MatchState matchState
-  - AutoConfig autoConfig
-  - List<User> participants
-  - Bet activeBet
-  + updateStatus(Match)
-  + canLaunchMiniGame()
-  + createBet(Bet) : String
-  + hasActiveBet() : boolean
-  + getActiveBet() : Bet
+class DiscreteChoiceBet {
+  - List<String> choices
+  - Map<User, String> userChoices
+  - String correctChoice
+  - List<User> lastWinners
+  + getVoteDistribution() : Map<String, Integer>
+  + modifyChoice(User, String) : String
+  + getLastWinners() : List<User>
 }
-WatchParty o-- AutoConfig
-WatchParty o-- Match
-WatchParty o-- User
-WatchParty o-- Bet
+class NumericValueBet {
+  - Map<User, Double> userValues
+  - Double correctValue
+  - boolean isInteger
+  - Double minValue
+  - Double maxValue
+  - List<User> lastWinners
+  + modifyValue(User, Double) : String
+  + getLastWinners() : List<User>
+}
+class OrderedRankingBet {
+  - List<String> items
+  - Map<User, List<String>> userRankings
+  - List<String> correctRanking
+  - List<User> lastWinners
+  + modifyRanking(User, List<String>) : String
+  + getLastWinners() : List<User>
+}
+Bet <|-- DiscreteChoiceBet
+Bet <|-- NumericValueBet
+Bet <|-- OrderedRankingBet
+Bet o-- User
+Bet o-- BetType
 
-' Services
 class UserService {
   - Map<String, User> users
   + getUser(String)
+  + getAllUsers()
 }
 class ChatService {
-  - Map<String, Chat> chats
-  + createPublicChat(String, User)
-  + createPrivateChat(String, User)
-}
-class BetService {
-  - WatchPartyManager watchPartyManager
+  - Chat publicChat
   - UserService userService
-  + createDiscreteChoiceBet(...) : String
-  + createNumericValueBet(...) : String
-  + createOrderedRankingBet(...) : String
-  + vote(...) : String
-  + endVoting(...) : String
-  + resolveBet(...) : String
-  + cancelBet(...) : String
-  + getAllActiveBets() : List<Bet>
-}
-class RankingService {
-  + getRanking()
-}
-class QuizService {
-  + answer(...)
-}
-class LeaguepediaClient {
-  - String apiEndpoint
-  - HttpClient http
-  - Gson gson
-  + fetchUpcomingMatchesForTeam(String)
-  + fetchUpcomingMatchesForTournament(String)
-}
-class AutoWatchPartyScheduler {
-  - WatchPartyManager manager
-  - LeaguepediaClient apiClient
-  + updateAllAutoWatchParties()
+  + addMessage(String, String)
+  + getMessages()
 }
 class WatchPartyManager {
   - List<WatchParty> watchParties
   - List<WatchParty> watchPartiesPlanned
   - AutoWatchPartyScheduler scheduler
   + addWatchParty(WatchParty)
-  + planifyWatchParty(WatchParty)
-  + changeMatchState(...)
+  + addAutoWatchParty(WatchParty)
+  + getWatchPartyByName(String)
+  + getAllWatchParties()
+  + startScheduler()
+  + forceSchedulerUpdateReport() : String
+  + changeMatchState(WatchParty, MatchState, boolean)
 }
-WatchPartyManager o-- WatchParty
-WatchPartyManager o-- AutoWatchPartyScheduler
-AutoWatchPartyScheduler o-- LeaguepediaClient
+class AutoWatchPartyScheduler {
+  - WatchPartyManager manager
+  - LeaguepediaClient apiClient
+  - ScheduledExecutorService scheduler
+  + start()
+  + stop()
+  + forceUpdateReport() : String
+  + isRunning()
+}
+class LeaguepediaClient {
+  - String apiEndpoint
+  - HttpClient http
+  - Gson gson
+  + getNextTeamMatch(String)
+  + getNextTournamentMatch(String)
+  + fetchUpcomingMatchesForTeam(String)
+  + fetchUpcomingMatchesForTournament(String)
+  + updateMatchStatus(Match)
+}
+class BetService {
+  - WatchPartyManager watchPartyManager
+  - UserService userService
+  + createDiscreteChoiceBet(...)
+  + createNumericValueBet(...)
+  + createOrderedRankingBet(...)
+  + vote(...)
+  + endVoting(...)
+  + resolveBet(...)
+  + cancelBet(...)
+  + getAllActiveBets()
+}
+class RankingService {
+  - CachedRanking globalPublicPoints
+  - CachedRanking globalPublicWins
+  - Map<String, CachedRanking> watchPartyPoints
+  - Map<String, CachedRanking> watchPartyWins
+  + getGlobalPublicPoints(boolean)
+  + getGlobalPublicWins(boolean)
+  + getWatchPartyPoints(String, boolean)
+  + getWatchPartyWins(String, boolean)
+  + refreshAll()
+  + refreshWatchParty(String)
+}
+class RewardService {
+  - Map<String, Set<Integer>> awardedThresholds
+  + getThresholds()
+  + evaluateThresholdRewards()
+  + computeMonthlyTop3()
+  + runDailyJob()
+}
+class RewardScheduler {
+  - RewardService rewardService
+  - ScheduledExecutorService scheduler
+  + start()
+  + stop()
+}
+RewardScheduler o-- RewardService
 
 ' Controllers -> Services
 class BetController
 class ChatController
 class QuizController
 class RankingController
+class RewardController
 class UserController
 class WatchPartyController
 
 BetController --> BetService
-BetController --> UserService
 ChatController --> ChatService
 QuizController --> QuizService
+QuizController --> UserService
 RankingController --> RankingService
+RewardController --> RewardService
 UserController --> UserService
 WatchPartyController --> WatchPartyManager
 
 ' Domain links
-BetService o-- Bet
+WatchPartyManager o-- WatchParty
+WatchPartyManager o-- AutoWatchPartyScheduler
+AutoWatchPartyScheduler o-- LeaguepediaClient
 BetService o-- WatchPartyManager
 BetService o-- UserService
+RankingService o-- UserService
+RankingService o-- WatchPartyManager
+RewardService o-- UserService
+RewardService o-- RankingService
+ChatService o-- Chat
 ChatService o-- UserService
 QuizService o-- QuizGame
-RankingService o-- UserService
-WatchPartyManager o-- LeaguepediaClient
 
 @enduml
