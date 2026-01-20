@@ -18,6 +18,7 @@ public class DiscreteChoiceBet extends Bet {
     private List<String> choices;                    // Les options disponibles
     private Map<User, String> userChoices;           // User -> choix sélectionné
     private String correctChoice;                    // La réponse correcte (après résolution)
+    private List<User> lastWinners;                  // Les gagnants après résolution
     
     /**
      * Crée un pari à choix discrets
@@ -34,6 +35,7 @@ public class DiscreteChoiceBet extends Bet {
         this.choices = new ArrayList<>(choices);
         this.userChoices = new HashMap<>();
         this.correctChoice = null;
+        this.lastWinners = new ArrayList<>();
     }
     
     @Override
@@ -93,21 +95,19 @@ public class DiscreteChoiceBet extends Bet {
         
         // Répartition équitable du pot
         int rewardPerWinner = totalPot / winners.size();
+        this.lastWinners = new ArrayList<>(winners);
         for (User winner : winners) {
             creditUserPoints(winner, rewardPerWinner);
             recordWin(winner);
-            // Tickets
-            if (isOffersTicket()) {
-                watchParty.grantTicket(winner, TicketType.DISCRETE_CHOICE);
-                // 10% de chance d'un ticket IN_OR_OUT additionnel
-                if (Math.random() < 0.10) { //NOSONAR S2245: Random is acceptable for game mechanics
-                    watchParty.grantTicket(winner, TicketType.IN_OR_OUT);
-                }
-            }
         }
         
         return String.format("✅ Pari résolu! Réponse: %s | %d gagnants | %d points chacun",
                            correctChoice, winners.size(), rewardPerWinner);
+    }
+    
+    @Override
+    public List<User> getLastWinners() {
+        return new ArrayList<>(lastWinners);
     }
     
     /**

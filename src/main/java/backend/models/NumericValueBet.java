@@ -39,6 +39,7 @@ public class NumericValueBet extends Bet {
     private boolean isInteger;                 // true = entier, false = flottant
     private Double minValue;                   // Valeur minimale acceptée (optionnel)
     private Double maxValue;                   // Valeur maximale acceptée (optionnel)
+    private List<User> lastWinners;            // Les gagnants après résolution
     
     /**
      * Crée un pari sur une valeur numérique
@@ -55,6 +56,7 @@ public class NumericValueBet extends Bet {
         this.minValue = minValue;
         this.maxValue = maxValue;
         this.correctValue = null;
+        this.lastWinners = new ArrayList<>();
     }
     
     @Override
@@ -158,15 +160,10 @@ public class NumericValueBet extends Bet {
      */
     private String distributeExactMatchRewards(List<User> winners, int totalPot, double value) {
         int rewardPerWinner = totalPot / winners.size();
+        this.lastWinners = new ArrayList<>(winners);
         for (User winner : winners) {
             creditUserPoints(winner, rewardPerWinner);
             recordWin(winner);
-            if (isOffersTicket()) {
-                watchParty.grantTicket(winner, TicketType.NUMERIC_VALUE);
-                if (Math.random() < 0.10) { //NOSONAR S2245: Random is acceptable for game mechanics
-                    watchParty.grantTicket(winner, TicketType.IN_OR_OUT);
-                }
-            }
         }
         return String.format(SUCCESS_EXACT_MATCH, formatValue(value), winners.size(), rewardPerWinner);
     }
@@ -208,17 +205,13 @@ public class NumericValueBet extends Bet {
         StringBuilder result = new StringBuilder();
         result.append(String.format(SUCCESS_PROXIMITY, formatValue(correctValue), winners.size()));
         
+        this.lastWinners = new ArrayList<>();
         for (UserDistance ud : winners) {
+            this.lastWinners.add(ud.user);
             double weight = weights.get(ud.user);
             int reward = (int) ((weight / totalWeight) * totalPot);
             creditUserPoints(ud.user, reward);
             recordWin(ud.user);
-            if (isOffersTicket()) {
-                watchParty.grantTicket(ud.user, TicketType.NUMERIC_VALUE);
-                if (Math.random() < 0.10) { //NOSONAR S2245: Random is acceptable for game mechanics
-                    watchParty.grantTicket(ud.user, TicketType.IN_OR_OUT);
-                }
-            }
             
             result.append(String.format(WINNER_DETAIL_FORMAT,
                                       ud.user.getName(),
@@ -228,6 +221,11 @@ public class NumericValueBet extends Bet {
         }
         
         return result.toString().trim();
+    }
+    
+    @Override
+    public List<User> getLastWinners() {
+        return new ArrayList<>(lastWinners);
     }
     
     /**

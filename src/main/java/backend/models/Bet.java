@@ -2,6 +2,7 @@ package backend.models;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -20,7 +21,8 @@ public abstract class Bet {
     
     protected String question;
     protected User creator;          // Admin qui a créé le pari
-    protected WatchParty watchParty; // Watch party associée
+    protected String watchPartyName; // Nom de la watch party
+    protected boolean isPublic;      // Si la watch party est publique
     protected State state;
     protected LocalDateTime votingEndTime;
     protected Map<User, Integer> userBets; // User -> points misés
@@ -35,7 +37,8 @@ public abstract class Bet {
         }
         this.question = question;
         this.creator = creator;
-        this.watchParty = watchParty;
+        this.watchPartyName = watchParty.name();
+        this.isPublic = watchParty.isPublic();
         this.state = State.VOTING;
         this.votingEndTime = votingEndTime;
         this.userBets = new HashMap<>();
@@ -53,6 +56,12 @@ public abstract class Bet {
      * @return message de résultat avec détails de distribution
      */
     public abstract String resolve(Object correctValue);
+    
+    /**
+     * Récupère la liste des gagnants après résolution
+     * @return liste des utilisateurs gagnants (vide si pas encore résolu)
+     */
+    public abstract List<User> getLastWinners();
     
     /**
      * Annule le pari et rembourse tous les parieurs
@@ -159,25 +168,25 @@ public abstract class Bet {
     }
 
     protected boolean hasSufficientPoints(User user, int points) {
-        if (watchParty.isPublic()) {
+        if (isPublic) {
             return user.getPublicPoints() >= points;
         }
-        return user.getPointsForWatchParty(watchParty.name()) >= points;
+        return user.getPointsForWatchParty(watchPartyName) >= points;
     }
 
     protected void debitUserPoints(User user, int points) {
-        if (watchParty.isPublic()) {
+        if (isPublic) {
             user.addPublicPoints(-points);
         } else {
-            user.addPointsForWatchParty(watchParty.name(), -points);
+            user.addPointsForWatchParty(watchPartyName, -points);
         }
     }
 
     protected void creditUserPoints(User user, int points) {
-        if (watchParty.isPublic()) {
+        if (isPublic) {
             user.addPublicPoints(points);
         } else {
-            user.addPointsForWatchParty(watchParty.name(), points);
+            user.addPointsForWatchParty(watchPartyName, points);
         }
     }
 
@@ -185,10 +194,10 @@ public abstract class Bet {
      * Enregistre une victoire pour l'utilisateur selon le type de watchparty.
      */
     protected void recordWin(User user) {
-        if (watchParty.isPublic()) {
+        if (isPublic) {
             user.addPublicWin();
         } else {
-            user.addWinForWatchParty(watchParty.name());
+            user.addWinForWatchParty(watchPartyName);
         }
     }
     
@@ -202,13 +211,14 @@ public abstract class Bet {
     
     public String getQuestion() { return question; }
     public User getCreator() { return creator; }
-    public WatchParty getWatchParty() { return watchParty; }
     public State getState() { return state; }
     public LocalDateTime getVotingEndTime() { return votingEndTime; }
     public Map<User, Integer> getUserBets() { return new HashMap<>(userBets); }
     public int getParticipantCount() { return userBets.size(); }
     public boolean isOffersTicket() { return offersTicket; }
     public void setOffersTicket(boolean offersTicket) { this.offersTicket = offersTicket; }
+    public String getWatchPartyName() { return watchPartyName; }
+    public boolean isPublic() { return isPublic; }
 }
 
 

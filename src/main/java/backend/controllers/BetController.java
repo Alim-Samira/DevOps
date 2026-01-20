@@ -14,6 +14,7 @@ import backend.models.Bet;
 import backend.models.User;
 import backend.services.BetService;
 import backend.services.UserService;
+import backend.services.WatchPartyManager;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
@@ -51,10 +52,12 @@ public class BetController {
 
     private final BetService betService;
     private final UserService userService;
+    private final WatchPartyManager watchPartyManager;
 
-    public BetController(BetService betService, UserService userService) {
+    public BetController(BetService betService, UserService userService, WatchPartyManager watchPartyManager) {
         this.betService = betService;
         this.userService = userService;
+        this.watchPartyManager = watchPartyManager;
     }
 
     // ==================== GET OPERATIONS ====================
@@ -243,7 +246,7 @@ public class BetController {
             return betValidationError;
         }
 
-        backend.models.WatchParty wp = bet.getWatchParty();
+        backend.models.WatchParty wp = watchPartyManager.getWatchPartyByName(bet.getWatchPartyName());
         backend.models.User user = userService.getUser(username);
 
         backend.models.TicketType type;
