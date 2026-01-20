@@ -122,26 +122,32 @@ enum BetType
 class Bet {
   # String question
   # User creator
-  # WatchParty watchParty
+  # String watchPartyName
+  # boolean isPublic
   # State state
   # LocalDateTime votingEndTime
   # Map<User, Integer> userBets
   # boolean offersTicket
   + {abstract} vote(User, Object, int) : String
   + {abstract} resolve(Object) : String
+  + {abstract} getLastWinners() : List<User>
   + cancel() : String
   + endVoting() : String
   + adjustBetPoints(User, int) : String
   + getTotalPot() : int
   + recordWin(User)
   + getType() : BetType
+  + getWatchPartyName() : String
+  + isPublic() : boolean
 }
 class DiscreteChoiceBet {
   - List<String> choices
   - Map<User, String> userChoices
   - String correctChoice
+  - List<User> lastWinners
   + getVoteDistribution() : Map<String, Integer>
   + modifyChoice(User, String) : String
+  + getLastWinners() : List<User>
 }
 class NumericValueBet {
   - Map<User, Double> userValues
@@ -149,18 +155,21 @@ class NumericValueBet {
   - boolean isInteger
   - Double minValue
   - Double maxValue
+  - List<User> lastWinners
   + modifyValue(User, Double) : String
+  + getLastWinners() : List<User>
 }
 class OrderedRankingBet {
   - List<String> items
   - Map<User, List<String>> userRankings
   - List<String> correctRanking
+  - List<User> lastWinners
   + modifyRanking(User, List<String>) : String
+  + getLastWinners() : List<User>
 }
 Bet <|-- DiscreteChoiceBet
 Bet <|-- NumericValueBet
 Bet <|-- OrderedRankingBet
-Bet o-- WatchParty
 Bet o-- User
 Bet o-- BetType
 

@@ -7,6 +7,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.LinkedHashMap;
 
 /**
  * Pari sur un classement ordonné d'éléments
@@ -33,8 +34,9 @@ public class OrderedRankingBet extends Bet {
     private static final double TOP_PERCENT = 0.30;
     
     private List<String> items;                          // Les éléments à classer (ex: joueurs)
-    private Map<User, List<String>> userRankings;        // User -> son classement
+    private Map<User, List<String>> userRankings;        // User -> son classement (LinkedHashMap pour ordre d'insertion)
     private List<String> correctRanking;                 // Le classement correct
+    private List<User> lastWinners;                      // Les gagnants après résolution
     
     /**
      * Crée un pari de classement ordonné
@@ -49,8 +51,9 @@ public class OrderedRankingBet extends Bet {
         }
         
         this.items = new ArrayList<>(items);
-        this.userRankings = new HashMap<>();
+        this.userRankings = new LinkedHashMap<>();
         this.correctRanking = null;
+        this.lastWinners = new ArrayList<>();
     }
     
     @Override
@@ -148,15 +151,10 @@ public class OrderedRankingBet extends Bet {
      */
     private String distributePerfectMatchRewards(List<User> winners, int totalPot) {
         int rewardPerWinner = totalPot / winners.size();
+        this.lastWinners = new ArrayList<>(winners);
         for (User winner : winners) {
             creditUserPoints(winner, rewardPerWinner);
             recordWin(winner);
-            if (isOffersTicket()) {
-                watchParty.grantTicket(winner, TicketType.ORDERED_RANKING);
-                if (Math.random() < 0.10) { //NOSONAR S2245: Random is acceptable for game mechanics
-                    watchParty.grantTicket(winner, TicketType.IN_OR_OUT);
-                }
-            }
         }
         return String.format(SUCCESS_PERFECT, winners.size(), rewardPerWinner, String.join(" > ", correctRanking));
     }
@@ -173,6 +171,8 @@ public class OrderedRankingBet extends Bet {
         }
         
         // Trier par distance (plus proche en premier)
+        // L'ordre d'insertion est préservé via LinkedHashMap: en cas d'égalité,
+        // le premier à avoir voté est prioritaire (équitable)
         Collections.sort(distances, Comparator.comparingDouble(urd -> urd.distance));
         
         // Sélectionner le top 30% (arrondi supérieur)
@@ -196,17 +196,13 @@ public class OrderedRankingBet extends Bet {
         StringBuilder result = new StringBuilder();
         result.append(String.format(SUCCESS_KENDALL, String.join(" > ", correctRanking), winners.size()));
         
+        this.lastWinners = new ArrayList<>();
         for (UserRankingDistance urd : winners) {
+            this.lastWinners.add(urd.user);
             double weight = weights.get(urd.user);
             int reward = (int) ((weight / totalWeight) * totalPot);
             creditUserPoints(urd.user, reward);
             recordWin(urd.user);
-            if (isOffersTicket()) {
-                watchParty.grantTicket(urd.user, TicketType.ORDERED_RANKING);
-                if (Math.random() < 0.10) { //NOSONAR S2245: Random is acceptable for game mechanics
-                    watchParty.grantTicket(urd.user, TicketType.IN_OR_OUT);
-                }
-            }
             
             result.append(String.format(WINNER_DETAIL_FORMAT,
                                       urd.user.getName(),
@@ -216,6 +212,11 @@ public class OrderedRankingBet extends Bet {
         }
         
         return result.toString().trim();
+    }
+    
+    @Override
+    public List<User> getLastWinners() {
+        return new ArrayList<>(lastWinners);
     }
     
     /**
