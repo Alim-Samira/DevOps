@@ -1,0 +1,22 @@
+# OS generated files
+.DS_Store
+
+
+# IDE specific files
+.vscode/
+
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+.gradle
+# Build outputs
+
+build/
+out/
+bin/
+.git
+
+copilot-instructions.md
