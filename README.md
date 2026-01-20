@@ -5,58 +5,36 @@
 ![Java](https://img.shields.io/badge/Java-17-orange)
 ![Gradle](https://img.shields.io/badge/Gradle-9.x-02303A)
 ![JUnit](https://img.shields.io/badge/JUnit-5-brightgreen)
-![Version](https://img.shields.io/badge/version-0.2.0-blue)
+![Version](https://img.shields.io/badge/version-0.3.0-blue)
 
 [![Java CI with Gradle](https://github.com/Alim-Samira/DevOps/actions/workflows/gradle.yml/badge.svg)](https://github.com/Alim-Samira/DevOps/actions/workflows/gradle.yml)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Alim-Samira_DevOps&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Alim-Samira_DevOps)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=Alim-Samira_DevOps&metric=coverage)](https://sonarcloud.io/summary/new_code?id=Alim-Samira_DevOps)
 
 </div>
 
 ## 🚀 Aperçu
 
-Projet Java (structure Gradle standard) fournissant un système complet de gestion d'événements esports avec:
-- **Système de chat** (public/privé) avec messages horodatés et mini-jeux intégrés
-- **Module de paris** (Bet/Choice) avec système de points et répartition des gains
-- **Auto Watch Parties** - Création automatique de watch parties basée sur l'API Leaguepedia
-- **Gestion d'états de match** - Suivi en temps réel des matchs
-- **Mini-jeux** - Quiz intégrés dans les chats pour l'engagement des utilisateurs
+Application Spring Boot 3 / Java 17 exposant une API REST pour gérer:
+- **Chats** (public/privé) avec messages horodatés et mini-jeux
+- **Paris** (Bet/Choice) avec points, votes, annulation et répartition des gains
+- **Auto Watch Parties** via Leaguepedia API (fetch des prochains matchs + scheduler)
+- **États de match** (PRE_MATCH → IN_PROGRESS → PAUSED → FINISHED)
 
-L'application propose:
-- une exécution interactive en console avec menu intuitif
-- une suite de tests JUnit 5 complète (27+ tests)
+**v0.3.0** : passage de l'application console à une API REST (frontend manquant pour l'instant). Aucune nouvelle fonctionnalité métier, mais exposition complète des capacités existantes via contrôleurs REST et ajout du suivi qualité SonarCloud.
 
-## 🎯 Nouveautés v0.2.0
+## 🎯 Nouveautés v0.3.0 (migration REST)
 
-### ✨ Fonctionnalités ajoutées
+- ✅ Passage complet en API REST Spring Boot (contrôleurs pour chat, paris, quiz, ranking, watch parties, utilisateurs)
+- ✅ Réorganisation du code en packages `backend.controllers`, `backend.models`, `backend.services`
+- ✅ Intégration SonarCloud (badges qualité et couverture)
+- ⚠️ Frontend non fourni : tester via Swagger/Postman/cURL
 
-**Auto Watch Parties**
-- Création automatique de watch parties pour une équipe ou un tournoi
-- Intégration avec Leaguepedia API (mock) pour récupérer les prochains matchs
-- Scheduler qui ouvre/ferme automatiquement les watch parties (30 min avant le match)
-- États: WAITING → OPEN → CLOSED
-- Filtrage des matchs passés pour éviter les doublons
-
-**Gestion d'états de match (Admin)**
-- Enum `MatchState`: PRE_MATCH, IN_PROGRESS, PAUSED, FINISHED
-- Admins peuvent changer l'état des matchs manuellement
-- Lancement de mini-jeux conditionnel à l'état du match
-
-**Mini-jeux dans les chats**
-- Interface `MiniGame` pour créer des jeux personnalisés
-- `QuizGame`: quiz interactif avec scores et classement
-- Lancement réservé aux admins/modérateurs
-- Commandes: `!quiz start`, `!quiz exit`
-
-**Système de classement**
-- Interface `Bet` pour standardiser les paris
-- `PublicBet` implémente Bet avec méthodes `vote()`, `setResult()`, `cancel()`
-- Gestion des points améliorée
-
-### 🔧 Améliorations techniques
-
-- Refactorisation complète de `Main.java` (meilleure organisation par sections)
-- Extension des tests: 27 tests couvrant tous les scénarios
-- Meilleure séparation des responsabilités (Chat, Betting, Watch Parties)
-- Encodage Windows-1252 compatible (marqueurs ASCII au lieu d'emojis)
+Fonctionnalités métiers conservées (v0.2.x) et désormais exposées en REST :
+- Auto Watch Parties basées sur Leaguepedia (scheduler, états, filtrage des matchs passés)
+- Gestion d'états de match (admin) + lancement de mini-jeux conditionné
+- Mini-jeux : interface `MiniGame`, `QuizGame` (scores + classement)
+- Système de paris : `Bet` / `PublicBet` avec `vote()`, `setResult()`, `cancel()` et répartition des points
 
 ## 🧭 Structure du projet
 
@@ -67,28 +45,13 @@ L'application propose:
 ├─ gradlew / gradlew.bat
 ├─ src
 │  ├─ main/java
-│  │  ├─ Main.java                    # Point d'entrée avec menu interactif
-│  │  ├─ User.java                    # Gestion utilisateurs et points
-│  │  ├─ Chat.java                    # Classe abstraite pour chats
-│  │  ├─ PublicChat.java              # Chat public
-│  │  ├─ PrivateChat.java             # Chat privé
-│  │  ├─ Message.java                 # Messages avec likes/reports
-│  │  ├─ Bet.java                     # Interface pour les paris
-│  │  ├─ PublicBet.java               # Implémentation publique des paris
-│  │  ├─ Choice.java                  # Options de paris
-│  │  ├─ WatchParty.java              # Watch party (manuelle ou auto)
-│  │  ├─ WatchPartyManager.java       # Gestion et planification
-│  │  ├─ AutoConfig.java              # Config pour auto watch parties
-│  │  ├─ AutoType.java                # TEAM ou TOURNAMENT
-│  │  ├─ WatchPartyStatus.java        # WAITING, OPEN, CLOSED
-│  │  ├─ Match.java                   # Modèle de match esports
-│  │  ├─ MatchState.java              # PRE_MATCH, IN_PROGRESS, PAUSED, FINISHED
-│  │  ├─ LeaguepediaClient.java       # Client API (mock)
-│  │  ├─ AutoWatchPartyScheduler.java # Scheduler automatique
-│  │  ├─ MiniGame.java                # Interface mini-jeux
-│  │  └─ QuizGame.java                # Quiz interactif
+│  │  ├─ backend
+│  │  │  ├─ DevOpsApplication.java       # Entrée Spring Boot (API REST)
+│  │  │  ├─ controllers/                 # Contrôleurs REST (chat, bet, quiz, ranking, user, watchparty)
+│  │  │  ├─ models/                      # Domain (User, Chat, Bet, WatchParty, Match, etc.)
+│  │  │  └─ services/                    # Services métier + scheduler + client Leaguepedia
 │  └─ test/java
-│     └─ MainTest.java                # 27+ tests unitaires
+│     └─ backend/                     # Tests unitaires + intégration (MockMvc)
 └─ ...
 ```
 
@@ -135,37 +98,22 @@ Les tests JUnit 5 couvrent:
 Rapport HTML des tests:
 - `build/reports/tests/test/index.html`
 
-Résultat attendu: **27 tests passed** ✅
+Résultat attendu: **37+ tests passés** ✅
 
 ## ▶️ Lancement de l'application
-
-### Option 1: Via Gradle (recommandé)
-
-```powershell
-.\gradlew run
-```
-
-### Option 2: Via JAR
+API REST (Tomcat embarqué, port 8080) :
 
 ```powershell
-.\gradlew jar
-java -jar build/libs/DevOps-0.2.0.jar
+.\gradlew bootRun
+# puis consommer l'API sur http://localhost:8080
 ```
 
-### Menu principal
-
-```
-=== MAIN MENU ===
-Current User: Alice | Points: 200
-
-1. Public Chat
-2. Private Chat
-3. Betting System
-4. Auto Watch Parties
-5. Exit
-
-Choice (or 'e' to exit):
-```
+Exemples de ressources (selon les contrôleurs) :
+- `GET /ranking` – récupérer le classement
+- `POST /quiz/answer` – répondre à une question de quiz
+- `POST /bet/public` – créer un pari public
+- `POST /watchparty/auto` – créer une auto watch party (team/tournament)
+- `DELETE /watchparty/{name}` – supprimer une watch party
 
 ## 🎮 Utilisation
 
@@ -251,95 +199,28 @@ Dans un chat, les admins peuvent lancer:
 - Auto-mise à jour via API
 - Conditions pour lancer les mini-jeux
 
-## 🛠️ Développement
 
-### VS Code (recommandé)
-
-Extensions utiles:
-- Extension Pack for Java
-- Test Runner for Java
-- Gradle for Java
-
-### Tâches Gradle
-
-```powershell
-# Nettoyer
-.\gradlew clean
-
-# Compiler
-.\gradlew classes
-
-# Tester
-.\gradlew test
-
-# Build complet
-.\gradlew build
-
-# Exécuter
-.\gradlew run
-
-# Créer JAR
-.\gradlew jar
-```
 
 ## 📦 Dépendances
-
-```kotlin
-plugins {
-    java
-    application
-}
-
-group = "com.devops"
-version = "0.2.0"
-
-dependencies {
-    testImplementation("org.junit.jupiter:junit-jupiter:5.9.3")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.3")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.9.3")
-}
-
-tasks.withType<Test> {
-    useJUnitPlatform()
-}
-```
+Stack principale (voir `build.gradle.kts`) :
+- Spring Boot 3 / Spring Web
+- Spring Boot Starter Test (JUnit 5)
+- Gson (parsing JSON Leaguepedia)
+- Gradle 9 (wrapper inclus)
 
 ## 🧪 Tests
 
-### Couverture des tests
-
-- **Chat Tests** (3)
-  - Public chat messaging
-  - Private chat user management
-  - Message storage
-
-- **Betting Tests** (4)
-  - Vote and point deduction
-  - Result distribution
-  - Bet cancellation
-  - Points consistency
-
-- **Watch Party Tests** (3)
-  - Manual party creation and planning
-  - Join/leave functionality
-  - Party removal
-
-- **Auto Watch Party Tests** (8)
-  - Auto creation (team/tournament)
-  - State transitions
-  - Join restrictions
-  - Manager tracking
-  - Scheduler lifecycle
-  - Multiple parties coexistence
-
-- **Integration Tests** (9)
-  - User points consistency
-  - Multiple concurrent parties
-  - Full workflow scenarios
-
-**Total: 27 tests** ✅
+- ~37 tests (unitaires + intégration MockMvc)
+- Rapport HTML : `build/reports/tests/test/index.html`
+- Lancer: `./gradlew test`
 
 ## 📝 Notes de version
+
+### v0.3.0 (Janvier 2026)
+- 🌀 Migration complète en API REST Spring Boot
+- 🏷️ Ajout badges SonarCloud (quality gate, coverage)
+- 🧱 Réorganisation en packages controllers/models/services
+- ⚠️ Pas de nouvelles features métier
 
 ### v0.2.0 (Décembre 2025)
 - ✨ Auto Watch Parties avec Leaguepedia integration
@@ -359,5 +240,3 @@ tasks.withType<Test> {
 Ce dépôt est fourni à des fins pédagogiques.
 
 ---
-
-**Développé avec passion pour la communauté esports**
