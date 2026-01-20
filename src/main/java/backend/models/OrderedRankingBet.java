@@ -7,6 +7,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.LinkedHashMap;
 
 /**
  * Pari sur un classement ordonné d'éléments
@@ -33,7 +34,7 @@ public class OrderedRankingBet extends Bet {
     private static final double TOP_PERCENT = 0.30;
     
     private List<String> items;                          // Les éléments à classer (ex: joueurs)
-    private Map<User, List<String>> userRankings;        // User -> son classement
+    private Map<User, List<String>> userRankings;        // User -> son classement (LinkedHashMap pour ordre d'insertion)
     private List<String> correctRanking;                 // Le classement correct
     
     /**
@@ -49,7 +50,7 @@ public class OrderedRankingBet extends Bet {
         }
         
         this.items = new ArrayList<>(items);
-        this.userRankings = new HashMap<>();
+        this.userRankings = new LinkedHashMap<>();
         this.correctRanking = null;
     }
     
@@ -173,6 +174,8 @@ public class OrderedRankingBet extends Bet {
         }
         
         // Trier par distance (plus proche en premier)
+        // L'ordre d'insertion est préservé via LinkedHashMap: en cas d'égalité,
+        // le premier à avoir voté est prioritaire (équitable)
         Collections.sort(distances, Comparator.comparingDouble(urd -> urd.distance));
         
         // Sélectionner le top 30% (arrondi supérieur)

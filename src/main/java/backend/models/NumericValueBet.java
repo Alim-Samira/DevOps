@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -33,7 +34,7 @@ public class NumericValueBet extends Bet {
     private static final double TOLERANCE = 0.0001;
     private static final double TOP_PERCENT = 0.30;
     
-    private Map<User, Double> userValues;      // User -> valeur prédite
+    private Map<User, Double> userValues;      // User -> valeur prédite (LinkedHashMap pour ordre d'insertion)
     private Double correctValue;               // La valeur correcte (après résolution)
     private boolean isInteger;                 // true = entier, false = flottant
     private Double minValue;                   // Valeur minimale acceptée (optionnel)
@@ -49,7 +50,7 @@ public class NumericValueBet extends Bet {
                           LocalDateTime votingEndTime, boolean isInteger,
                           Double minValue, Double maxValue) {
         super(question, creator, watchParty, votingEndTime);
-        this.userValues = new HashMap<>();
+        this.userValues = new LinkedHashMap<>();
         this.isInteger = isInteger;
         this.minValue = minValue;
         this.maxValue = maxValue;
@@ -182,6 +183,8 @@ public class NumericValueBet extends Bet {
         }
         
         // Trier par distance (plus proche en premier)
+        // L'ordre d'insertion est préservé via LinkedHashMap: en cas d'égalité,
+        // le premier à avoir voté est prioritaire (tri stable)
         Collections.sort(distances, Comparator.comparingDouble(ud -> ud.distance));
         
         // Sélectionner le top 30% (arrondi supérieur)
