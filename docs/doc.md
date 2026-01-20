@@ -17,11 +17,11 @@ La plateforme s’adresse aux spectateurs de matchs e-sport afin de profiter de 
 
 | | Notre projet |Discord |Twitch |
 |-|-|-|-|
-|Chat structuré (public/privé)|✔️         |✔️            |✔️|
-|Paris          |✔️          |❌ via bots           |✔️
-|Watch Parties automatiques          |✔️|❌|❌
-  |Mini-jeux          |✔️ quiz integré|❌ via bots|❌
-|Classement        |✔️ |❌ via bots|❌
+|Chat structuré (public/privé)|Oui         |Oui            |Oui|
+|Paris          |Oui          |Non via bots           |Oui
+|Watch Parties automatiques          |Oui|Non|Non
+  |Mini-jeux          |Oui quiz integré|Non via bots|Non
+|Classement        |Oui |Non via bots|Non
 
 
 # Diagramme de classe
