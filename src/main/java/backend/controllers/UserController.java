@@ -17,7 +17,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/api/users")
-@Tag(name = "Users & Leaderboard", description = "Manage users and view points")
+@Tag(name = "Users", description = "Manage users and view points")
 public class UserController {
 
     private final UserService userService;
@@ -26,7 +26,7 @@ public class UserController {
         this.userService = userService;
     }
 
-    @Operation(summary = "Get all users (Leaderboard)", description = "Returns list of users sorted by points (if you implemented sorting in Service)")
+    @Operation(summary = "Get all users", description = "Returns list of users")
     @GetMapping
     public List<User> getAllUsers() {
         return userService.getAllUsers();

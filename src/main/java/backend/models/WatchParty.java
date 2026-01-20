@@ -2,6 +2,9 @@ package backend.models;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.EnumSet;
+import java.util.HashMap;
 
 public class WatchParty {
 
@@ -9,15 +12,23 @@ public class WatchParty {
     private LocalDateTime date;
     private String game;
     private boolean planned;
+    private boolean isPublic = true; // distinction public/private
     
     // Auto watch party fields
     private AutoConfig autoConfig; // null for manual watch parties
     private WatchPartyStatus status;
     private List<User> participants;
     private User creator;
+    // Chat unique pour la watchparty
+    private Chat chat;
+    // Tickets détenus par les utilisateurs pour cette watchparty
+    private Map<User, EnumSet<TicketType>> userTickets;
     
     // Match state management (admin features)
     private MatchState matchState;
+    
+    // Betting system - one active bet per watch party
+    private Bet activeBet;
 
     // Constructor for manual watch parties (existing)
     public WatchParty(String name, LocalDateTime date, String game) {
@@ -30,6 +41,8 @@ public class WatchParty {
         this.participants = new ArrayList<>();
         this.creator = null;
         this.matchState = MatchState.PRE_MATCH; // initial state
+        this.chat = new Chat(name + " Chat", new User("system", true));
+        this.userTickets = new HashMap<>();
     }
     
     // Constructor for auto watch parties
@@ -43,6 +56,8 @@ public class WatchParty {
         this.participants = new ArrayList<>();
         this.creator = creator;
         this.matchState = MatchState.PRE_MATCH; // initial state
+        this.chat = new Chat(name + " Chat", creator != null ? creator : new User("system", true));
+        this.userTickets = new HashMap<>();
     }
 
      public String name() {
@@ -73,6 +88,14 @@ public class WatchParty {
         this.planned = true;
     }
 
+    public boolean isPublic() {
+        return isPublic;
+    }
+
+    public void setPublic(boolean isPublic) {
+        this.isPublic = isPublic;
+    }
+
     // Factory method to create auto watch party
     public static WatchParty createAutoWatchParty(User creator, String target, AutoType type) {
         String name = type == AutoType.TEAM 
@@ -97,6 +120,7 @@ public class WatchParty {
             if (status == WatchPartyStatus.OPEN) {
                 status = WatchPartyStatus.CLOSED;
                 kickAllParticipants();
+                clearAllTickets();
             }
             return;
         }
@@ -123,6 +147,7 @@ public class WatchParty {
         if (upcomingMatch.isFinished() && status == WatchPartyStatus.OPEN) {
             status = WatchPartyStatus.CLOSED;
             kickAllParticipants();
+            clearAllTickets();
         }
     }
     
@@ -139,6 +164,12 @@ public class WatchParty {
         if (!isAutoWatchParty()) {
             if (!participants.contains(user)) {
                 participants.add(user);
+                // Bonus initial de 500 points dans le contexte de la watchparty
+                if (isPublic) {
+                    user.addPublicPoints(500);
+                } else {
+                    user.addPointsForWatchParty(name, 500);
+                }
                 return true;
             }
             return false;
@@ -151,6 +182,12 @@ public class WatchParty {
         
         if (!participants.contains(user)) {
             participants.add(user);
+            // Bonus initial de 500 points
+            if (isPublic) {
+                user.addPublicPoints(500);
+            } else {
+                user.addPointsForWatchParty(name, 500);
+            }
             return true;
         }
         return false;
@@ -177,10 +214,88 @@ public class WatchParty {
     public AutoConfig getAutoConfig() { return autoConfig; }
     public List<User> getParticipants() { return new ArrayList<>(participants); }
     public User getCreator() { return creator; }
+    public Chat getChat() { return chat; }
 
     // Admin feature: whether a mini-game can be launched
     public boolean canLaunchMiniGame() {
         // Only when the match is paused
         return matchState == MatchState.PAUSED;
+    }
+    
+    // ==================== BETTING SYSTEM ====================
+    
+    /**
+     * Crée et associe un pari à cette watch party
+     * @return message de succès ou d'erreur
+     */
+    public String createBet(Bet bet) {
+        if (activeBet != null && activeBet.getState() != Bet.State.RESOLVED 
+            && activeBet.getState() != Bet.State.CANCELED) {
+            return "❌ Un pari est déjà actif pour cette watch party";
+        }
+        
+        if (!bet.getCreator().isAdmin()) {
+            return "❌ Seuls les admins peuvent créer des paris";
+        }
+        
+        activeBet = bet;
+        return "✅ Pari créé: " + bet.getQuestion();
+    }
+    
+    /**
+     * Obtient le pari actif
+     */
+    public Bet getActiveBet() {
+        return activeBet;
+    }
+    
+    /**
+     * Vérifie si un pari est actif
+     */
+    public boolean hasActiveBet() {
+        return activeBet != null && (activeBet.getState() == Bet.State.VOTING 
+                                   || activeBet.getState() == Bet.State.PENDING);
+    }
+    
+    /**
+     * Ferme le pari actif
+     */
+    public String closeActiveBet() {
+        if (activeBet == null) {
+            return "❌ Aucun pari actif";
+        }
+        if (activeBet.getState() != Bet.State.VOTING) {
+            return "❌ Le pari n'est pas en phase de vote";
+        }
+        return activeBet.endVoting();
+    }
+
+    // ==================== TICKETS ====================
+    public void grantTicket(User user, TicketType type) {
+        EnumSet<TicketType> set = userTickets.computeIfAbsent(user, u -> EnumSet.noneOf(TicketType.class));
+        set.add(type);
+    }
+
+    public boolean hasTicket(User user, TicketType type) {
+        EnumSet<TicketType> set = userTickets.get(user);
+        return set != null && set.contains(type);
+    }
+
+    public boolean consumeTicket(User user, TicketType type) {
+        EnumSet<TicketType> set = userTickets.get(user);
+        if (set != null && set.contains(type)) {
+            set.remove(type);
+            if (set.isEmpty()) {
+                userTickets.remove(user);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    private void clearAllTickets() {
+        if (userTickets != null) {
+            userTickets.clear();
+        }
     }
 }
