@@ -1,150 +1,112 @@
 package backend.models;
 
 import jakarta.persistence.*;
-import org.hibernate.annotations.CreationTimestamp;
-
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
 @Entity
-@Table(name = "chats") // links this class to the 'chats' table in the DB
-@Inheritance(strategy = InheritanceType.SINGLE_TABLE) // manage all subclasses in one table ie Public/Private
-@DiscriminatorColumn(name = "type", discriminatorType = DiscriminatorType.STRING) //to distinguish between chat types
-public abstract class Chat {
+@Table(name = "chats")
+public class Chat {
 
-    // BDD Fields
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    protected Long id;
+    private Long id;
 
-    @Column(name = "created_at")
-    @CreationTimestamp
-    protected Date createdAt;
-    
-    @Column(name = "name")
-    protected String name;
+    private String name;
 
-    //Un Chat a un Admin (User)
-    @ManyToOne
-    @JoinColumn(name = "admin_id")
-    protected User admin;
-
-    // 'mappedBy = "chat"' signifie que c'est la classe Message qui porte la clé étrangère
-    @OneToMany(mappedBy = "chat", cascade = CascadeType.ALL, orphanRemoval = true)
+    // IN-MEMORY :so the messages do not pollute database
+    @Transient
     protected List<Message> messages;
 
-    // @Transient = basically keeps memory for API but don't put it inside SQL base 
+    @Transient
+    protected User admin;
+
     @Transient
     private MiniGame activeGame;
-    
-    @Transient
-    private final List<MiniGame> availableGames;
 
-    // empty constructor so JPA reads th BDD correctly
+    @Transient
+    private final List<MiniGame> availableGames = new ArrayList<>();
+
+    //constructors
+
     public Chat() {
         this.messages = new ArrayList<>();
-        this.availableGames = new ArrayList<>();
+        initGames();
+    }
+
+    public Chat(String name) {
+        this.name = name;
+        this.messages = new ArrayList<>();
+        initGames();
+    }
+
+    public Chat(String name, User admin) {
+        this.name = name;
+        this.admin = admin;
+        this.messages = new ArrayList<>();
+        initGames();
+    }
+
+    private void initGames() {
+        // Add games (verify quiz is mounted)
         this.availableGames.add(new QuizGame());
     }
 
-    protected Chat(String name, User admin) {
-        this(); // Appelle le constructeur vide pour initier les listes
-        this.name = name;
-        this.admin = admin;
-        this.activeGame = null;
-    }
-
     public void sendMessage(User sender, String content) {
-        if (sender == null || content == null || content.isEmpty()) {
-            return;
-        }
-
-        String timestamp = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy").format(new Date());
-        Message newMessage = new Message(sender, content, timestamp);
-        
-        // tells to a message to which chat it belongs for the BDD
-        newMessage.setChat(this); 
-        
-        messages.add(newMessage);
-    }
-
-    // Toutes vos autres méthodes restent exactement pareilles
-    
-    public void listMessages() {
-        // Messages listing delegated to UI layer
+        if (sender == null || content == null || content.isEmpty()) return;
+        String timestamp = new SimpleDateFormat("HH:mm").format(new Date());
+        messages.add(new Message(sender, content, timestamp));
     }
 
     public String launchGame(User launcher, String gameCommand) {
-        if (activeGame != null) {
-            return "[X] Un mini-jeu (" + activeGame.getCommandName() + ") est deja en cours.";
-        }
+        if (activeGame != null) return "[X] Jeu en cours.";
         
         for (MiniGame game : availableGames) {
             if (game.getCommandName().equalsIgnoreCase(gameCommand)) {
-                if (!launcher.isAdmin() && !launcher.isModerator()) {
-                    return "[X] Seuls les administrateurs et moderateurs peuvent lancer un mini-jeu.";
-                }
                 activeGame = game;
                 return activeGame.start();
             }
         }
-        return "[X] Mini-jeu '" + gameCommand + "' non trouve.";
+        return "[X] Jeu introuvable.";
     }
-    
+
     public String processGameInput(User user, String input) {
         if (activeGame == null) return null;
         
         if (input.trim().equalsIgnoreCase("!" + activeGame.getCommandName() + " exit")) {
-            String results = activeGame.getResults();
             activeGame.reset();
             activeGame = null;
-            return "🛑 **Mini-jeu arrêté par l'utilisateur.** " + results;
+            return " Jeu arrêté par l'utilisateur.";
         }
-
-        String gameResponse = activeGame.processInput(user, input);
-        if (activeGame.isFinished()) {
-            activeGame = null; 
-        }
-        return gameResponse;
+        
+        String response = activeGame.processInput(user, input);
+        if (activeGame.isFinished()) activeGame = null;
+        return response;
     }
-    
+
     public MiniGame getActiveGame() { return activeGame; }
 
+    // Just some helpers tu find/delete a message (Logic In-Memory)
     public Message findMessageById(String shortId) {
-        if (shortId == null || shortId.isEmpty()) return null;
-        for (Message message : messages) {
-            String messageIdSnippet = String.valueOf(message.getTimestamp().hashCode() & 0xFFFF);
-            if (messageIdSnippet.equals(shortId)) return message;
+        if (shortId == null) return null;
+        for (Message m : messages) {
+            if (String.valueOf(m.getTimestamp().hashCode() & 0xFFFF).equals(shortId)) return m;
         }
         return null;
     }
 
     public void deleteMessage(User remover, String messageShortId) {
-        Message message = findMessageById(messageShortId);
-        if (message == null) return;
-
-        boolean isSender = message.getSender().equals(remover);
-        boolean isAdminOrMod = remover.isAdmin() || remover.isModerator();
-
-        if (isSender || isAdminOrMod) {
-            messages.remove(message);
-            message.setChat(null);
-        }
+        Message m = findMessageById(messageShortId);
+        if (m != null) messages.remove(m);
     }
+    
+    public void removeMessage(Message message) { messages.remove(message); }
 
-    public void removeMessage(Message message) {
-        messages.remove(message);
-    }
-
-    // Getters standards
-    public String getName() { return name; }
-    public User getAdmin() { return admin; }
-    public List<Message> getMessages() { return messages; }
-    public void registerGame(MiniGame game) { this.availableGames.add(game); }
-    public List<MiniGame> getAvailableGames() { return availableGames; }
-
-    // Getter for the ID BDD (optional)
+    // Getters DB
     public Long getId() { return id; }
+    public String getName() { return name; }
+    public List<Message> getMessages() { return messages; }
+    public User getAdmin() { return admin; }
 }
