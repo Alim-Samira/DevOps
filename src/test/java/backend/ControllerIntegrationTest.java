@@ -112,26 +112,6 @@ class ControllerIntegrationTest {
                 .andExpect(jsonPath("$.name").value("alice"));
     }
 
-    // ==================== CHAT CONTROLLER TESTS ====================
-
-    @Test
-    @DisplayName("GET /api/chat should return chat history")
-    void testGetChatHistory() throws Exception {
-        mockMvc.perform(get("/api/chat"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType. APPLICATION_JSON));
-    }
-
-    @Test
-    @DisplayName("POST /api/chat should send a message")
-    void testSendMessage() throws Exception {
-        mockMvc.perform(post("/api/chat")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"user\": \"testuser\", \"text\": \"Hello!\"}"))
-                .andExpect(status().isOk())
-                .andExpect(content().string("Message sent"));
-    }
-
     // ==================== WATCHPARTY CONTROLLER TESTS ====================
 
     @Test

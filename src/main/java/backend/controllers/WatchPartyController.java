@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import backend.models.AutoType;
+import backend.models.Message;
 import backend.models.User;
 import backend.models.WatchParty;
 import backend.services.RankingService;
@@ -114,6 +115,32 @@ public class WatchPartyController {
         if (wp == null) return "❌ WatchParty introuvable: " + name;
         boolean removed = wp.leave(userService.getUser(userName));
         return removed ? "✅ " + userName + " a quitté " + name : "⚠️ " + userName + " n'est pas participant";
+    }
+
+    // 6. CHAT for a watchparty
+    @GetMapping("/{name}/chat")
+    public List<Message> getWatchPartyChat(@PathVariable("name") String name) {
+        WatchParty wp = manager.getWatchPartyByName(name);
+        if (wp == null) return List.of();
+        return wp.getChat().getMessages();
+    }
+
+    @PostMapping("/{name}/chat")
+    public String sendWatchPartyMessage(@PathVariable("name") String name, @RequestBody Map<String, String> payload) {
+        String user = payload.get("user");
+        String text = payload.get("text");
+
+        if (user == null || text == null) {
+            return "❌ Missing 'user' or 'text'";
+        }
+
+        WatchParty wp = manager.getWatchPartyByName(name);
+        if (wp == null) {
+            return "❌ Watch party introuvable: " + name;
+        }
+
+        wp.getChat().sendMessage(userService.getUser(user), text);
+        return "✅ Message sent";
     }
 
     // Helpers

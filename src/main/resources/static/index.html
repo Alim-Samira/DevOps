@@ -95,6 +95,28 @@
         </div>
       </section>
 
+      <section id="chat-section" class="card">
+        <h2>Chat de WatchParty</h2>
+        <div class="controls">
+          <select id="chat-wp">
+            <option value="">-- Sélectionner une WP --</option>
+          </select>
+          <button id="btn-load-chat">Charger chat</button>
+        </div>
+        
+        <div style="display: flex; flex-direction: column; gap: 10px; height: 250px;">
+          <div style="flex: 1; border: 1px solid #ccc; overflow-y: auto; padding: 10px; background: #f9f9f9; border-radius: 4px;" id="chat-messages">
+            <div style="color: #999; font-size: 0.9rem;">Aucun message</div>
+          </div>
+        </div>
+
+        <div class="controls" style="margin-top: 10px;">
+          <input id="chat-user" placeholder="username" style="width: 120px;" />
+          <input id="chat-text" placeholder="Votre message..." style="flex: 1;" />
+          <button id="btn-send-chat">Envoyer</button>
+        </div>
+      </section>
+
       <section id="log-section" class="card large">
         <h2>Log / réponses</h2>
         <div id="log"></div>

@@ -80,6 +80,7 @@ async function createWatchParty(){
   log('Create WP → '+text);
   await refreshWatchParties();
   await refreshWatchPartyRanking();
+  updateChatWPSelector();
 }
 
 
@@ -132,6 +133,7 @@ async function joinWatchParty(){
   await refreshWatchParties();
   await refreshWatchPartyRanking();
   await refreshRankings();
+  updateChatWPSelector();
 }
 
 async function leaveWatchParty(){
@@ -143,6 +145,7 @@ async function leaveWatchParty(){
   await refreshWatchParties();
   await refreshWatchPartyRanking();
   await refreshRankings();
+  updateChatWPSelector();
 }
 
 async function refreshRankings(){
@@ -178,6 +181,89 @@ async function lookupUser(){
   log(`User ${u} fetched`);
 }
 
+function updateChatWPSelector() {
+  const betWpSelect = document.getElementById('bet-wp');
+  const chatWpSelect = document.getElementById('chat-wp');
+  
+  // Copier les options
+  chatWpSelect.innerHTML = '<option value="">-- Sélectionner une WP --</option>';
+  for (const opt of betWpSelect.options) {
+    if (opt.value !== '') {
+      const newOpt = document.createElement('option');
+      newOpt.value = opt.value;
+      newOpt.textContent = opt.textContent;
+      chatWpSelect.appendChild(newOpt);
+    }
+  }
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+async function loadWatchPartyChat() {
+  const wpName = document.getElementById('chat-wp').value;
+  if (!wpName) {
+    log('Sélectionnez une watch party');
+    return;
+  }
+
+  try {
+    const messages = await fetchJson(`/api/watchparties/${encodeName(wpName)}/chat`);
+    const container = document.getElementById('chat-messages');
+    if (!messages || messages.length === 0) {
+      container.innerHTML = '<div style="color: #999; font-size: 0.9rem;">Aucun message</div>';
+      return;
+    }
+    container.innerHTML = messages.map(m => 
+      `<div style="margin-bottom: 8px; padding: 6px; background: #f5f5f5; border-radius: 3px; border-left: 3px solid #007bff;">
+        <strong>${escapeHtml(m.user?.name || 'System')}</strong>: ${escapeHtml(m.content || m.text)}<br/>
+        <small style="color: #666;">${m.timestamp || ''}</small>
+      </div>`
+    ).join('');
+    // Auto-scroll to bottom
+    container.scrollTop = container.scrollHeight;
+    log('Chat chargé');
+  } catch(e) {
+    log('Erreur chargement chat: ' + e);
+  }
+}
+
+async function sendChatMessage() {
+  const wpName = document.getElementById('chat-wp').value;
+  const user = document.getElementById('chat-user').value;
+  const text = document.getElementById('chat-text').value;
+
+  if (!wpName) {
+    log('Sélectionnez une watch party');
+    return;
+  }
+  if (!user || !text) {
+    log('Remplissez user et message');
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/watchparties/${encodeName(wpName)}/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user, text })
+    });
+    const result = await res.text();
+    log(result);
+    document.getElementById('chat-text').value = '';
+    await loadWatchPartyChat(); // Rafraîchir
+  } catch(e) {
+    log('Erreur envoi message: ' + e);
+  }
+}
+
 function toggleWpMode(){
   const mode = document.getElementById('wp-mode').value;
   const wpType = document.getElementById('wp-type');
@@ -208,9 +294,11 @@ function bind(){
   document.getElementById('btn-leave-wp').onclick = leaveWatchParty;
   document.getElementById('btn-refresh-rank').onclick = refreshRankings;
   document.getElementById('btn-refresh-wp-rank').onclick = refreshWatchPartyRanking;
-  document.getElementById('bet-wp').onchange = () => { refreshWatchPartyRanking(); setWpAdminFromSelector(); };
+  document.getElementById('bet-wp').onchange = () => { refreshWatchPartyRanking(); setWpAdminFromSelector(); updateChatWPSelector(); };
   document.getElementById('wp-mode').onchange = toggleWpMode;
   document.getElementById('btn-lookup-user').onclick = lookupUser;
+  document.getElementById('btn-load-chat').onclick = loadWatchPartyChat;
+  document.getElementById('btn-send-chat').onclick = sendChatMessage;
 }
 
-window.addEventListener('DOMContentLoaded', async () => { bind(); toggleWpMode(); await refreshWatchParties(); await refreshRankings(); await refreshWatchPartyRanking(); log('UI ready'); });
+window.addEventListener('DOMContentLoaded', async () => { bind(); toggleWpMode(); await refreshWatchParties(); updateChatWPSelector(); await refreshRankings(); await refreshWatchPartyRanking(); log('UI ready'); });

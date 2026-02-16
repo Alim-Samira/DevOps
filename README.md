@@ -111,7 +111,6 @@ Triple système de récompenses pour fidéliser les joueurs :
 │  │  ├─ DevOpsApplication.java
 │  │  ├─ controllers/          # REST endpoints
 │  │  │  ├─ BetController.java
-│  │  │  ├─ ChatController.java
 │  │  │  ├─ QuizController.java
 │  │  │  ├─ RankingController.java
 │  │  │  ├─ RewardController.java
@@ -296,16 +295,13 @@ POST /api/watchparties/{name}/leave
 { "user": "bob" }
 ```
 
-### 💬 Chat & Quiz (`/api/chat`, `/api/quiz`)
+### 💬 Chat & Quiz
+
+**Chat**: See WatchParty endpoints (`GET/POST /api/watchparties/{name}/chat`)
+
+**Quiz** (`/api/quiz`):
 
 ```http
-# Envoyer un message
-POST /api/chat/public/send
-{
-  "username": "alice",
-  "message": "!quiz start"
-}
-
 # Répondre au quiz
 POST /api/quiz/answer
 {

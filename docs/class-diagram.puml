@@ -178,12 +178,6 @@ class UserService {
   + getUser(String)
   + getAllUsers()
 }
-class ChatService {
-  - Chat publicChat
-  - UserService userService
-  + addMessage(String, String)
-  + getMessages()
-}
 class WatchPartyManager {
   - List<WatchParty> watchParties
   - List<WatchParty> watchPartiesPlanned
@@ -256,7 +250,6 @@ RewardScheduler o-- RewardService
 
 ' Controllers -> Services
 class BetController
-class ChatController
 class QuizController
 class RankingController
 class RewardController
@@ -264,8 +257,6 @@ class UserController
 class WatchPartyController
 
 BetController --> BetService
-ChatController --> ChatService
-QuizController --> QuizService
 QuizController --> UserService
 RankingController --> RankingService
 RewardController --> RewardService
@@ -282,8 +273,6 @@ RankingService o-- UserService
 RankingService o-- WatchPartyManager
 RewardService o-- UserService
 RewardService o-- RankingService
-ChatService o-- Chat
-ChatService o-- UserService
 QuizService o-- QuizGame
 
 @enduml
