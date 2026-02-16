@@ -92,6 +92,13 @@ public class WatchPartyController {
         String name = payload.get("name");
         if (name == null || name.isBlank()) return "❌ Missing name";
 
+        // Optional creator supplied by caller (useful for manual creation from UI)
+        String userName = payload.get("user");
+        User creator = null;
+        if (userName != null && !userName.isBlank()) {
+            creator = userService.getUser(userName);
+        }
+
         String game = payload.getOrDefault("game", "League of Legends");
         String dateStr = payload.get("date");
         LocalDateTime date = null;
@@ -106,6 +113,7 @@ public class WatchPartyController {
         }
 
         WatchParty wp = new WatchParty(name, date, game);
+        if (creator != null) wp.setCreator(creator);
         wp.setPublic(isPublic);
         manager.addWatchParty(wp);
         return (isPublic ? "✅ Public" : "✅ Private") + " watchparty created: " + name;

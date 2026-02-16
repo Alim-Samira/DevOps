@@ -18,8 +18,20 @@
         <div class="controls">
           <input id="wp-name" placeholder="Nom (ex: TestWP)" />
           <input id="wp-user" placeholder="User créateur (ex: alice)" />
+
+          <label for="wp-mode" style="margin-left:6px">Mode</label>
+          <select id="wp-mode" style="margin-right:8px">
+            <option value="AUTO" selected>Auto</option>
+            <option value="PUBLIC">Public</option>
+            <option value="PRIVATE">Privé</option>
+          </select>
+
           <select id="wp-type"><option>TEAM</option><option>TOURNAMENT</option></select>
-          <button id="btn-create-wp">Créer (auto)</button>
+
+          <input id="wp-game" placeholder="Game (manual only)" style="display:none; width:160px; margin-left:6px" />
+          <input id="wp-date" placeholder="Date ISO (manual only)" style="display:none; width:200px; margin-left:6px" />
+
+          <button id="btn-create-wp">Créer</button>
         </div>
         <div>
           <button id="btn-refresh-wp">Rafraîchir la liste</button>

@@ -23,26 +23,65 @@ async function refreshWatchParties(){
     sel.innerHTML = '';
     wps.forEach(wp => {
       const li = document.createElement('li');
-      li.textContent = wp.name + (wp.creator? ` (creator=${wp.creator.name})` : '');
+      const isPublic = wp.public === true || wp.isPublic === true;
+      const typeLabel = wp.autoConfig ? `auto(${wp.autoConfig.type}${wp.autoConfig.target? ':'+wp.autoConfig.target : ''})` : (isPublic ? 'public' : 'private');
+      li.textContent = `${wp.name} — ${typeLabel}` + (wp.creator? ` (creator=${wp.creator.name})` : '');
       list.appendChild(li);
       const opt = document.createElement('option');
       opt.value = wp.name; opt.textContent = wp.name;
+      opt.dataset.creator = wp.creator ? wp.creator.name : '';
       sel.appendChild(opt);
     });
+    if (sel.options.length > 0) {
+      sel.selectedIndex = 0;
+      setWpAdminFromSelector();
+    }
     log('WatchParties rafraîchis');
   }catch(e){ log('Erreur fetch WP: '+e); }
+}
+
+function setWpAdminFromSelector(){
+  const sel = document.getElementById('bet-wp');
+  if (!sel) return;
+  const opt = sel.options[sel.selectedIndex];
+  if (!opt) return;
+  const creator = opt.dataset && opt.dataset.creator;
+  if (creator && creator.length>0) {
+    const adminEl = document.getElementById('bet-admin');
+    const adminActionEl = document.getElementById('bet-admin-action');
+    if (adminEl) adminEl.value = creator;
+    if (adminActionEl) adminActionEl.value = creator;
+  }
 }
 
 async function createWatchParty(){
   const name = document.getElementById('wp-name').value || `WP_${Date.now()}`;
   const user = document.getElementById('wp-user').value || 'alice';
-  const type = document.getElementById('wp-type').value || 'TEAM';
-  const payload = { user, name, type };
-  const r = await fetch('/api/watchparties',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-  const text = await r.text();
+  const mode = document.getElementById('wp-mode').value;
+
+  let res;
+  if (mode === 'AUTO') {
+    const type = document.getElementById('wp-type').value || 'TEAM';
+    const payload = { user, name, type };
+    res = await fetch('/api/watchparties',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  } else if (mode === 'PUBLIC') {
+    const game = document.getElementById('wp-game').value || 'League of Legends';
+    const date = document.getElementById('wp-date').value || '';
+    const payload = { name, game, date, user };
+    res = await fetch('/api/watchparties/public',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  } else { // PRIVATE
+    const game = document.getElementById('wp-game').value || 'League of Legends';
+    const date = document.getElementById('wp-date').value || '';
+    const payload = { name, game, date, user };
+    res = await fetch('/api/watchparties/private',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  }
+
+  const text = await res.text();
   log('Create WP → '+text);
   await refreshWatchParties();
+  await refreshWatchPartyRanking();
 }
+
 
 async function createBet(){
   const name = document.getElementById('bet-wp').value;
@@ -117,6 +156,25 @@ async function lookupUser(){
   log(`User ${u} fetched`);
 }
 
+function toggleWpMode(){
+  const mode = document.getElementById('wp-mode').value;
+  const wpType = document.getElementById('wp-type');
+  const wpGame = document.getElementById('wp-game');
+  const wpDate = document.getElementById('wp-date');
+  const createBtn = document.getElementById('btn-create-wp');
+  if (mode === 'AUTO') {
+    wpType.style.display = '';
+    wpGame.style.display = 'none';
+    wpDate.style.display = 'none';
+    createBtn.textContent = 'Créer (auto)';
+  } else {
+    wpType.style.display = 'none';
+    wpGame.style.display = '';
+    wpDate.style.display = '';
+    createBtn.textContent = mode === 'PUBLIC' ? 'Créer (public)' : 'Créer (privé)';
+  }
+}
+
 function bind(){
   document.getElementById('btn-refresh-wp').onclick = refreshWatchParties;
   document.getElementById('btn-create-wp').onclick = createWatchParty;
@@ -126,8 +184,9 @@ function bind(){
   document.getElementById('btn-resolve').onclick = resolveBet;
   document.getElementById('btn-refresh-rank').onclick = refreshRankings;
   document.getElementById('btn-refresh-wp-rank').onclick = refreshWatchPartyRanking;
-  document.getElementById('bet-wp').onchange = refreshWatchPartyRanking;
+  document.getElementById('bet-wp').onchange = () => { refreshWatchPartyRanking(); setWpAdminFromSelector(); };
+  document.getElementById('wp-mode').onchange = toggleWpMode;
   document.getElementById('btn-lookup-user').onclick = lookupUser;
 }
 
-window.addEventListener('DOMContentLoaded', async () => { bind(); await refreshWatchParties(); await refreshRankings(); await refreshWatchPartyRanking(); log('UI ready'); });
+window.addEventListener('DOMContentLoaded', async () => { bind(); toggleWpMode(); await refreshWatchParties(); await refreshRankings(); await refreshWatchPartyRanking(); log('UI ready'); });

@@ -231,6 +231,20 @@ public class WatchParty {
     public AutoConfig getAutoConfig() { return autoConfig; }
     public List<User> getParticipants() { return new ArrayList<>(participants); }
     public User getCreator() { return creator; }
+
+    /**
+     * Définit le créateur de la watchparty (utilisé pour les watchparties manuelles).
+     * Ajoute également le créateur à la liste des participants et met à jour le chat.
+     */
+    public void setCreator(User creator) {
+        this.creator = creator;
+        if (creator != null && !this.participants.contains(creator)) {
+            this.participants.add(creator);
+        }
+        // Mettre à jour l'admin du chat pour refléter le créateur
+        this.chat = new Chat(name + " Chat", creator != null ? creator : new User("system", true));
+    }
+
     public Chat getChat() { return chat; }
 
     // Admin feature: whether a mini-game can be launched
