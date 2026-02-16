@@ -64,11 +64,23 @@ public class WatchParty {
         return name;
     }
 
+    public String getName() {
+        return name;
+    }
+
     public LocalDateTime date() {
         return date;
     }
 
+    public LocalDateTime getDate() {
+        return date;
+    }
+
     public String game() {
+        return game;
+    }
+
+    public String getGame() {
         return game;
     }
 
