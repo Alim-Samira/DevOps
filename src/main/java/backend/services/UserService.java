@@ -17,8 +17,6 @@ public class UserService {
         
         // Create a default admin
         users.put("admin", new User("admin", true));
-        // Create a default user
-        users.put("alice", new User("alice", false));
     }
 
     // Get or Create a user
