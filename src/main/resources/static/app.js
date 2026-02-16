@@ -85,9 +85,28 @@ async function resolveBet(){
 }
 
 async function refreshRankings(){
-  const r = await fetchJson('/api/rankings/public/points');
-  document.getElementById('rankings').textContent = JSON.stringify(r, null, 2);
-  log('Rankings rafraîchis');
+  // legacy button -> refresh global ranking (force server recompute)
+  const r = await fetchJson('/api/rankings/public/points?refresh=true');
+  const txt = JSON.stringify(r, null, 2);
+  // keep backward-compatible place and new UI element
+  const legacyEl = document.getElementById('rankings');
+  if (legacyEl) legacyEl.textContent = txt;
+  document.getElementById('global-ranking').textContent = txt;
+  log('Classement global rafraîchi (points)');
+}
+
+async function refreshWatchPartyRanking(){
+  const sel = document.getElementById('bet-wp');
+  const name = sel && sel.value;
+  if (!name) {
+    document.getElementById('wp-ranking').textContent = 'Aucune watchparty sélectionnée';
+    return;
+  }
+  try {
+    const r = await fetchJson(`/api/watchparties/${encodeName(name)}/rankings/points?refresh=true`);
+    document.getElementById('wp-ranking').textContent = JSON.stringify(r, null, 2);
+    log(`Classement WP "${name}" rafraîchi`);
+  } catch(e) { log('Erreur fetch ranking WP: '+e); }
 }
 
 async function lookupUser(){
@@ -106,7 +125,9 @@ function bind(){
   document.getElementById('btn-end-voting').onclick = endVoting;
   document.getElementById('btn-resolve').onclick = resolveBet;
   document.getElementById('btn-refresh-rank').onclick = refreshRankings;
+  document.getElementById('btn-refresh-wp-rank').onclick = refreshWatchPartyRanking;
+  document.getElementById('bet-wp').onchange = refreshWatchPartyRanking;
   document.getElementById('btn-lookup-user').onclick = lookupUser;
 }
 
-window.addEventListener('DOMContentLoaded', async () => { bind(); await refreshWatchParties(); await refreshRankings(); log('UI ready'); });
+window.addEventListener('DOMContentLoaded', async () => { bind(); await refreshWatchParties(); await refreshRankings(); await refreshWatchPartyRanking(); log('UI ready'); });

@@ -54,9 +54,21 @@
       <section id="ranking-section" class="card">
         <h2>Rankings / Users</h2>
         <div class="controls">
-          <button id="btn-refresh-rank">Rafraîchir rankings</button>
-          <pre id="rankings" class="mono"></pre>
+          <button id="btn-refresh-rank">Rafraîchir (global)</button>
+          <button id="btn-refresh-wp-rank">Rafraîchir (watchparty sélectionnée)</button>
         </div>
+
+        <div class="controls">
+          <h3 style="margin:0.2rem 0">Global (public) — points</h3>
+          <pre id="global-ranking" class="mono"></pre>
+        </div>
+
+        <div class="controls">
+          <h3 style="margin:0.2rem 0">WatchParty — points</h3>
+          <div style="font-size:0.9rem;margin-bottom:0.5rem">Sélectionnez une WatchParty dans le sélecteur `Pari` ci‑dessus</div>
+          <pre id="wp-ranking" class="mono"></pre>
+        </div>
+
         <div class="controls">
           <input id="lookup-user" placeholder="username" />
           <button id="btn-lookup-user">Chercher user</button>
