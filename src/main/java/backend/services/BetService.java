@@ -30,10 +30,12 @@ public class BetService {
     
     private final WatchPartyManager watchPartyManager;
     private final UserService userService;
+    private final RankingService rankingService;
 
-    public BetService(WatchPartyManager watchPartyManager, UserService userService) {
+    public BetService(WatchPartyManager watchPartyManager, UserService userService, RankingService rankingService) {
         this.watchPartyManager = watchPartyManager;
         this.userService = userService;
+        this.rankingService = rankingService;
     }
 
     /**
@@ -172,6 +174,13 @@ public class BetService {
 
         Bet bet = wp.getActiveBet();
         String result = bet.resolve(correctValue);
+
+        // Refresh ranking cache after bet resolution (points were distributed)
+        if (wp.isPublic()) {
+            rankingService.refreshAll();
+        } else {
+            rankingService.refreshWatchParty(watchPartyName);
+        }
 
         // Distribuer les tickets aux gagnants
         if (bet.isOffersTicket()) {

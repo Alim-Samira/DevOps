@@ -169,37 +169,27 @@ public abstract class Bet {
     }
 
     protected boolean hasSufficientPoints(User user, int points) {
-        if (isPublic) {
-            return user.getPublicPoints() >= points;
-        }
+        // Always use WatchParty-specific points
+        // Rankings for public WPs sum these same points, ensuring consistency
         return user.getPointsForWatchParty(watchPartyName) >= points;
     }
 
     protected void debitUserPoints(User user, int points) {
-        if (isPublic) {
-            user.addPublicPoints(-points);
-        } else {
-            user.addPointsForWatchParty(watchPartyName, -points);
-        }
+        // Always debit from WatchParty-specific points
+        user.addPointsForWatchParty(watchPartyName, -points);
     }
 
     protected void creditUserPoints(User user, int points) {
-        if (isPublic) {
-            user.addPublicPoints(points);
-        } else {
-            user.addPointsForWatchParty(watchPartyName, points);
-        }
+        // Always credit to WatchParty-specific points
+        user.addPointsForWatchParty(watchPartyName, points);
     }
 
     /**
-     * Enregistre une victoire pour l'utilisateur selon le type de watchparty.
+     * Enregistre une victoire pour l'utilisateur dans la WP spécifique.
      */
     protected void recordWin(User user) {
-        if (isPublic) {
-            user.addPublicWin();
-        } else {
-            user.addWinForWatchParty(watchPartyName);
-        }
+        // Always record win for the specific watch party
+        user.addWinForWatchParty(watchPartyName);
     }
     
     // Getters

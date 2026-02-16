@@ -42,6 +42,12 @@ class MainTest {
         alice = new User("Alice", false);
         bob = new User("Bob", false);
         watchParty = new WatchParty("Test WP", LocalDateTime.now().plusDays(1), "LoL");
+        watchParty.setPublic(false); // Default as private for tests
+        
+        // Initialize users in the watch party with 200 points
+        watchParty.join(admin);
+        watchParty.join(alice);
+        watchParty.join(bob);
     }
 
     // ==================== CHAT TESTS ====================
@@ -71,9 +77,9 @@ class MainTest {
         );
         watchParty.createBet(bet);
 
-        assertEquals(200, alice.getPublicPoints());
+        assertEquals(200, alice.getPointsForWatchParty("Test WP"));
         bet.vote(alice, "T1", 50);
-        assertEquals(150, alice.getPublicPoints());
+        assertEquals(150, alice.getPointsForWatchParty("Test WP"));
     }
 
     @Test
@@ -88,15 +94,15 @@ class MainTest {
         bet.vote(alice, "A", 50);
         bet.vote(bob, "A", 50);
         
-        assertEquals(150, alice.getPublicPoints());
-        assertEquals(150, bob.getPublicPoints());
+        assertEquals(150, alice.getPointsForWatchParty("Test WP"));
+        assertEquals(150, bob.getPointsForWatchParty("Test WP"));
 
         bet.endVoting();
         bet.resolve("A");
 
         // Total pot = 100, split equally between 2 winners = 50 each
-        assertEquals(200, alice.getPublicPoints()); // 150 + 50
-        assertEquals(200, bob.getPublicPoints());   // 150 + 50
+        assertEquals(200, alice.getPointsForWatchParty("Test WP")); // 150 + 50
+        assertEquals(200, bob.getPointsForWatchParty("Test WP"));   // 150 + 50
     }
 
     @Test
@@ -109,10 +115,10 @@ class MainTest {
         );
 
         bet.vote(alice, "A", 50);
-        assertEquals(150, alice.getPublicPoints());
+        assertEquals(150, alice.getPointsForWatchParty("Test WP"));
 
         bet.cancel();
-        assertEquals(200, alice.getPublicPoints());
+        assertEquals(200, alice.getPointsForWatchParty("Test WP"));
     }
 
     @Test
@@ -138,7 +144,7 @@ class MainTest {
 
         String result = bet.vote(alice, 35, 50);
         assertTrue(result.contains("✅"));
-        assertEquals(150, alice.getPublicPoints());
+        assertEquals(150, alice.getPointsForWatchParty("Test WP"));
     }
 
     @Test
@@ -156,8 +162,8 @@ class MainTest {
         String result = bet.resolve(35);
 
         assertTrue(result.contains("✅"));
-        assertEquals(200, alice.getPublicPoints()); // 150 + 50
-        assertEquals(200, bob.getPublicPoints());
+        assertEquals(200, alice.getPointsForWatchParty("Test WP")); // 150 + 50
+        assertEquals(200, bob.getPointsForWatchParty("Test WP"));
     }
 
     @Test
@@ -181,7 +187,7 @@ class MainTest {
 
         assertTrue(result.contains("✅"));
         // Top 30% de 4 = 2 gagnants (bob et alice ou charlie)
-        assertTrue(bob.getPublicPoints() > 150); // Bob devrait gagner plus (plus proche)
+        assertTrue(bob.getPointsForWatchParty("Test WP") > 150); // Bob devrait gagner plus (plus proche)
     }
 
     // ==================== ORDERED RANKING BET TESTS ====================
@@ -199,7 +205,7 @@ class MainTest {
         String result = bet.vote(alice, ranking, 50);
 
         assertTrue(result.contains("✅"));
-        assertEquals(150, alice.getPublicPoints());
+        assertEquals(150, alice.getPointsForWatchParty("Test WP"));
     }
 
     @Test
@@ -219,8 +225,8 @@ class MainTest {
         String result = bet.resolve(perfect);
 
         assertTrue(result.contains("parfait"));
-        assertEquals(200, alice.getPublicPoints());
-        assertEquals(200, bob.getPublicPoints());
+        assertEquals(200, alice.getPointsForWatchParty("Test WP"));
+        assertEquals(200, bob.getPointsForWatchParty("Test WP"));
     }
 
     @Test
@@ -240,7 +246,7 @@ class MainTest {
 
         assertTrue(result.contains("✅"));
         // Alice devrait gagner plus (distance = 0)
-        assertTrue(alice.getPublicPoints() >= bob.getPublicPoints());
+        assertTrue(alice.getPointsForWatchParty("Test WP") >= bob.getPointsForWatchParty("Test WP"));
     }
 
     // ==================== WATCH PARTY BETTING TESTS ====================
@@ -505,10 +511,10 @@ class MainTest {
     void testUserPointsAccumulation() {
         User pointUser = new User("PointAccumulator", false);
 
-        int initialPoints = pointUser.getPublicPoints();
-        pointUser.addPublicPoints(100);
+        int initialPoints = pointUser.getPointsForWatchParty("Test WP");
+        pointUser.addPointsForWatchParty("Test WP", 100);
 
-        assertEquals(initialPoints + 100, pointUser.getPublicPoints());
+        assertEquals(initialPoints + 100, pointUser.getPointsForWatchParty("Test WP"));
     }
 
     @Test
