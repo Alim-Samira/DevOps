@@ -222,8 +222,8 @@ async function loadWatchPartyChat() {
       return;
     }
     container.innerHTML = messages.map(m => 
-      `<div style="margin-bottom: 8px; padding: 6px; background: #f5f5f5; border-radius: 3px; border-left: 3px solid #007bff;">
-        <strong>${escapeHtml(m.user?.name || 'System')}</strong>: ${escapeHtml(m.content || m.text)}<br/>
+      `<div style="margin-bottom: 8px; padding: 6px; background: #e8f0ff; border-radius: 3px; border-left: 3px solid #007bff; color: #000;">
+        <strong style="color: #0056b3;">${escapeHtml(m.sender?.name || 'System')}</strong>: <span style="color: #222;">${escapeHtml(m.content || m.text)}</span><br/>
         <small style="color: #666;">${m.timestamp || ''}</small>
       </div>`
     ).join('');

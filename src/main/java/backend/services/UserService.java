@@ -14,6 +14,7 @@ public class UserService {
     private Map<String, User> users = new HashMap<>();
 
     public UserService() {
+        
         // Create a default admin
         users.put("admin", new User("admin", true));
         // Create a default user

@@ -85,7 +85,7 @@ public class RankingService {
     }
 
     private Map<String, Integer> computeGlobalPublicPoints() {
-        // Global public ranking = sum of user's points **for each public watchparty they participate in**
+        // Global ranking includes ALL users; WP-specific rankings only include participants
         Map<String, Integer> totals = userService.getAllUsers().stream()
             .collect(Collectors.toMap(User::getName, u -> 0));
 
@@ -107,12 +107,18 @@ public class RankingService {
     }
 
     private Map<String, Integer> computeWatchPartyPoints(String watchPartyName) {
-        return sortDescending(userService.getAllUsers().stream()
+        WatchParty wp = watchPartyManager.getWatchPartyByName(watchPartyName);
+        if (wp == null) return Map.of();
+        
+        return sortDescending(wp.getParticipants().stream()
             .collect(Collectors.toMap(User::getName, u -> u.getPointsForWatchParty(watchPartyName), (a, b) -> a, LinkedHashMap::new)));
     }
 
     private Map<String, Integer> computeWatchPartyWins(String watchPartyName) {
-        return sortDescending(userService.getAllUsers().stream()
+        WatchParty wp = watchPartyManager.getWatchPartyByName(watchPartyName);
+        if (wp == null) return Map.of();
+        
+        return sortDescending(wp.getParticipants().stream()
             .collect(Collectors.toMap(User::getName, u -> u.getWinsForWatchParty(watchPartyName), (a, b) -> a, LinkedHashMap::new)));
     }
 
