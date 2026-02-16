@@ -152,24 +152,50 @@ class ControllerIntegrationTest {
     }
 
     @Test
-    @DisplayName("Creator is watchparty admin but not global admin")
+    @DisplayName("WatchParty admin vs global admin behavior")
     void testCreatorIsWpAdminButNotGlobalAdmin() throws Exception {
-        // create a watchparty with 'alice' as creator
+        // 1) Auto WP created by 'alice' (creator != null)
         mockMvc.perform(post("/api/watchparties")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"user\": \"alice\", \"name\": \"CreatorWP\", \"type\": \"TEAM\"}"))
                 .andExpect(status().isOk());
 
-        // 'alice' should be allowed to create a bet for that watchparty (WP-scoped admin)
+        // Creator 'alice' can create a bet on her WP (WP-scoped admin)
         mockMvc.perform(post("/api/watchparties/Auto WP: Team CreatorWP/bets/discrete")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"admin\": \"alice\", \"question\": \"Is creator admin?\", \"choices\": [\"Yes\", \"No\"], \"votingMinutes\": 5}"))
                 .andExpect(status().isOk());
 
-        // but 'alice' must NOT be promoted to a global admin
+        // Global admin 'admin' must NOT be allowed to create a bet when WP has a creator
+        mockMvc.perform(post("/api/watchparties/Auto WP: Team CreatorWP/bets/discrete")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"admin\": \"admin\", \"question\": \"Global admin attempt\", \"choices\": [\"A\", \"B\"], \"votingMinutes\": 5}"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("❌ Seuls les admins peuvent créer des paris"));
+
+        // Ensure 'alice' was NOT promoted to global admin
         mockMvc.perform(get("/api/users/alice"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.admin").value(false));
+
+        // 2) Create a manual (public) watchparty -> creator == null
+        mockMvc.perform(post("/api/watchparties/public")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\": \"ManualWP\", \"game\": \"League of Legends\"}"))
+                .andExpect(status().isOk());
+
+        // On manual WP a global admin may create bets
+        mockMvc.perform(post("/api/watchparties/ManualWP/bets/discrete")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"admin\": \"admin\", \"question\": \"Admin on manual WP\", \"choices\": [\"A\", \"B\"], \"votingMinutes\": 5}"))
+                .andExpect(status().isOk());
+
+        // Non-admin (alice) cannot create bets on manual WP
+        mockMvc.perform(post("/api/watchparties/ManualWP/bets/discrete")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"admin\": \"alice\", \"question\": \"Alice on manual WP\", \"choices\": [\"A\", \"B\"], \"votingMinutes\": 5}"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("❌ Seuls les admins peuvent créer des paris"));
     }
 
     // ==================== BET CONTROLLER TESTS ====================
