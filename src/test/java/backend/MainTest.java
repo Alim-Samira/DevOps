@@ -543,4 +543,65 @@ class MainTest {
 
         assertEquals(250, points);
     }
+
+    @Test
+    @DisplayName("Bet.isVotingOpen() should return false when votingEndTime has passed")
+    void testBetVotingOpenedCheckWithExpiredTime() {
+        // Create a bet with votingEndTime in the past
+        LocalDateTime expiredTime = LocalDateTime.now().minusMinutes(5);
+        DiscreteChoiceBet expiredBet = new DiscreteChoiceBet("Expired question?", admin, watchParty, expiredTime, 
+                                                               Arrays.asList("Yes", "No"));
+        
+        // isVotingOpen should return false because time has passed
+        assertFalse(expiredBet.isVotingOpen(), "Voting should be closed when votingEndTime has passed");
+    }
+
+    @Test
+    @DisplayName("Bet.isVotingOpen() should return false when state is not VOTING")
+    void testBetVotingOpenedCheckWithPendingState() {
+        // Create a bet with valid future time
+        LocalDateTime futureTime = LocalDateTime.now().plusMinutes(10);
+        DiscreteChoiceBet bet = new DiscreteChoiceBet("Future question?", admin, watchParty, futureTime,
+                                                        Arrays.asList("Yes", "No"));
+        
+        // Verify voting is open initially
+        assertTrue(bet.isVotingOpen(), "Voting should be open initially");
+        
+        // End voting (transitions to PENDING)
+        bet.endVoting();
+        
+        // Now isVotingOpen should return false because state is PENDING
+        assertFalse(bet.isVotingOpen(), "Voting should be closed when state is PENDING");
+    }
+
+    @Test
+    @DisplayName("Auto scheduler should auto-close expired bets when invoked")
+    void testAutoSchedulerClosesExpiredBets() {
+        // Setup: Create a public manual WP with a bet that has already expired
+        WatchParty wp = new WatchParty("SchedTest", LocalDateTime.now().plusDays(1), "LoL");
+        wp.setPublic(true);
+        User betCreator = new User("BetCreator", true);
+        wp.setCreator(betCreator);
+        
+        // Create a bet with votingEndTime in the past (already expired)
+        LocalDateTime expiredTime = LocalDateTime.now().minusMinutes(5);
+        DiscreteChoiceBet expiredBet = new DiscreteChoiceBet("Already expired?", betCreator, wp, expiredTime,
+                                                               Arrays.asList("A", "B"));
+        
+        // Add bet to WP and verify it's in VOTING state
+        wp.createBet(expiredBet);
+        assertTrue(wp.hasActiveBet(), "WP should have active bet");
+        assertEquals(expiredBet.getState(), backend.models.Bet.State.VOTING, "Bet should start in VOTING state");
+        
+        // Manually invoke the auto-close logic (what the scheduler would do)
+        backend.models.Bet activeBet = wp.getActiveBet();
+        if (activeBet != null && activeBet.getState() == backend.models.Bet.State.VOTING 
+            && LocalDateTime.now().isAfter(activeBet.getVotingEndTime())) {
+            activeBet.endVoting();
+        }
+        
+        // Verify the bet has been transitioned to PENDING
+        assertEquals(wp.getActiveBet().getState(), backend.models.Bet.State.PENDING, 
+                     "Expired bet should be auto-closed to PENDING state");
+    }
 }

@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import backend.models.AutoType;
 import backend.models.User;
 import backend.models.WatchParty;
+import backend.services.RankingService;
 import backend.services.UserService;
 import backend.services.WatchPartyManager;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,11 +30,13 @@ public class WatchPartyController {
 
     private final WatchPartyManager manager;
     private final UserService userService;
+    private final RankingService rankingService;
 
     @Autowired
-    public WatchPartyController(WatchPartyManager manager, UserService userService) {
+    public WatchPartyController(WatchPartyManager manager, UserService userService, RankingService rankingService) {
         this.manager = manager;
         this.userService = userService;
+        this.rankingService = rankingService;
     }
 
     // 1. GET (Read all)
@@ -95,6 +98,10 @@ public class WatchPartyController {
         WatchParty wp = manager.getWatchPartyByName(name);
         if (wp == null) return "❌ WatchParty introuvable: " + name;
         boolean joined = wp.join(userService.getUser(userName));
+        if (joined && wp.isPublic()) {
+            // Refresh global ranking cache when user joins a public WP
+            rankingService.refreshAll();
+        }
         return joined ? "✅ " + userName + " a rejoint " + name : "⚠️ " + userName + " est déjà participant";
     }
 
@@ -138,6 +145,12 @@ public class WatchPartyController {
         wp.setPublic(isPublic);
         if (creator != null) wp.setCreator(creator);
         manager.addWatchParty(wp);
+        
+        // Refresh global ranking cache when a public WP is created (especially with a creator)
+        if (isPublic) {
+            rankingService.refreshAll();
+        }
+        
         return (isPublic ? "✅ Public" : "✅ Private") + " watchparty created: " + name;
     }
 }

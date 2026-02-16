@@ -306,4 +306,67 @@ class ControllerIntegrationTest {
                 .andExpect(status().isOk());
     }
 
+    @Test
+    @DisplayName("Only WatchParty admin can end voting on a bet (close voting phase)")
+    void testOnlyAdminCanEndVoting() throws Exception {
+        // Create a public WP (no creator, so global admin can manage)
+        mockMvc.perform(post("/api/watchparties/public")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\": \"PublicBetWP\", \"game\": \"LoL\"}"))
+                .andExpect(status().isOk());
+
+        // Admin creates a discrete bet
+        mockMvc.perform(post("/api/watchparties/PublicBetWP/bets/discrete")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"admin\": \"admin\", \"question\": \"Winner?\", \"choices\": [\"A\", \"B\"], \"votingMinutes\": 10}"))
+                .andExpect(status().isOk());
+
+        // Non-admin tries to close voting -> fails
+        mockMvc.perform(post("/api/watchparties/PublicBetWP/bets/end-voting")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"admin\": \"bob\"}"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("❌ Seuls le créateur de la watchparty ou les admins globaux peuvent fermer le vote"));
+
+        // Admin closes voting -> succeeds
+        mockMvc.perform(post("/api/watchparties/PublicBetWP/bets/end-voting")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"admin\": \"admin\"}"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("✅ Phase de vote terminée, en attente du résultat"));
+
+        // Verify bet is now in PENDING state
+        mockMvc.perform(get("/api/watchparties/PublicBetWP/bets"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.state").value("PENDING"));
+    }
+
+    @Test
+    @DisplayName("WP creator can close voting on their own WP (WP-scoped admin)")
+    void testWpCreatorCanEndVotingOnOwnWp() throws Exception {
+        // Create a manual public WP with 'dave' as creator
+        mockMvc.perform(post("/api/watchparties/public")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\": \"CreatorBetWP\", \"game\": \"LoL\", \"user\": \"dave\"}"))
+                .andExpect(status().isOk());
+
+        // Creator 'dave' creates a bet on their WP
+        mockMvc.perform(post("/api/watchparties/CreatorBetWP/bets/discrete")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"admin\": \"dave\", \"question\": \"Winner?\", \"choices\": [\"X\", \"Y\"], \"votingMinutes\": 10}"))
+                .andExpect(status().isOk());
+
+        // Creator 'dave' closes voting -> succeeds (is WP admin)
+        mockMvc.perform(post("/api/watchparties/CreatorBetWP/bets/end-voting")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"admin\": \"dave\"}"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("✅ Phase de vote terminée, en attente du résultat"));
+
+        // Verify bet is now in PENDING state
+        mockMvc.perform(get("/api/watchparties/CreatorBetWP/bets"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.state").value("PENDING"));
+    }
+
 }
