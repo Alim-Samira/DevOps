@@ -123,6 +123,28 @@ async function resolveBet(){
   log('Resolve → '+text);
 }
 
+async function joinWatchParty(){
+  const name = document.getElementById('bet-wp').value;
+  const user = document.getElementById('join-user').value || 'bob';
+  const res = await fetch(`/api/watchparties/${encodeName(name)}/join`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user})});
+  const text = await res.text();
+  log('Join → '+text);
+  await refreshWatchParties();
+  await refreshWatchPartyRanking();
+  await refreshRankings();
+}
+
+async function leaveWatchParty(){
+  const name = document.getElementById('bet-wp').value;
+  const user = document.getElementById('join-user').value || 'bob';
+  const res = await fetch(`/api/watchparties/${encodeName(name)}/leave`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user})});
+  const text = await res.text();
+  log('Leave → '+text);
+  await refreshWatchParties();
+  await refreshWatchPartyRanking();
+  await refreshRankings();
+}
+
 async function refreshRankings(){
   // legacy button -> refresh global ranking (force server recompute)
   const r = await fetchJson('/api/rankings/public/points?refresh=true');
@@ -182,6 +204,8 @@ function bind(){
   document.getElementById('btn-vote').onclick = vote;
   document.getElementById('btn-end-voting').onclick = endVoting;
   document.getElementById('btn-resolve').onclick = resolveBet;
+  document.getElementById('btn-join-wp').onclick = joinWatchParty;
+  document.getElementById('btn-leave-wp').onclick = leaveWatchParty;
   document.getElementById('btn-refresh-rank').onclick = refreshRankings;
   document.getElementById('btn-refresh-wp-rank').onclick = refreshWatchPartyRanking;
   document.getElementById('bet-wp').onchange = () => { refreshWatchPartyRanking(); setWpAdminFromSelector(); };

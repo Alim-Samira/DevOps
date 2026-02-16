@@ -3,7 +3,6 @@ package backend.services;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -11,7 +10,7 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 import backend.models.User;
-import backend.services.WatchPartyManager;
+import backend.models.WatchParty;
 
 @Service
 public class RankingService {
@@ -86,8 +85,20 @@ public class RankingService {
     }
 
     private Map<String, Integer> computeGlobalPublicPoints() {
-        return sortDescending(userService.getAllUsers().stream()
-            .collect(Collectors.toMap(User::getName, User::getPublicPoints, (a, b) -> a, LinkedHashMap::new)));
+        // Global public ranking = sum of user's points **for each public watchparty they participate in**
+        Map<String, Integer> totals = userService.getAllUsers().stream()
+            .collect(Collectors.toMap(User::getName, u -> 0));
+
+        watchPartyManager.getAllWatchParties().stream()
+            .filter(WatchParty::isPublic)
+            .forEach(wp -> {
+                String wpName = wp.getName();
+                wp.getParticipants().forEach(user -> {
+                    totals.compute(user.getName(), (k, v) -> v == null ? user.getPointsForWatchParty(wpName) : v + user.getPointsForWatchParty(wpName));
+                });
+            });
+
+        return sortDescending(totals);
     }
 
     private Map<String, Integer> computeGlobalPublicWins() {

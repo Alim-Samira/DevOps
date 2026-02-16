@@ -87,6 +87,28 @@ public class WatchPartyController {
         return "⚠️ Not found: ";
     }
 
+    // 4. JOIN a watchparty (user becomes participant and gets initial WP points)
+    @PostMapping("/{name}/join")
+    public String joinWatchParty(@PathVariable("name") String name, @RequestBody Map<String, String> payload) {
+        String userName = payload.get("user");
+        if (userName == null || userName.isBlank()) return "❌ Missing user";
+        WatchParty wp = manager.getWatchPartyByName(name);
+        if (wp == null) return "❌ WatchParty introuvable: " + name;
+        boolean joined = wp.join(userService.getUser(userName));
+        return joined ? "✅ " + userName + " a rejoint " + name : "⚠️ " + userName + " est déjà participant";
+    }
+
+    // 5. LEAVE a watchparty
+    @PostMapping("/{name}/leave")
+    public String leaveWatchParty(@PathVariable("name") String name, @RequestBody Map<String, String> payload) {
+        String userName = payload.get("user");
+        if (userName == null || userName.isBlank()) return "❌ Missing user";
+        WatchParty wp = manager.getWatchPartyByName(name);
+        if (wp == null) return "❌ WatchParty introuvable: " + name;
+        boolean removed = wp.leave(userService.getUser(userName));
+        return removed ? "✅ " + userName + " a quitté " + name : "⚠️ " + userName + " n'est pas participant";
+    }
+
     // Helpers
     private String createManualWatchParty(Map<String, String> payload, boolean isPublic) {
         String name = payload.get("name");
@@ -113,8 +135,8 @@ public class WatchPartyController {
         }
 
         WatchParty wp = new WatchParty(name, date, game);
-        if (creator != null) wp.setCreator(creator);
         wp.setPublic(isPublic);
+        if (creator != null) wp.setCreator(creator);
         manager.addWatchParty(wp);
         return (isPublic ? "✅ Public" : "✅ Private") + " watchparty created: " + name;
     }

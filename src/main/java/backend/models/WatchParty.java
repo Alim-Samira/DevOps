@@ -173,33 +173,15 @@ public class WatchParty {
     
     // Join watch party
     public boolean join(User user) {
-        if (!isAutoWatchParty()) {
-            if (!participants.contains(user)) {
-                participants.add(user);
-                // Bonus initial de 500 points dans le contexte de la watchparty
-                if (isPublic) {
-                    user.addPublicPoints(500);
-                } else {
-                    user.addPointsForWatchParty(name, 500);
-                }
-                return true;
-            }
-            return false;
+        // Joining logic applies the same initialisation for manual and auto WPs
+        if (isAutoWatchParty() && status != WatchPartyStatus.OPEN) {
+            return false; // cannot join closed auto WP
         }
-        
-        // Auto watch parties: only joinable when OPEN
-        if (status != WatchPartyStatus.OPEN) {
-            return false;
-        }
-        
+
         if (!participants.contains(user)) {
             participants.add(user);
-            // Bonus initial de 500 points
-            if (isPublic) {
-                user.addPublicPoints(500);
-            } else {
-                user.addPointsForWatchParty(name, 500);
-            }
+            // Initialize WP-specific points to 200 regardless of WP type
+            user.setPointsForWatchParty(name, 200);
             return true;
         }
         return false;
@@ -240,6 +222,8 @@ public class WatchParty {
         this.creator = creator;
         if (creator != null && !this.participants.contains(creator)) {
             this.participants.add(creator);
+            // Initialize creator's WP points to 200 (same rule as join)
+            creator.setPointsForWatchParty(this.name, 200);
         }
         // Mettre à jour l'admin du chat pour refléter le créateur
         this.chat = new Chat(name + " Chat", creator != null ? creator : new User("system", true));

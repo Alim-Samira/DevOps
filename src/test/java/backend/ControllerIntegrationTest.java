@@ -152,6 +152,88 @@ class ControllerIntegrationTest {
     }
 
     @Test
+    @DisplayName("POST /api/watchparties/{name}/join should add participant and initialize 200 WP points")
+    void testJoinWatchPartyInitializesPoints() throws Exception {
+        // create a public manual watchparty
+        mockMvc.perform(post("/api/watchparties/public")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\": \"JoinablePublicWP\", \"game\": \"LoL\"}"))
+                .andExpect(status().isOk());
+
+        // user bob joins
+        mockMvc.perform(post("/api/watchparties/JoinablePublicWP/join")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"user\": \"bob\"}"))
+                .andExpect(status().isOk());
+
+        // bob should have 200 points for the WP
+        mockMvc.perform(get("/api/users/bob"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.pointsByWatchParty.JoinablePublicWP").value(200));
+    }
+
+    @Test
+    @DisplayName("Global ranking = sum of points in public WPs where user participates")
+    void testGlobalRankingSummedFromPublicWPs() throws Exception {
+        // Create two public WPs and have 'charlie' join both
+        mockMvc.perform(post("/api/watchparties/public")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\": \"PublicA\", \"game\": \"LoL\"}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/watchparties/public")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\": \"PublicB\", \"game\": \"LoL\"}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/watchparties/PublicA/join")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"user\": \"charlie\"}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/watchparties/PublicB/join")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"user\": \"charlie\"}"))
+                .andExpect(status().isOk());
+
+        // Each join gives 200 WP points -> global ranking for charlie should be 400
+        mockMvc.perform(get("/api/rankings/public/points?refresh=true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.charlie").value(400));
+
+        // and the user's own globalPoints should reflect the same
+        mockMvc.perform(get("/api/users/charlie"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.globalPoints").value(400));
+    }
+
+    @Test
+    @DisplayName("Manual private watchparty with creator initializes creator's WP points")
+    void testManualPrivateWatchPartyInitializesCreatorPoints() throws Exception {
+        mockMvc.perform(post("/api/watchparties/private")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\": \"ManualPrivateWP\", \"game\": \"LoL\", \"user\": \"creatorBob\"}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/users/creatorBob"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.pointsByWatchParty.ManualPrivateWP").value(200));
+    }
+
+    @Test
+    @DisplayName("Manual public watchparty with creator initializes creator's WP points (public WP)")
+    void testManualPublicWatchPartyInitializesCreatorPublicPoints() throws Exception {
+        mockMvc.perform(post("/api/watchparties/public")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\": \"ManualPublicWP\", \"game\": \"LoL\", \"user\": \"creatorCarol\"}"))
+                .andExpect(status().isOk());
+
+        // creatorCarol's WP-specific points for ManualPublicWP must be initialized to 200
+        mockMvc.perform(get("/api/users/creatorCarol"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.pointsByWatchParty.ManualPublicWP").value(200))
+                .andExpect(jsonPath("$.globalPoints").value(200));
+    }
+
+    @Test
     @DisplayName("WatchParty admin vs global admin behavior")
     void testCreatorIsWpAdminButNotGlobalAdmin() throws Exception {
         // 1) Auto WP created by 'alice' (creator != null)
