@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>DevOps — Frontend de test</title>
+    <link rel="stylesheet" href="/frontend/styles.css">
+  </head>
+  <body>
+    <header>
+      <h1>DevOps — Frontend de test (vanilla JS)</h1>
+      <p class="muted">Aucune installation requise — servi par Spring Boot (place: <code>/frontend</code>).</p>
+    </header>
+
+    <main class="grid">
+      <section id="wp-section" class="card">
+        <h2>WatchParties</h2>
+        <div class="controls">
+          <input id="wp-name" placeholder="Nom (ex: TestWP)" />
+          <input id="wp-user" placeholder="User créateur (ex: alice)" />
+          <select id="wp-type"><option>TEAM</option><option>TOURNAMENT</option></select>
+          <button id="btn-create-wp">Créer (auto)</button>
+        </div>
+        <div>
+          <button id="btn-refresh-wp">Rafraîchir la liste</button>
+          <ul id="wp-list"></ul>
+        </div>
+      </section>
+
+      <section id="bet-section" class="card">
+        <h2>Pari (Discrete)</h2>
+        <div class="controls">
+          <select id="bet-wp"></select>
+          <input id="bet-admin" placeholder="admin (ex: alice)" />
+          <input id="bet-question" placeholder="Question" />
+          <input id="bet-choices" placeholder="Choices (csv)" />
+          <input id="bet-minutes" placeholder="Minutes" value="5" style="width:70px" />
+          <button id="btn-create-bet">Créer pari</button>
+        </div>
+        <div class="controls">
+          <input id="vote-user" placeholder="voter (user)" />
+          <input id="vote-value" placeholder="voted value" />
+          <input id="vote-points" placeholder="points" value="10" style="width:70px" />
+          <button id="btn-vote">Voter</button>
+        </div>
+        <div class="controls">
+          <input id="bet-admin-action" placeholder="admin" />
+          <button id="btn-end-voting">Clore vote</button>
+          <input id="resolve-value" placeholder="correctValue" />
+          <button id="btn-resolve">Résoudre</button>
+        </div>
+      </section>
+
+      <section id="ranking-section" class="card">
+        <h2>Rankings / Users</h2>
+        <div class="controls">
+          <button id="btn-refresh-rank">Rafraîchir rankings</button>
+          <pre id="rankings" class="mono"></pre>
+        </div>
+        <div class="controls">
+          <input id="lookup-user" placeholder="username" />
+          <button id="btn-lookup-user">Chercher user</button>
+          <pre id="user-result" class="mono"></pre>
+        </div>
+      </section>
+
+      <section id="log-section" class="card large">
+        <h2>Log / réponses</h2>
+        <div id="log"></div>
+      </section>
+    </main>
+
+    <footer>
+      <small>UI de démonstration — served at <code>/frontend/</code></small>
+    </footer>
+
+    <script src="/frontend/app.js"></script>
+  </body>
+</html>
