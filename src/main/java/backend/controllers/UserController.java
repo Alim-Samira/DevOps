@@ -34,7 +34,7 @@ public class UserController {
 
     @Operation(summary = "Get specific user")
     @GetMapping("/{username}")
-    public User getUser(@PathVariable String username) {
+    public User getUser(@PathVariable("username") String username) {
         return userService.getUser(username);
     }
 

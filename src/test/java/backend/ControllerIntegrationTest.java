@@ -1,17 +1,19 @@
 package backend;
 
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
-
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest(classes = backend.DevOpsApplication.class)
 class ControllerIntegrationTest {
@@ -145,8 +147,29 @@ class ControllerIntegrationTest {
     void testCreateWatchParty() throws Exception {
         mockMvc.perform(post("/api/watchparties")
                 .contentType(MediaType. APPLICATION_JSON)
-                .content("{\"name\": \"TestParty\", \"type\": \"TEAM\"}"))
+                .content("{\"user\": \"alice\", \"name\": \"TestParty\", \"type\": \"TEAM\"}"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("Creator is watchparty admin but not global admin")
+    void testCreatorIsWpAdminButNotGlobalAdmin() throws Exception {
+        // create a watchparty with 'alice' as creator
+        mockMvc.perform(post("/api/watchparties")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"user\": \"alice\", \"name\": \"CreatorWP\", \"type\": \"TEAM\"}"))
+                .andExpect(status().isOk());
+
+        // 'alice' should be allowed to create a bet for that watchparty (WP-scoped admin)
+        mockMvc.perform(post("/api/watchparties/Auto WP: Team CreatorWP/bets/discrete")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"admin\": \"alice\", \"question\": \"Is creator admin?\", \"choices\": [\"Yes\", \"No\"], \"votingMinutes\": 5}"))
+                .andExpect(status().isOk());
+
+        // but 'alice' must NOT be promoted to a global admin
+        mockMvc.perform(get("/api/users/alice"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.admin").value(false));
     }
 
     // ==================== BET CONTROLLER TESTS ====================
@@ -165,7 +188,7 @@ class ControllerIntegrationTest {
         // First create a watch party
         mockMvc.perform(post("/api/watchparties")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"name\": \"TestWP\", \"type\": \"TEAM\"}"))
+                .content("{\"user\": \"AdminAPI\", \"name\": \"TestWP\", \"type\": \"TEAM\"}"))
                 .andExpect(status().isOk());
 
         // Then create a bet for that watch party

@@ -1,28 +1,29 @@
 package backend;
 
-import static org.junit.jupiter.api.Assertions.*;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
 import backend.models.AutoType;
+import backend.models.Chat;
 import backend.models.DiscreteChoiceBet;
 import backend.models.NumericValueBet;
 import backend.models.OrderedRankingBet;
-import backend.models.Chat;
 import backend.models.QuizGame;
 import backend.models.User;
 import backend.models.WatchParty;
 import backend.models.WatchPartyStatus;
 import backend.services.WatchPartyManager;
-import backend.services.RankingService;
-import backend.services.UserService;
-import backend.services.RewardService;
 
 /**
  * Suite de tests complète pour le système DevOps
@@ -341,6 +342,20 @@ class MainTest {
         assertEquals(alice, wp.getCreator());
         assertTrue(wp.isAutoWatchParty());
         assertEquals("Gen.G", wp.getAutoConfig().getTarget());
+    }
+
+    @Test
+    @DisplayName("WatchParty.isAdmin() should prefer creator and fallback to global admin")
+    void testWatchPartyIsAdminHelper() {
+        // Auto WP: creator Alice should be considered admin, even if another user is global admin
+        WatchParty autoWp = WatchParty.createAutoWatchParty(alice, "T1", AutoType.TEAM);
+        assertTrue(autoWp.isAdmin(alice));
+        assertFalse(autoWp.isAdmin(admin));
+
+        // Manual WP: no creator -> fallback to global admin flag
+        WatchParty manualWp = new WatchParty("Manual", java.time.LocalDateTime.now().plusDays(1), "LoL");
+        assertTrue(manualWp.isAdmin(admin));
+        assertFalse(manualWp.isAdmin(alice));
     }
 
     @Test

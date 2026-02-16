@@ -1,9 +1,9 @@
 package backend.controllers;
 
-import java.util.List;
-import java.util.Map;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
+import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import backend.models.AutoType;
 import backend.models.User;
 import backend.models.WatchParty;
+import backend.services.UserService;
 import backend.services.WatchPartyManager;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
@@ -27,10 +28,12 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class WatchPartyController {
 
     private final WatchPartyManager manager;
+    private final UserService userService;
 
     @Autowired
-    public WatchPartyController(WatchPartyManager manager) {
+    public WatchPartyController(WatchPartyManager manager, UserService userService) {
         this.manager = manager;
+        this.userService = userService;
     }
 
     // 1. GET (Read all)
@@ -44,15 +47,17 @@ public class WatchPartyController {
     public String createWatchParty(@RequestBody Map<String, String> payload) {
         String name = payload.get("name");
         String typeStr = payload.get("type");
+        String userName = payload.get("user");
 
-        if (name == null || typeStr == null) return "Error: Missing name or type";
+        if (name == null || typeStr == null || userName == null) return "Error: Missing name, type or user";
 
-        // Create a fake admin user (since we have no login system yet)
-        User admin = new User("AdminAPI", true);
-        
+        // Use the caller (payload.user) as the creator of the watchparty.
+        // Do NOT promote the creator to a global admin here — WatchParty-scoped admin checks use `WatchParty.isAdmin(User)`.
+        User creator = userService.getUser(userName);
+
         try {
             AutoType type = AutoType.valueOf(typeStr.toUpperCase());
-            WatchParty wp = WatchParty.createAutoWatchParty(admin, name, type);
+            WatchParty wp = WatchParty.createAutoWatchParty(creator, name, type);
             manager.addAutoWatchParty(wp);
             return "✅ Created WatchParty: " + name;
         } catch (IllegalArgumentException e) {
@@ -74,7 +79,7 @@ public class WatchPartyController {
 
     // 3. DELETE (Remove)
     @DeleteMapping(value = "/{name}", produces = "text/plain")
-    public String deleteWatchParty(@PathVariable String name) {
+    public String deleteWatchParty(@PathVariable("name") String name) {
         boolean removed = manager.removeWatchParty(name);
         if (removed) {
             return "🗑️ Deleted: ";

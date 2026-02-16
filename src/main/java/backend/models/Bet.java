@@ -32,8 +32,9 @@ public abstract class Bet {
      * Constructeur protégé - utiliser les factory methods des sous-classes
      */
     protected Bet(String question, User creator, WatchParty watchParty, LocalDateTime votingEndTime) {
-        if (!creator.isAdmin()) {
-            throw new IllegalArgumentException("Seuls les admins peuvent créer des paris");
+        // Use WatchParty helper to decide authorization (creator preferred, fallback to global admin)
+        if (!watchParty.isAdmin(creator)) {
+            throw new IllegalArgumentException("Seuls le créateur de la watchparty ou les admins globaux peuvent créer des paris");
         }
         this.question = question;
         this.creator = creator;

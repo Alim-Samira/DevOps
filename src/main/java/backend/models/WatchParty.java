@@ -1,10 +1,10 @@
 package backend.models;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class WatchParty {
 
@@ -203,11 +203,16 @@ public class WatchParty {
         return creator != null && creator.equals(user);
     }
     
-    // Update auto config target (admin only)
-    public void updateAutoTarget(String newTarget) {
-        if (autoConfig != null) {
-            autoConfig = new AutoConfig(autoConfig.getType(), newTarget);
+    /**
+     * Helper: determines whether the given user should be considered an admin for this WatchParty.
+     * Policy: prefer the WatchParty creator when present; otherwise fallback to global admin flag.
+     */
+    public boolean isAdmin(User user) {
+        if (user == null) return false;
+        if (this.creator != null) {
+            return this.creator.getName().equalsIgnoreCase(user.getName());
         }
+        return user.isAdmin();
     }
     
     // Getters
@@ -234,10 +239,14 @@ public class WatchParty {
             return "❌ Un pari est déjà actif pour cette watch party";
         }
         
-        if (!bet.getCreator().isAdmin()) {
+        // Use WatchParty.isAdmin to decide whether the bet creator is allowed here
+        if (!this.isAdmin(bet.getCreator())) {
+            if (this.creator != null) {
+                return "❌ Seul le créateur de la watchparty peut créer des paris";
+            }
             return "❌ Seuls les admins peuvent créer des paris";
         }
-        
+
         activeBet = bet;
         return "✅ Pari créé: " + bet.getQuestion();
     }
