@@ -139,7 +139,17 @@ public class WatchPartyController {
             return "❌ Watch party introuvable: " + name;
         }
 
-        wp.getChat().sendMessage(userService.getUser(user), text);
+        User sender = userService.getUser(user);
+        if (sender == null) {
+            return "❌ Utilisateur introuvable: " + user;
+        }
+
+        // Vérifier que l'utilisateur est participant de la WatchParty
+        if (!wp.getParticipants().contains(sender)) {
+            return "❌ Vous devez être participant de la watch party pour envoyer des messages";
+        }
+
+        wp.getChat().sendMessage(sender, text);
         return "✅ Message sent";
     }
 
