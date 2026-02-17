@@ -14,6 +14,13 @@ async function fetchJson(path){
 
 function encodeName(name){ return encodeURIComponent(name); }
 
+function parseCsv(input) {
+  return (input || '')
+    .split(',')
+    .map(s => s.trim())
+    .filter(s => s.length > 0);
+}
+
 async function refreshWatchParties(){
   try{
     const wps = await fetchJson('/api/watchparties');
@@ -96,6 +103,48 @@ async function createBet(){
   log('Create Bet → '+text);
 }
 
+async function createNumericBet(){
+  const name = document.getElementById('bet-wp').value;
+  const admin = document.getElementById('bet-admin').value || 'alice';
+  const question = document.getElementById('bet-question-num').value || 'Numeric question?';
+  const isInteger = document.getElementById('bet-num-int').checked === true;
+  const minStr = document.getElementById('bet-num-min').value;
+  const maxStr = document.getElementById('bet-num-max').value;
+  const minutes = parseInt(document.getElementById('bet-minutes-num').value || '5',10);
+  const payload = { admin, question, isInteger, votingMinutes: minutes };
+  if (minStr !== '') {
+    const minVal = parseFloat(minStr);
+    if (Number.isNaN(minVal)) {
+      log('Valeur min invalide');
+      return;
+    }
+    payload.minValue = minVal;
+  }
+  if (maxStr !== '') {
+    const maxVal = parseFloat(maxStr);
+    if (Number.isNaN(maxVal)) {
+      log('Valeur max invalide');
+      return;
+    }
+    payload.maxValue = maxVal;
+  }
+  const res = await fetch(`/api/watchparties/${encodeName(name)}/bets/numeric`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const text = await res.text();
+  log('Create Numeric Bet → '+text);
+}
+
+async function createRankingBet(){
+  const name = document.getElementById('bet-wp').value;
+  const admin = document.getElementById('bet-admin').value || 'alice';
+  const question = document.getElementById('bet-question-rank').value || 'Ranking question?';
+  const items = parseCsv(document.getElementById('bet-items').value || 'A,B,C');
+  const minutes = parseInt(document.getElementById('bet-minutes-rank').value || '5',10);
+  const payload = { admin, question, items, votingMinutes: minutes };
+  const res = await fetch(`/api/watchparties/${encodeName(name)}/bets/ranking`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const text = await res.text();
+  log('Create Ranking Bet → '+text);
+}
+
 async function vote(){
   const name = document.getElementById('bet-wp').value;
   const user = document.getElementById('vote-user').value || 'bob';
@@ -105,6 +154,37 @@ async function vote(){
   const res = await fetch(`/api/watchparties/${encodeName(name)}/bets/vote`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
   const text = await res.text();
   log('Vote → '+text);
+}
+
+async function voteNumeric(){
+  const name = document.getElementById('bet-wp').value;
+  const user = document.getElementById('vote-user').value || 'bob';
+  const valStr = document.getElementById('vote-value-num').value;
+  const value = parseFloat(valStr);
+  const points = parseInt(document.getElementById('vote-points').value || '10',10);
+  if (Number.isNaN(value)) {
+    log('Valeur numerique invalide');
+    return;
+  }
+  const payload = { user, value, points };
+  const res = await fetch(`/api/watchparties/${encodeName(name)}/bets/vote`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const text = await res.text();
+  log('Vote Numeric → '+text);
+}
+
+async function voteRanking(){
+  const name = document.getElementById('bet-wp').value;
+  const user = document.getElementById('vote-user').value || 'bob';
+  const value = parseCsv(document.getElementById('vote-value-rank').value);
+  const points = parseInt(document.getElementById('vote-points').value || '10',10);
+  if (value.length === 0) {
+    log('Classement invalide');
+    return;
+  }
+  const payload = { user, value, points };
+  const res = await fetch(`/api/watchparties/${encodeName(name)}/bets/vote`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const text = await res.text();
+  log('Vote Ranking → '+text);
 }
 
 async function endVoting(){
@@ -122,6 +202,33 @@ async function resolveBet(){
   const res = await fetch(`/api/watchparties/${encodeName(name)}/bets/resolve`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({admin, correctValue})});
   const text = await res.text();
   log('Resolve → '+text);
+}
+
+async function resolveNumeric(){
+  const name = document.getElementById('bet-wp').value;
+  const admin = document.getElementById('bet-admin-action').value || 'alice';
+  const valStr = document.getElementById('resolve-value-num').value;
+  const correctValue = parseFloat(valStr);
+  if (Number.isNaN(correctValue)) {
+    log('Valeur numerique invalide');
+    return;
+  }
+  const res = await fetch(`/api/watchparties/${encodeName(name)}/bets/resolve`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({admin, correctValue})});
+  const text = await res.text();
+  log('Resolve Numeric → '+text);
+}
+
+async function resolveRanking(){
+  const name = document.getElementById('bet-wp').value;
+  const admin = document.getElementById('bet-admin-action').value || 'alice';
+  const correctValue = parseCsv(document.getElementById('resolve-value-rank').value);
+  if (correctValue.length === 0) {
+    log('Classement invalide');
+    return;
+  }
+  const res = await fetch(`/api/watchparties/${encodeName(name)}/bets/resolve`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({admin, correctValue})});
+  const text = await res.text();
+  log('Resolve Ranking → '+text);
 }
 
 async function joinWatchParty(){
@@ -287,9 +394,15 @@ function bind(){
   document.getElementById('btn-refresh-wp').onclick = refreshWatchParties;
   document.getElementById('btn-create-wp').onclick = createWatchParty;
   document.getElementById('btn-create-bet').onclick = createBet;
+  document.getElementById('btn-create-bet-num').onclick = createNumericBet;
+  document.getElementById('btn-create-bet-rank').onclick = createRankingBet;
   document.getElementById('btn-vote').onclick = vote;
+  document.getElementById('btn-vote-num').onclick = voteNumeric;
+  document.getElementById('btn-vote-rank').onclick = voteRanking;
   document.getElementById('btn-end-voting').onclick = endVoting;
   document.getElementById('btn-resolve').onclick = resolveBet;
+  document.getElementById('btn-resolve-num').onclick = resolveNumeric;
+  document.getElementById('btn-resolve-rank').onclick = resolveRanking;
   document.getElementById('btn-join-wp').onclick = joinWatchParty;
   document.getElementById('btn-leave-wp').onclick = leaveWatchParty;
   document.getElementById('btn-refresh-rank').onclick = refreshRankings;

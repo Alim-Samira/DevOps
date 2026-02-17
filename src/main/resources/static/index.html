@@ -40,26 +40,73 @@
       </section>
 
       <section id="bet-section" class="card">
-        <h2>Pari (Discrete)</h2>
+        <h2>Paris</h2>
         <div class="controls">
           <select id="bet-wp"></select>
           <input id="bet-admin" placeholder="admin (ex: alice)" />
+        </div>
+        <div class="controls">
+          <strong style="min-width:90px;">Discrete</strong>
           <input id="bet-question" placeholder="Question" />
           <input id="bet-choices" placeholder="Choices (csv)" />
           <input id="bet-minutes" placeholder="Minutes" value="5" style="width:70px" />
           <button id="btn-create-bet">Créer pari</button>
         </div>
         <div class="controls">
+          <strong style="min-width:90px;">Numeric</strong>
+          <input id="bet-question-num" placeholder="Question" />
+          <label style="display:flex;align-items:center;gap:4px;">
+            <input type="checkbox" id="bet-num-int" checked /> Int
+          </label>
+          <input id="bet-num-min" placeholder="Min" style="width:70px" />
+          <input id="bet-num-max" placeholder="Max" style="width:70px" />
+          <input id="bet-minutes-num" placeholder="Minutes" value="5" style="width:70px" />
+          <button id="btn-create-bet-num">Créer pari</button>
+        </div>
+        <div class="controls">
+          <strong style="min-width:90px;">Ranking</strong>
+          <input id="bet-question-rank" placeholder="Question" />
+          <input id="bet-items" placeholder="Items (csv)" />
+          <input id="bet-minutes-rank" placeholder="Minutes" value="5" style="width:70px" />
+          <button id="btn-create-bet-rank">Créer pari</button>
+        </div>
+        <div class="controls">
           <input id="vote-user" placeholder="voter (user)" />
-          <input id="vote-value" placeholder="voted value" />
           <input id="vote-points" placeholder="points" value="10" style="width:70px" />
+        </div>
+        <div class="controls">
+          <strong style="min-width:90px;">Discrete</strong>
+          <input id="vote-value" placeholder="voted value" />
           <button id="btn-vote">Voter</button>
+        </div>
+        <div class="controls">
+          <strong style="min-width:90px;">Numeric</strong>
+          <input id="vote-value-num" placeholder="numeric value" style="width:120px" />
+          <button id="btn-vote-num">Voter</button>
+        </div>
+        <div class="controls">
+          <strong style="min-width:90px;">Ranking</strong>
+          <input id="vote-value-rank" placeholder="ranking (csv)" />
+          <button id="btn-vote-rank">Voter</button>
         </div>
         <div class="controls">
           <input id="bet-admin-action" placeholder="admin" />
           <button id="btn-end-voting">Clore vote</button>
+        </div>
+        <div class="controls">
+          <strong style="min-width:90px;">Discrete</strong>
           <input id="resolve-value" placeholder="correctValue" />
           <button id="btn-resolve">Résoudre</button>
+        </div>
+        <div class="controls">
+          <strong style="min-width:90px;">Numeric</strong>
+          <input id="resolve-value-num" placeholder="correctValue" style="width:120px" />
+          <button id="btn-resolve-num">Résoudre</button>
+        </div>
+        <div class="controls">
+          <strong style="min-width:90px;">Ranking</strong>
+          <input id="resolve-value-rank" placeholder="correctValue (csv)" />
+          <button id="btn-resolve-rank">Résoudre</button>
         </div>
 
         <div class="controls">
