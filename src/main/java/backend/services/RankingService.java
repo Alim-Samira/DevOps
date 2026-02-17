@@ -102,8 +102,20 @@ public class RankingService {
     }
 
     private Map<String, Integer> computeGlobalPublicWins() {
-        return sortDescending(userService.getAllUsers().stream()
-            .collect(Collectors.toMap(User::getName, User::getPublicWins, (a, b) -> a, LinkedHashMap::new)));
+        // Global wins = sum of wins in all public watch parties (same logic as points)
+        Map<String, Integer> totals = userService.getAllUsers().stream()
+            .collect(Collectors.toMap(User::getName, u -> 0));
+
+        watchPartyManager.getAllWatchParties().stream()
+            .filter(WatchParty::isPublic)
+            .forEach(wp -> {
+                String wpName = wp.getName();
+                wp.getParticipants().forEach(user -> {
+                    totals.compute(user.getName(), (k, v) -> v == null ? user.getWinsForWatchParty(wpName) : v + user.getWinsForWatchParty(wpName));
+                });
+            });
+
+        return sortDescending(totals);
     }
 
     private Map<String, Integer> computeWatchPartyPoints(String watchPartyName) {
