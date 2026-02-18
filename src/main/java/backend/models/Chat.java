@@ -43,7 +43,8 @@ public class Chat {
         
         for (MiniGame game : availableGames) {
             if (game.getCommandName().equalsIgnoreCase(gameCommand)) {
-                if (!launcher.isAdmin() && !launcher.isModerator()) {
+                // Allow launch if launcher is the chat admin (creator of the WatchParty), a global admin, or a moderator
+                if (!launcher.isModerator() && !(admin != null && admin.getName().equalsIgnoreCase(launcher.getName())) && !launcher.isAdmin()) {
                     return "[X] Seuls les administrateurs et moderateurs peuvent lancer un mini-jeu.";
                 }
                 activeGame = game;
@@ -95,7 +96,7 @@ public class Chat {
         }
 
         boolean isSender = message.getSender().equals(remover);
-        boolean isAdminOrMod = remover.isAdmin() || remover.isModerator();
+        boolean isAdminOrMod = remover.isModerator() || (admin != null && admin.getName().equalsIgnoreCase(remover.getName())) || remover.isAdmin();
 
         if (isSender || isAdminOrMod) {
             messages.remove(message);

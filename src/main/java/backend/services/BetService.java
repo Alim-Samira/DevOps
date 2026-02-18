@@ -30,10 +30,12 @@ public class BetService {
     
     private final WatchPartyManager watchPartyManager;
     private final UserService userService;
+    private final RankingService rankingService;
 
-    public BetService(WatchPartyManager watchPartyManager, UserService userService) {
+    public BetService(WatchPartyManager watchPartyManager, UserService userService, RankingService rankingService) {
         this.watchPartyManager = watchPartyManager;
         this.userService = userService;
+        this.rankingService = rankingService;
     }
 
     /**
@@ -41,18 +43,18 @@ public class BetService {
      * @return Message d'erreur ou null si validation réussie
      */
     private String validateBetCreation(User admin, WatchParty wp, String watchPartyName) {
-        if (!admin.isAdmin()) {
-            return ADMIN_REQUIRED_ERROR;
-        }
-        
         if (wp == null) {
             return WATCH_PARTY_NOT_FOUND + watchPartyName;
         }
-        
+
+        if (!wp.isAdmin(admin)) {
+            return ADMIN_REQUIRED_ERROR;
+        }
+
         if (wp.hasActiveBet()) {
             return ACTIVE_BET_EXISTS;
         }
-        
+
         return null;
     }
 
@@ -141,16 +143,15 @@ public class BetService {
      * Ferme la phase de vote du pari actif
      */
     public String endVoting(String watchPartyName, String adminName) {
-        User admin = userService.getUser(adminName);
-        if (!admin.isAdmin()) {
-            return "❌ Seuls les admins peuvent fermer le vote";
-        }
-        
         WatchParty wp = watchPartyManager.getWatchPartyByName(watchPartyName);
         if (wp == null) {
             return WATCH_PARTY_NOT_FOUND + watchPartyName;
         }
-        
+        User admin = userService.getUser(adminName);
+        if (!wp.isAdmin(admin)) {
+            return "❌ Seuls le créateur de la watchparty ou les admins globaux peuvent fermer le vote";
+        }
+
         return wp.closeActiveBet();
     }
     
@@ -158,23 +159,29 @@ public class BetService {
      * Résout un pari avec la valeur correcte
      */
     public String resolveBet(String watchPartyName, String adminName, Object correctValue) {
-        User admin = userService.getUser(adminName);
-        if (!admin.isAdmin()) {
-            return "❌ Seuls les admins peuvent résoudre un pari";
-        }
-        
         WatchParty wp = watchPartyManager.getWatchPartyByName(watchPartyName);
         if (wp == null) {
             return WATCH_PARTY_NOT_FOUND + watchPartyName;
         }
-        
+        User admin = userService.getUser(adminName);
+        if (!wp.isAdmin(admin)) {
+            return "❌ Seuls le créateur de la watchparty ou les admins globaux peuvent résoudre un pari";
+        }
+
         if (!wp.hasActiveBet()) {
             return NO_ACTIVE_BET;
         }
-        
+
         Bet bet = wp.getActiveBet();
         String result = bet.resolve(correctValue);
-        
+
+        // Refresh ranking cache after bet resolution (points were distributed)
+        if (wp.isPublic()) {
+            rankingService.refreshAll();
+        } else {
+            rankingService.refreshWatchParty(watchPartyName);
+        }
+
         // Distribuer les tickets aux gagnants
         if (bet.isOffersTicket()) {
             TicketType ticketType = getTicketTypeForBet(bet);
@@ -186,7 +193,7 @@ public class BetService {
                 }
             }
         }
-        
+
         return result;
     }
     
@@ -208,20 +215,19 @@ public class BetService {
      * Annule un pari et rembourse les parieurs
      */
     public String cancelBet(String watchPartyName, String adminName) {
-        User admin = userService.getUser(adminName);
-        if (!admin.isAdmin()) {
-            return "❌ Seuls les admins peuvent annuler un pari";
-        }
-        
         WatchParty wp = watchPartyManager.getWatchPartyByName(watchPartyName);
         if (wp == null) {
             return WATCH_PARTY_NOT_FOUND + watchPartyName;
         }
-        
+        User admin = userService.getUser(adminName);
+        if (!wp.isAdmin(admin)) {
+            return "❌ Seuls le créateur de la watchparty ou les admins globaux peuvent annuler un pari";
+        }
+
         if (!wp.hasActiveBet()) {
             return NO_ACTIVE_BET;
         }
-        
+
         Bet bet = wp.getActiveBet();
         return bet.cancel();
     }

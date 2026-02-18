@@ -3,7 +3,6 @@ package backend.services;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -11,7 +10,7 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 import backend.models.User;
-import backend.services.WatchPartyManager;
+import backend.models.WatchParty;
 
 @Service
 public class RankingService {
@@ -86,22 +85,52 @@ public class RankingService {
     }
 
     private Map<String, Integer> computeGlobalPublicPoints() {
-        return sortDescending(userService.getAllUsers().stream()
-            .collect(Collectors.toMap(User::getName, User::getPublicPoints, (a, b) -> a, LinkedHashMap::new)));
+        // Global ranking includes ALL users; WP-specific rankings only include participants
+        Map<String, Integer> totals = userService.getAllUsers().stream()
+            .collect(Collectors.toMap(User::getName, u -> 0));
+
+        watchPartyManager.getAllWatchParties().stream()
+            .filter(WatchParty::isPublic)
+            .forEach(wp -> {
+                String wpName = wp.getName();
+                wp.getParticipants().forEach(user -> {
+                    totals.compute(user.getName(), (k, v) -> v == null ? user.getPointsForWatchParty(wpName) : v + user.getPointsForWatchParty(wpName));
+                });
+            });
+
+        return sortDescending(totals);
     }
 
     private Map<String, Integer> computeGlobalPublicWins() {
-        return sortDescending(userService.getAllUsers().stream()
-            .collect(Collectors.toMap(User::getName, User::getPublicWins, (a, b) -> a, LinkedHashMap::new)));
+        // Global wins = sum of wins in all public watch parties (same logic as points)
+        Map<String, Integer> totals = userService.getAllUsers().stream()
+            .collect(Collectors.toMap(User::getName, u -> 0));
+
+        watchPartyManager.getAllWatchParties().stream()
+            .filter(WatchParty::isPublic)
+            .forEach(wp -> {
+                String wpName = wp.getName();
+                wp.getParticipants().forEach(user -> {
+                    totals.compute(user.getName(), (k, v) -> v == null ? user.getWinsForWatchParty(wpName) : v + user.getWinsForWatchParty(wpName));
+                });
+            });
+
+        return sortDescending(totals);
     }
 
     private Map<String, Integer> computeWatchPartyPoints(String watchPartyName) {
-        return sortDescending(userService.getAllUsers().stream()
+        WatchParty wp = watchPartyManager.getWatchPartyByName(watchPartyName);
+        if (wp == null) return Map.of();
+        
+        return sortDescending(wp.getParticipants().stream()
             .collect(Collectors.toMap(User::getName, u -> u.getPointsForWatchParty(watchPartyName), (a, b) -> a, LinkedHashMap::new)));
     }
 
     private Map<String, Integer> computeWatchPartyWins(String watchPartyName) {
-        return sortDescending(userService.getAllUsers().stream()
+        WatchParty wp = watchPartyManager.getWatchPartyByName(watchPartyName);
+        if (wp == null) return Map.of();
+        
+        return sortDescending(wp.getParticipants().stream()
             .collect(Collectors.toMap(User::getName, u -> u.getWinsForWatchParty(watchPartyName), (a, b) -> a, LinkedHashMap::new)));
     }
 

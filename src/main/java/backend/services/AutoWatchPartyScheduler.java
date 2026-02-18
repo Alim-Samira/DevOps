@@ -1,14 +1,15 @@
 package backend.services;
+import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import backend.models.AutoConfig;
+import backend.models.Bet;
 import backend.models.Match;
 import backend.models.WatchParty;
-
-import java.util.List;
-import java.util.Collections;
 
 /**
  * Scheduler that automatically opens/closes watch parties based on match timing
@@ -68,7 +69,8 @@ public class AutoWatchPartyScheduler {
     }
     
     /**
-     * Check all auto watch parties and update their status
+     * Check all auto watch parties and update their status,
+     * and also check/auto-close any expired bets across all watch parties
      */
     private void updateAllAutoWatchParties() {
         for (WatchParty wp : manager.getAllAutoWatchParties()) {
@@ -78,6 +80,9 @@ public class AutoWatchPartyScheduler {
                 // Ignore errors for individual watch parties
             }
         }
+        
+        // Also check and auto-close expired bets on all watch parties (manual + auto)
+        checkAndAutoCloseBets();
     }
     
     /**
@@ -133,6 +138,22 @@ public class AutoWatchPartyScheduler {
 
         report.append("✅ Auto watch party check complete\n");
         return report.toString();
+    }
+
+    /**
+     * Check and auto-close expired bets across all watch parties
+     */
+    private void checkAndAutoCloseBets() {
+        LocalDateTime now = LocalDateTime.now();
+        for (WatchParty wp : manager.getAllWatchParties()) {
+            Bet activeBet = wp.getActiveBet();
+            if (activeBet != null 
+                && activeBet.getState() == Bet.State.VOTING 
+                && now.isAfter(activeBet.getVotingEndTime())) {
+                // Auto-close the bet
+                activeBet.endVoting();
+            }
+        }
     }
 
     private void processWatchPartyReport(WatchParty wp, StringBuilder report) {

@@ -21,9 +21,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class UserController {
 
     private final UserService userService;
+    private final backend.services.RankingService rankingService;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, backend.services.RankingService rankingService) {
         this.userService = userService;
+        this.rankingService = rankingService;
     }
 
     @Operation(summary = "Get all users", description = "Returns list of users")
@@ -34,8 +36,22 @@ public class UserController {
 
     @Operation(summary = "Get specific user")
     @GetMapping("/{username}")
-    public User getUser(@PathVariable String username) {
-        return userService.getUser(username);
+    public java.util.Map<String, Object> getUser(@PathVariable("username") String username) {
+        User user = userService.getUser(username);
+        java.util.Map<String, Object> body = new java.util.HashMap<>();
+        body.put("name", user.getName());
+        body.put("admin", user.isAdmin());
+        body.put("moderator", user.isModerator());
+        body.put("publicPoints", user.getPublicPoints());
+        body.put("pointsByWatchParty", user.getPointsByWatchParty());
+        body.put("publicWins", user.getPublicWins());
+        body.put("winsByWatchParty", user.getWinsByWatchParty());
+
+        // computed global points = rankingService sum for public WPs
+        java.util.Map<String, Integer> globalRanking = rankingService.getGlobalPublicPoints(false);
+        body.put("globalPoints", globalRanking.getOrDefault(username, 0));
+
+        return body;
     }
 
     @Operation(summary = "Register/Reset User", description = "Resets a user to 200 points or creates them.")

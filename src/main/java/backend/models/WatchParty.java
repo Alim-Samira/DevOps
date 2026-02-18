@@ -1,10 +1,10 @@
 package backend.models;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class WatchParty {
 
@@ -64,11 +64,23 @@ public class WatchParty {
         return name;
     }
 
+    public String getName() {
+        return name;
+    }
+
     public LocalDateTime date() {
         return date;
     }
 
+    public LocalDateTime getDate() {
+        return date;
+    }
+
     public String game() {
+        return game;
+    }
+
+    public String getGame() {
         return game;
     }
 
@@ -161,33 +173,15 @@ public class WatchParty {
     
     // Join watch party
     public boolean join(User user) {
-        if (!isAutoWatchParty()) {
-            if (!participants.contains(user)) {
-                participants.add(user);
-                // Bonus initial de 500 points dans le contexte de la watchparty
-                if (isPublic) {
-                    user.addPublicPoints(500);
-                } else {
-                    user.addPointsForWatchParty(name, 500);
-                }
-                return true;
-            }
-            return false;
+        // Joining logic applies the same initialisation for manual and auto WPs
+        if (isAutoWatchParty() && status != WatchPartyStatus.OPEN) {
+            return false; // cannot join closed auto WP
         }
-        
-        // Auto watch parties: only joinable when OPEN
-        if (status != WatchPartyStatus.OPEN) {
-            return false;
-        }
-        
+
         if (!participants.contains(user)) {
             participants.add(user);
-            // Bonus initial de 500 points
-            if (isPublic) {
-                user.addPublicPoints(500);
-            } else {
-                user.addPointsForWatchParty(name, 500);
-            }
+            // Initialize WP-specific points to 200 regardless of WP type
+            user.setPointsForWatchParty(name, 200);
             return true;
         }
         return false;
@@ -203,17 +197,38 @@ public class WatchParty {
         return creator != null && creator.equals(user);
     }
     
-    // Update auto config target (admin only)
-    public void updateAutoTarget(String newTarget) {
-        if (autoConfig != null) {
-            autoConfig = new AutoConfig(autoConfig.getType(), newTarget);
+    /**
+     * Helper: determines whether the given user should be considered an admin for this WatchParty.
+     * Policy: prefer the WatchParty creator when present; otherwise fallback to global admin flag.
+     */
+    public boolean isAdmin(User user) {
+        if (user == null) return false;
+        if (this.creator != null) {
+            return this.creator.getName().equalsIgnoreCase(user.getName());
         }
+        return user.isAdmin();
     }
     
     // Getters
     public AutoConfig getAutoConfig() { return autoConfig; }
     public List<User> getParticipants() { return new ArrayList<>(participants); }
     public User getCreator() { return creator; }
+
+    /**
+     * Définit le créateur de la watchparty (utilisé pour les watchparties manuelles).
+     * Ajoute également le créateur à la liste des participants et met à jour le chat.
+     */
+    public void setCreator(User creator) {
+        this.creator = creator;
+        if (creator != null && !this.participants.contains(creator)) {
+            this.participants.add(creator);
+            // Initialize creator's WP points to 200 (same rule as join)
+            creator.setPointsForWatchParty(this.name, 200);
+        }
+        // Mettre à jour l'admin du chat pour refléter le créateur
+        this.chat = new Chat(name + " Chat", creator != null ? creator : new User("system", true));
+    }
+
     public Chat getChat() { return chat; }
 
     // Admin feature: whether a mini-game can be launched
@@ -234,10 +249,14 @@ public class WatchParty {
             return "❌ Un pari est déjà actif pour cette watch party";
         }
         
-        if (!bet.getCreator().isAdmin()) {
+        // Use WatchParty.isAdmin to decide whether the bet creator is allowed here
+        if (!this.isAdmin(bet.getCreator())) {
+            if (this.creator != null) {
+                return "❌ Seul le créateur de la watchparty peut créer des paris";
+            }
             return "❌ Seuls les admins peuvent créer des paris";
         }
-        
+
         activeBet = bet;
         return "✅ Pari créé: " + bet.getQuestion();
     }

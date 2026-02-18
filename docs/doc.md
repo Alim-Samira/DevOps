@@ -3,6 +3,7 @@
 # Projet
 ## Nom
 /alll en référence aux premières lettres de nos prénoms et /all couramment utilisé pour désigner l’ensemble des personnes présentes dans une room.
+
 ## Objectif
 L’objectif est de proposer un environnement interactif autour d’un match e‑sport, en combinant plusieurs fonctionnalités dont des paris par exemple. L’application vise à offrir une expérience immersive et communautaire.
 
@@ -17,11 +18,11 @@ La plateforme s’adresse aux spectateurs de matchs e-sport afin de profiter de 
 
 | | Notre projet |Discord |Twitch |
 |-|-|-|-|
-|Chat structuré (public/privé)|✔️         |✔️            |✔️|
-|Paris          |✔️          |❌ via bots           |✔️
-|Watch Parties automatiques          |✔️|❌|❌
-  |Mini-jeux          |✔️ quiz integré|❌ via bots|❌
-|Classement        |✔️ |❌ via bots|❌
+|Chat structuré (public/privé)|Oui         |Oui            |Oui|
+|Paris          |Oui          |Non via bots           |Oui
+|Watch Parties automatiques          |Oui|Non|Non
+  |Mini-jeux          |Oui quiz integré|Non via bots|Non
+|Classement        |Oui |Non via bots|Non
 
 
 # Diagramme de classe

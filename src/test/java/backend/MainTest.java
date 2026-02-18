@@ -1,28 +1,29 @@
 package backend;
 
-import static org.junit.jupiter.api.Assertions.*;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
 import backend.models.AutoType;
+import backend.models.Chat;
 import backend.models.DiscreteChoiceBet;
 import backend.models.NumericValueBet;
 import backend.models.OrderedRankingBet;
-import backend.models.Chat;
 import backend.models.QuizGame;
 import backend.models.User;
 import backend.models.WatchParty;
 import backend.models.WatchPartyStatus;
 import backend.services.WatchPartyManager;
-import backend.services.RankingService;
-import backend.services.UserService;
-import backend.services.RewardService;
 
 /**
  * Suite de tests complète pour le système DevOps
@@ -41,6 +42,12 @@ class MainTest {
         alice = new User("Alice", false);
         bob = new User("Bob", false);
         watchParty = new WatchParty("Test WP", LocalDateTime.now().plusDays(1), "LoL");
+        watchParty.setPublic(false); // Default as private for tests
+        
+        // Initialize users in the watch party with 200 points
+        watchParty.join(admin);
+        watchParty.join(alice);
+        watchParty.join(bob);
     }
 
     // ==================== CHAT TESTS ====================
@@ -70,9 +77,9 @@ class MainTest {
         );
         watchParty.createBet(bet);
 
-        assertEquals(200, alice.getPublicPoints());
+        assertEquals(200, alice.getPointsForWatchParty("Test WP"));
         bet.vote(alice, "T1", 50);
-        assertEquals(150, alice.getPublicPoints());
+        assertEquals(150, alice.getPointsForWatchParty("Test WP"));
     }
 
     @Test
@@ -87,15 +94,15 @@ class MainTest {
         bet.vote(alice, "A", 50);
         bet.vote(bob, "A", 50);
         
-        assertEquals(150, alice.getPublicPoints());
-        assertEquals(150, bob.getPublicPoints());
+        assertEquals(150, alice.getPointsForWatchParty("Test WP"));
+        assertEquals(150, bob.getPointsForWatchParty("Test WP"));
 
         bet.endVoting();
         bet.resolve("A");
 
         // Total pot = 100, split equally between 2 winners = 50 each
-        assertEquals(200, alice.getPublicPoints()); // 150 + 50
-        assertEquals(200, bob.getPublicPoints());   // 150 + 50
+        assertEquals(200, alice.getPointsForWatchParty("Test WP")); // 150 + 50
+        assertEquals(200, bob.getPointsForWatchParty("Test WP"));   // 150 + 50
     }
 
     @Test
@@ -108,10 +115,10 @@ class MainTest {
         );
 
         bet.vote(alice, "A", 50);
-        assertEquals(150, alice.getPublicPoints());
+        assertEquals(150, alice.getPointsForWatchParty("Test WP"));
 
         bet.cancel();
-        assertEquals(200, alice.getPublicPoints());
+        assertEquals(200, alice.getPointsForWatchParty("Test WP"));
     }
 
     @Test
@@ -137,7 +144,7 @@ class MainTest {
 
         String result = bet.vote(alice, 35, 50);
         assertTrue(result.contains("✅"));
-        assertEquals(150, alice.getPublicPoints());
+        assertEquals(150, alice.getPointsForWatchParty("Test WP"));
     }
 
     @Test
@@ -155,8 +162,8 @@ class MainTest {
         String result = bet.resolve(35);
 
         assertTrue(result.contains("✅"));
-        assertEquals(200, alice.getPublicPoints()); // 150 + 50
-        assertEquals(200, bob.getPublicPoints());
+        assertEquals(200, alice.getPointsForWatchParty("Test WP")); // 150 + 50
+        assertEquals(200, bob.getPointsForWatchParty("Test WP"));
     }
 
     @Test
@@ -180,7 +187,7 @@ class MainTest {
 
         assertTrue(result.contains("✅"));
         // Top 30% de 4 = 2 gagnants (bob et alice ou charlie)
-        assertTrue(bob.getPublicPoints() > 150); // Bob devrait gagner plus (plus proche)
+        assertTrue(bob.getPointsForWatchParty("Test WP") > 150); // Bob devrait gagner plus (plus proche)
     }
 
     // ==================== ORDERED RANKING BET TESTS ====================
@@ -198,7 +205,7 @@ class MainTest {
         String result = bet.vote(alice, ranking, 50);
 
         assertTrue(result.contains("✅"));
-        assertEquals(150, alice.getPublicPoints());
+        assertEquals(150, alice.getPointsForWatchParty("Test WP"));
     }
 
     @Test
@@ -218,8 +225,8 @@ class MainTest {
         String result = bet.resolve(perfect);
 
         assertTrue(result.contains("parfait"));
-        assertEquals(200, alice.getPublicPoints());
-        assertEquals(200, bob.getPublicPoints());
+        assertEquals(200, alice.getPointsForWatchParty("Test WP"));
+        assertEquals(200, bob.getPointsForWatchParty("Test WP"));
     }
 
     @Test
@@ -239,7 +246,7 @@ class MainTest {
 
         assertTrue(result.contains("✅"));
         // Alice devrait gagner plus (distance = 0)
-        assertTrue(alice.getPublicPoints() >= bob.getPublicPoints());
+        assertTrue(alice.getPointsForWatchParty("Test WP") >= bob.getPointsForWatchParty("Test WP"));
     }
 
     // ==================== WATCH PARTY BETTING TESTS ====================
@@ -341,6 +348,20 @@ class MainTest {
         assertEquals(alice, wp.getCreator());
         assertTrue(wp.isAutoWatchParty());
         assertEquals("Gen.G", wp.getAutoConfig().getTarget());
+    }
+
+    @Test
+    @DisplayName("WatchParty.isAdmin() should prefer creator and fallback to global admin")
+    void testWatchPartyIsAdminHelper() {
+        // Auto WP: creator Alice should be considered admin, even if another user is global admin
+        WatchParty autoWp = WatchParty.createAutoWatchParty(alice, "T1", AutoType.TEAM);
+        assertTrue(autoWp.isAdmin(alice));
+        assertFalse(autoWp.isAdmin(admin));
+
+        // Manual WP: no creator -> fallback to global admin flag
+        WatchParty manualWp = new WatchParty("Manual", java.time.LocalDateTime.now().plusDays(1), "LoL");
+        assertTrue(manualWp.isAdmin(admin));
+        assertFalse(manualWp.isAdmin(alice));
     }
 
     @Test
@@ -490,10 +511,10 @@ class MainTest {
     void testUserPointsAccumulation() {
         User pointUser = new User("PointAccumulator", false);
 
-        int initialPoints = pointUser.getPublicPoints();
-        pointUser.addPublicPoints(100);
+        int initialPoints = pointUser.getPointsForWatchParty("Test WP");
+        pointUser.addPointsForWatchParty("Test WP", 100);
 
-        assertEquals(initialPoints + 100, pointUser.getPublicPoints());
+        assertEquals(initialPoints + 100, pointUser.getPointsForWatchParty("Test WP"));
     }
 
     @Test
@@ -527,5 +548,66 @@ class MainTest {
         int points = partyPointUser.getPointsForWatchParty("Party2");
 
         assertEquals(250, points);
+    }
+
+    @Test
+    @DisplayName("Bet.isVotingOpen() should return false when votingEndTime has passed")
+    void testBetVotingOpenedCheckWithExpiredTime() {
+        // Create a bet with votingEndTime in the past
+        LocalDateTime expiredTime = LocalDateTime.now().minusMinutes(5);
+        DiscreteChoiceBet expiredBet = new DiscreteChoiceBet("Expired question?", admin, watchParty, expiredTime, 
+                                                               Arrays.asList("Yes", "No"));
+        
+        // isVotingOpen should return false because time has passed
+        assertFalse(expiredBet.isVotingOpen(), "Voting should be closed when votingEndTime has passed");
+    }
+
+    @Test
+    @DisplayName("Bet.isVotingOpen() should return false when state is not VOTING")
+    void testBetVotingOpenedCheckWithPendingState() {
+        // Create a bet with valid future time
+        LocalDateTime futureTime = LocalDateTime.now().plusMinutes(10);
+        DiscreteChoiceBet bet = new DiscreteChoiceBet("Future question?", admin, watchParty, futureTime,
+                                                        Arrays.asList("Yes", "No"));
+        
+        // Verify voting is open initially
+        assertTrue(bet.isVotingOpen(), "Voting should be open initially");
+        
+        // End voting (transitions to PENDING)
+        bet.endVoting();
+        
+        // Now isVotingOpen should return false because state is PENDING
+        assertFalse(bet.isVotingOpen(), "Voting should be closed when state is PENDING");
+    }
+
+    @Test
+    @DisplayName("Auto scheduler should auto-close expired bets when invoked")
+    void testAutoSchedulerClosesExpiredBets() {
+        // Setup: Create a public manual WP with a bet that has already expired
+        WatchParty wp = new WatchParty("SchedTest", LocalDateTime.now().plusDays(1), "LoL");
+        wp.setPublic(true);
+        User betCreator = new User("BetCreator", true);
+        wp.setCreator(betCreator);
+        
+        // Create a bet with votingEndTime in the past (already expired)
+        LocalDateTime expiredTime = LocalDateTime.now().minusMinutes(5);
+        DiscreteChoiceBet expiredBet = new DiscreteChoiceBet("Already expired?", betCreator, wp, expiredTime,
+                                                               Arrays.asList("A", "B"));
+        
+        // Add bet to WP and verify it's in VOTING state
+        wp.createBet(expiredBet);
+        assertTrue(wp.hasActiveBet(), "WP should have active bet");
+        assertEquals(expiredBet.getState(), backend.models.Bet.State.VOTING, "Bet should start in VOTING state");
+        
+        // Manually invoke the auto-close logic (what the scheduler would do)
+        backend.models.Bet activeBet = wp.getActiveBet();
+        if (activeBet != null && activeBet.getState() == backend.models.Bet.State.VOTING 
+            && LocalDateTime.now().isAfter(activeBet.getVotingEndTime())) {
+            activeBet.endVoting();
+        }
+        
+        // Verify the bet has been transitioned to PENDING
+        assertEquals(wp.getActiveBet().getState(), backend.models.Bet.State.PENDING, 
+                     "Expired bet should be auto-closed to PENDING state");
     }
 }

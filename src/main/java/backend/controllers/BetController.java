@@ -70,7 +70,7 @@ public class BetController {
 
     @GetMapping("/watchparties/{name}/bets")
     @Operation(summary = "Récupère le pari actif d'une watch party")
-    public Bet getActiveBet(@PathVariable String name) {
+    public Bet getActiveBet(@PathVariable("name") String name) {
         return betService.getActiveBet(name);
     }
 
@@ -85,7 +85,7 @@ public class BetController {
     @PostMapping("/watchparties/{name}/bets/discrete")
     @Operation(summary = "Crée un pari à choix discrets",
                description = "Payload: { \"admin\": \"alice\", \"question\": \"Qui gagne?\", \"choices\": [\"T1\", \"GenG\"], \"votingMinutes\": 10 }")
-    public String createDiscreteChoiceBet(@PathVariable String name, @RequestBody Map<String, Object> payload) {
+    public String createDiscreteChoiceBet(@PathVariable("name") String name, @RequestBody Map<String, Object> payload) {
         String admin = (String) payload.get(KEY_ADMIN);
         String question = (String) payload.get(KEY_QUESTION);
         @SuppressWarnings("unchecked")
@@ -111,7 +111,7 @@ public class BetController {
     @PostMapping("/watchparties/{name}/bets/numeric")
     @Operation(summary = "Crée un pari sur une valeur numérique",
                description = "Payload: { \"admin\": \"alice\", \"question\": \"Nombre de kills?\", \"isInteger\": true, \"minValue\": 0, \"maxValue\": 100, \"votingMinutes\": 10 }")
-    public String createNumericValueBet(@PathVariable String name, @RequestBody Map<String, Object> payload) {
+    public String createNumericValueBet(@PathVariable("name") String name, @RequestBody Map<String, Object> payload) {
         String admin = (String) payload.get(KEY_ADMIN);
         String question = (String) payload.get(KEY_QUESTION);
         Boolean isInteger = (Boolean) payload.get("isInteger");
@@ -141,7 +141,7 @@ public class BetController {
     @PostMapping("/watchparties/{name}/bets/ranking")
     @Operation(summary = "Crée un pari de classement ordonné",
                description = "Payload: { \"admin\": \"alice\", \"question\": \"Top 5 joueurs?\", \"items\": [\"Faker\", \"Chovy\", \"ShowMaker\", \"Doran\", \"Zeus\"], \"votingMinutes\": 10 }")
-    public String createOrderedRankingBet(@PathVariable String name, @RequestBody Map<String, Object> payload) {
+    public String createOrderedRankingBet(@PathVariable("name") String name, @RequestBody Map<String, Object> payload) {
         String admin = (String) payload.get(KEY_ADMIN);
         String question = (String) payload.get(KEY_QUESTION);
         @SuppressWarnings("unchecked")
@@ -171,7 +171,7 @@ public class BetController {
                    - Discret: { "user": "bob", "value": "T1", "points": 50 }
                    - Numérique: { "user": "bob", "value": 35, "points": 50 }
                    - Classement: { "user": "bob", "value": ["Faker", "Chovy", ...], "points": 50 }""")
-    public String vote(@PathVariable String name, @RequestBody Map<String, Object> payload) {
+    public String vote(@PathVariable("name") String name, @RequestBody Map<String, Object> payload) {
         String username = (String) payload.get(KEY_USER);
         Object value = payload.get(KEY_VALUE);
         int points = payload.get(KEY_POINTS) != null 
@@ -189,7 +189,7 @@ public class BetController {
 
     @PostMapping("/watchparties/{name}/bets/end-voting")
     @Operation(summary = "Ferme la phase de vote (admin uniquement)")
-    public String endVoting(@PathVariable String name, @RequestBody Map<String, String> payload) {
+    public String endVoting(@PathVariable("name") String name, @RequestBody Map<String, String> payload) {
         String admin = payload.get(KEY_ADMIN);
         if (admin == null) {
             return ERROR_ADMIN_REQUIRED;
@@ -204,7 +204,7 @@ public class BetController {
                    - Discret: { "admin": "alice", "correctValue": "T1" }
                    - Numérique: { "admin": "alice", "correctValue": 35 }
                    - Classement: { "admin": "alice", "correctValue": ["Faker", "Chovy", ...] }""")
-    public String resolveBet(@PathVariable String name, @RequestBody Map<String, Object> payload) {
+    public String resolveBet(@PathVariable("name") String name, @RequestBody Map<String, Object> payload) {
         String admin = (String) payload.get(KEY_ADMIN);
         Object correctValue = payload.get(KEY_CORRECT_VALUE);
 
@@ -217,7 +217,7 @@ public class BetController {
 
     @PostMapping("/watchparties/{name}/bets/cancel")
     @Operation(summary = "Annule le pari et rembourse les parieurs (admin uniquement)")
-    public String cancelBet(@PathVariable String name, @RequestBody Map<String, String> payload) {
+    public String cancelBet(@PathVariable("name") String name, @RequestBody Map<String, String> payload) {
         String admin = payload.get(KEY_ADMIN);
         if (admin == null) {
             return ERROR_ADMIN_REQUIRED;
@@ -230,7 +230,7 @@ public class BetController {
     @PostMapping("/watchparties/{name}/bets/use-ticket")
     @Operation(summary = "Utilise un ticket sur le pari actif (état PENDING)",
                description = "Payload: { \"user\": \"bob\", \"ticketType\": \"IN_OR_OUT\", \"newPoints\": 0 } ou selon le type de pari: newValue")
-    public String useTicket(@PathVariable String name, @RequestBody Map<String, Object> payload) {
+    public String useTicket(@PathVariable("name") String name, @RequestBody Map<String, Object> payload) {
         String username = (String) payload.get(KEY_USER);
         String ticketTypeStr = (String) payload.get(KEY_TICKET_TYPE);
         Object newValue = payload.get(KEY_NEW_VALUE);
