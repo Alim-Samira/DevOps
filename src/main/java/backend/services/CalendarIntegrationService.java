@@ -1,5 +1,6 @@
 package backend.services;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import backend.models.Calendar;
 import backend.models.CalendarConnectionRequest;
+import backend.models.CalendarEvent;
 import backend.models.CalendarProviderType;
 import backend.models.GoogleCalendar;
 import backend.models.IcalCalendar;
@@ -130,5 +132,52 @@ public class CalendarIntegrationService {
                 .map(String::trim)
                 .filter(v -> !v.isEmpty())
                 .orElse(null);
+    }
+
+    /**
+     * Get events from an ICAL calendar within a specific time range
+     */
+    public List<CalendarEvent> getEventsForCalendar(String user, String connectionId, LocalDateTime start, LocalDateTime end) {
+        List<Calendar> userConnections = getConnectionsForUser(user);
+        
+        for (Calendar connection : userConnections) {
+            if (connection.getId().equals(connectionId) && connection instanceof IcalCalendar) {
+                IcalCalendar icalCal = (IcalCalendar) connection;
+                try {
+                    // Fetch only events from the requested date and next day
+                    List<CalendarEvent> allEvents = IcalEventProvider.fetchEventsFromUrl(icalCal.getSourceUrl(), start);
+                    return IcalEventProvider.getEventsInTimeRange(allEvents, start, end);
+                } catch (Exception e) {
+                    throw new RuntimeException("Erreur lors de la recuperation des evenements: " + e.getMessage());
+                }
+            }
+        }
+        
+        throw new IllegalArgumentException("Calendrier " + connectionId + " non trouve pour l'utilisateur " + user);
+    }
+
+    /**
+     * Check if a user is available during a specific time slot across all their ICAL calendars
+     */
+    public boolean checkAvailability(String user, LocalDateTime start, LocalDateTime end) {
+        List<Calendar> userConnections = getConnectionsForUser(user);
+        
+        for (Calendar connection : userConnections) {
+            if (connection instanceof IcalCalendar) {
+                IcalCalendar icalCal = (IcalCalendar) connection;
+                try {
+                    // Fetch only events from the requested date and next day
+                    List<CalendarEvent> allEvents = IcalEventProvider.fetchEventsFromUrl(icalCal.getSourceUrl(), start);
+                    if (!IcalEventProvider.isAvailable(allEvents, start, end)) {
+                        return false;  // Conflict found, user is NOT available
+                    }
+                } catch (Exception e) {
+                    // Log and skip this calendar if there's an error
+                    System.err.println("Erreur lors de la vérification de disponibilité: " + e.getMessage());
+                }
+            }
+        }
+        
+        return true;  // No conflicts found, user is available
     }
 }

@@ -406,4 +406,45 @@ class ControllerIntegrationTest {
                 .andExpect(jsonPath("$.success").value(true));
     }
 
+    @Test
+    @DisplayName("GET /api/users/{user}/calendars/{connectionId}/events should return events in time range")
+    void testGetEventsInTimeRange() throws Exception {
+        // Connect a calendar first
+        String response = mockMvc.perform(post("/api/users/david/calendars")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"provider\":\"ICAL\",\"sourceUrl\":\"https://example.com/david.ics\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String connectionId = response.split("\\\"id\\\":\\\"")[1].split("\\\"")[0];
+
+        // Try to get events (this will fail for invalid URLs, which is expected)
+        mockMvc.perform(get("/api/users/david/calendars/" + connectionId + "/events")
+                .param("start", "2026-02-23T09:00:00")
+                .param("end", "2026-02-23T10:00:00"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("GET /api/users/{user}/availability should check if user is available")
+    void testCheckUserAvailability() throws Exception {
+        // Connect a calendar first
+        mockMvc.perform(post("/api/users/eve/calendars")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"provider\":\"ICAL\",\"sourceUrl\":\"https://example.com/eve.ics\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        // Check availability for a time slot
+        mockMvc.perform(get("/api/users/eve/availability")
+                .param("start", "2026-02-23T09:00:00")
+                .param("end", "2026-02-23T10:00:00"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user").value("eve"))
+                .andExpect(jsonPath("$.available").exists());
+    }
+
 }

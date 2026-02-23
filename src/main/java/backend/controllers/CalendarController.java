@@ -1,5 +1,7 @@
 package backend.controllers;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,10 +12,12 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import backend.models.Calendar;
 import backend.models.CalendarConnectionRequest;
+import backend.models.CalendarEvent;
 import backend.services.CalendarIntegrationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -72,5 +76,59 @@ public class CalendarController {
             response.put("error", "Connexion introuvable");
         }
         return response;
+    }
+
+    @Operation(summary = "Get events from a calendar in a time range")
+    @GetMapping("/users/{user}/calendars/{connectionId}/events")
+    public Map<String, Object> getEvents(
+            @PathVariable("user") String user,
+            @PathVariable("connectionId") String connectionId,
+            @RequestParam("start") String startStr,
+            @RequestParam("end") String endStr) {
+        try {
+            DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+            LocalDateTime start = LocalDateTime.parse(startStr, formatter);
+            LocalDateTime end = LocalDateTime.parse(endStr, formatter);
+
+            List<CalendarEvent> events = calendarIntegrationService.getEventsForCalendar(user, connectionId, start, end);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("events", events);
+            response.put("count", events.size());
+            return response;
+        } catch (Exception ex) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("error", ex.getMessage());
+            return response;
+        }
+    }
+
+    @Operation(summary = "Check if a user is available during a time slot")
+    @GetMapping("/users/{user}/availability")
+    public Map<String, Object> checkAvailability(
+            @PathVariable("user") String user,
+            @RequestParam("start") String startStr,
+            @RequestParam("end") String endStr) {
+        try {
+            DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+            LocalDateTime start = LocalDateTime.parse(startStr, formatter);
+            LocalDateTime end = LocalDateTime.parse(endStr, formatter);
+
+            boolean available = calendarIntegrationService.checkAvailability(user, start, end);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("user", user);
+            response.put("start", start);
+            response.put("end", end);
+            response.put("available", available);
+            return response;
+        } catch (Exception ex) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("error", ex.getMessage());
+            return response;
+        }
     }
 }
