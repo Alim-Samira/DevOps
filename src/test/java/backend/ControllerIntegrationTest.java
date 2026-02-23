@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -347,6 +348,62 @@ class ControllerIntegrationTest {
         mockMvc.perform(get("/api/watchparties/CreatorBetWP/bets"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.state").value("PENDING"));
+    }
+
+    // ==================== CALENDAR CONTROLLER TESTS ====================
+
+    @Test
+    @DisplayName("GET /api/calendars/providers should return supported providers")
+    void testGetCalendarProviders() throws Exception {
+        mockMvc.perform(get("/api/calendars/providers"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$[0].provider").exists());
+    }
+
+    @Test
+    @DisplayName("POST /api/users/{user}/calendars should connect ICAL calendar")
+    void testConnectIcsCalendar() throws Exception {
+        mockMvc.perform(post("/api/users/alice/calendars")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"provider\":\"ICAL\",\"label\":\"Mon agenda\",\"sourceUrl\":\"https://example.com/my.ics\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.connection.type").value("ICAL"));
+
+        mockMvc.perform(get("/api/users/alice/calendars"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].type").value("ICAL"));
+    }
+
+    @Test
+    @DisplayName("POST /api/users/{user}/calendars should reject invalid payload")
+    void testConnectCalendarInvalidPayload() throws Exception {
+        mockMvc.perform(post("/api/users/bob/calendars")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"provider\":\"ICAL\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error").exists());
+    }
+
+    @Test
+    @DisplayName("DELETE /api/users/{user}/calendars/{connectionId} should remove connection")
+    void testDeleteCalendarConnection() throws Exception {
+        String response = mockMvc.perform(post("/api/users/carol/calendars")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"provider\":\"ICAL\",\"sourceUrl\":\"https://example.com/carol.ics\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String connectionId = response.split("\\\"id\\\":\\\"")[1].split("\\\"")[0];
+
+        mockMvc.perform(delete("/api/users/carol/calendars/" + connectionId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
     }
 
 }

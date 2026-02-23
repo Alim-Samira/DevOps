@@ -1,7 +1,6 @@
 package backend.controllers;
 
 import java.util.List;
-import java.util.Map;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -11,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import backend.models.User;
+import backend.models.UserCreateRequest;
 import backend.services.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -56,8 +56,8 @@ public class UserController {
 
     @Operation(summary = "Register/Reset User", description = "Resets a user to 200 points or creates them.")
     @PostMapping
-    public User createUser(@RequestBody Map<String, String> payload) {
-        String username = payload.get("username");
+    public User createUser(@RequestBody UserCreateRequest payload) {
+        String username = payload.getName();
         if(username == null) return null;
         
         // Since your UserService.getUser() creates one if missing, 
