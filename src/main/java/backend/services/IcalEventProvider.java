@@ -6,7 +6,9 @@ import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -16,11 +18,53 @@ public class IcalEventProvider {
 
     private static final DateTimeFormatter ICAL_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss");
     private static final DateTimeFormatter ICAL_FORMATTER_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
+    private static final long CACHE_TTL_MINUTES = 30;
+    
+    // Cache: URL → (events, timestamp)
+    private static final Map<String, CachedCalendarData> cache = new HashMap<>();
 
     /**
-     * Fetch and parse events from an iCalendar URL
+     * Cached calendar data with timestamp for TTL management
+     */
+    private static class CachedCalendarData {
+        final List<CalendarEvent> events;
+        final long cachedAt;
+
+        CachedCalendarData(List<CalendarEvent> events) {
+            this.events = events;
+            this.cachedAt = System.currentTimeMillis();
+        }
+
+        boolean isExpired() {
+            long ageMs = System.currentTimeMillis() - cachedAt;
+            long ttlMs = CACHE_TTL_MINUTES * 60 * 1000;
+            return ageMs > ttlMs;
+        }
+    }
+
+    /**
+     * Fetch and parse events from an iCalendar URL (with caching - 30min TTL)
      */
     public static List<CalendarEvent> fetchEventsFromUrl(String sourceUrl) throws Exception {
+        // Check cache first
+        CachedCalendarData cached = cache.get(sourceUrl);
+        if (cached != null && !cached.isExpired()) {
+            return cached.events;  // Return cached data
+        }
+
+        // Download and parse
+        List<CalendarEvent> events = downloadAndParseCalendar(sourceUrl);
+        
+        // Store in cache
+        cache.put(sourceUrl, new CachedCalendarData(events));
+        
+        return events;
+    }
+
+    /**
+     * Download and parse the .ics file from URL
+     */
+    private static List<CalendarEvent> downloadAndParseCalendar(String sourceUrl) throws Exception {
         List<CalendarEvent> events = new ArrayList<>();
 
         // Fetch the .ics file
