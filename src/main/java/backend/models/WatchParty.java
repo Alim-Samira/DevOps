@@ -30,6 +30,10 @@ public class WatchParty {
     // Betting system - one active bet per watch party
     private Bet activeBet;
 
+    // Champs d'integration data Riot Games
+    private String currentRiotGameId;     // null = pas de données live
+    private LocalDateTime lastFrameProcessed;
+
     // Constructor for manual watch parties (existing)
     public WatchParty(String name, LocalDateTime date, String game) {
         this.name = name;
@@ -43,6 +47,8 @@ public class WatchParty {
         this.matchState = MatchState.PRE_MATCH; // initial state
         this.chat = new Chat(name + " Chat", new User("system", true));
         this.userTickets = new HashMap<>();
+        this.currentRiotGameId = null;
+        this.lastFrameProcessed = null;
     }
     
     // Constructor for auto watch parties
@@ -58,6 +64,8 @@ public class WatchParty {
         this.matchState = MatchState.PRE_MATCH; // initial state
         this.chat = new Chat(name + " Chat", creator != null ? creator : new User("system", true));
         this.userTickets = new HashMap<>();
+        this.currentRiotGameId = null;
+        this.lastFrameProcessed = null;
     }
 
      public String name() {
@@ -317,4 +325,9 @@ public class WatchParty {
             userTickets.clear();
         }
     }
+
+    public String getCurrentRiotGameId() { return currentRiotGameId; }
+    public void setCurrentRiotGameId(String gameId) { this.currentRiotGameId = gameId; }
+    public LocalDateTime getLastFrameProcessed() { return lastFrameProcessed; }
+    public void setLastFrameProcessed(LocalDateTime time) { this.lastFrameProcessed = time; }
 }

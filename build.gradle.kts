@@ -31,6 +31,7 @@ tasks.withType<org.gradle.api.tasks.compile.JavaCompile>().configureEach {
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0")
+    implementation("org.springframework:spring-web")
 
     // JSON parsing for API client
     implementation("com.google.code.gson:gson:2.10.1")

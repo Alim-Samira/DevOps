@@ -116,6 +116,12 @@ public class AutoWatchPartyScheduler {
         
         // Update watch party status
         wp.updateStatus(nextMatch);
+        if (nextMatch.isInProgress() && wp.getCurrentRiotGameId() == null) {
+            String gameId = lolClient.getFirstGameId(nextMatch.getRiotEventId()).orElse(null);
+            if (gameId != null) {
+                liveMonitor.startMonitoring(wp, gameId);
+            }
+        }
     }
     
     /**

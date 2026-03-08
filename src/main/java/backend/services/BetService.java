@@ -255,4 +255,18 @@ public class BetService {
         }
         return wp.getActiveBet();
     }
+
+    @Autowired
+    private BetSettlementService settlementService;   // injection
+
+    // Nouvelle méthode (appelée par le monitor)
+    public void tryAutoResolveLiveBet(WatchParty wp, Frame frame) {
+        Bet active = wp.getActiveBet();
+        if (active == null || active.getState() != Bet.State.VOTING) return;
+
+        boolean resolved = settlementService.attemptResolve(active, frame, wp);
+        if (resolved) {
+            wp.setActiveBet(null);
+        }
+    }
 }
