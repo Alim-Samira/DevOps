@@ -135,7 +135,7 @@ public class CalendarIntegrationService {
     }
 
     /**
-     * Get events from an ICAL calendar within a specific time range
+     * Récupère les événements d'un calendrier ICAL pour un créneau donné
      */
     public List<CalendarEvent> getEventsForCalendar(String user, String connectionId, LocalDateTime start, LocalDateTime end) {
         List<Calendar> userConnections = getConnectionsForUser(user);
@@ -144,7 +144,6 @@ public class CalendarIntegrationService {
             if (connection.getId().equals(connectionId) && connection instanceof IcalCalendar) {
                 IcalCalendar icalCal = (IcalCalendar) connection;
                 try {
-                    // Fetch only events from the requested date and next day
                     List<CalendarEvent> allEvents = IcalEventProvider.fetchEventsFromUrl(icalCal.getSourceUrl(), start);
                     return IcalEventProvider.getEventsInTimeRange(allEvents, start, end);
                 } catch (Exception e) {
@@ -157,7 +156,7 @@ public class CalendarIntegrationService {
     }
 
     /**
-     * Check if a user is available during a specific time slot across all their ICAL calendars
+     * Vérifie si un utilisateur est libre sur tous ses calendriers ICAL
      */
     public boolean checkAvailability(String user, LocalDateTime start, LocalDateTime end) {
         List<Calendar> userConnections = getConnectionsForUser(user);
@@ -166,18 +165,16 @@ public class CalendarIntegrationService {
             if (connection instanceof IcalCalendar) {
                 IcalCalendar icalCal = (IcalCalendar) connection;
                 try {
-                    // Fetch only events from the requested date and next day
                     List<CalendarEvent> allEvents = IcalEventProvider.fetchEventsFromUrl(icalCal.getSourceUrl(), start);
                     if (!IcalEventProvider.isAvailable(allEvents, start, end)) {
-                        return false;  // Conflict found, user is NOT available
+                        return false;  // Conflit trouvé
                     }
                 } catch (Exception e) {
-                    // Log and skip this calendar if there's an error
                     System.err.println("Erreur lors de la vérification de disponibilité: " + e.getMessage());
                 }
             }
         }
         
-        return true;  // No conflicts found, user is available
+        return true;  // Aucun conflit
     }
 }

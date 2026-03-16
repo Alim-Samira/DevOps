@@ -20,11 +20,11 @@ public class IcalEventProvider {
     private static final DateTimeFormatter ICAL_FORMATTER_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final long CACHE_TTL_MINUTES = 30;
     
-    // Cache: URL → (events, timestamp)
+    // Cache en mémoire : URL → événements + timestamp
     private static final Map<String, CachedCalendarData> cache = new HashMap<>();
 
     /**
-     * Cached calendar data with timestamp for TTL management
+     * Données en cache avec timestamp pour gérer l'expiration (30min)
      */
     private static class CachedCalendarData {
         final List<CalendarEvent> events;
@@ -43,31 +43,31 @@ public class IcalEventProvider {
     }
 
     /**
-     * Fetch and parse events from an iCalendar URL (with caching - 30min TTL)
+     * Récupère les événements d'une URL iCal (avec cache 30min)
      */
     public static List<CalendarEvent> fetchEventsFromUrl(String sourceUrl) throws Exception {
-        // Check cache first
+        // Vérifie si c'est en cache
         CachedCalendarData cached = cache.get(sourceUrl);
         if (cached != null && !cached.isExpired()) {
-            return cached.events;  // Return cached data
+            return cached.events;
         }
 
-        // Download and parse
+        // Télécharge et parse le fichier
         List<CalendarEvent> events = downloadAndParseCalendar(sourceUrl);
         
-        // Store in cache
+        // Stocke en cache
         cache.put(sourceUrl, new CachedCalendarData(events));
         
         return events;
     }
 
     /**
-     * Download and parse the .ics file from URL
+     * Télécharge et parse le fichier .ics
      */
     private static List<CalendarEvent> downloadAndParseCalendar(String sourceUrl) throws Exception {
         List<CalendarEvent> events = new ArrayList<>();
 
-        // Fetch the .ics file
+        // Télécharge le fichier
         URL url = new URL(sourceUrl);
         StringBuilder content = new StringBuilder();
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream()))) {
@@ -79,7 +79,7 @@ public class IcalEventProvider {
 
         String icsContent = content.toString();
 
-        // Extract VEVENT blocks
+        // Extrait les blocs VEVENT
         Pattern vEventPattern = Pattern.compile("BEGIN:VEVENT(.*?)END:VEVENT", Pattern.DOTALL);
         Matcher vEventMatcher = vEventPattern.matcher(icsContent);
 
@@ -95,20 +95,18 @@ public class IcalEventProvider {
     }
 
     /**
-     * Fetch and parse events from an iCalendar URL, filtered by date range
-     * Only returns events that start on referenceDate or the next day
+     * Récupère les événements, filtrés sur le jour demandé (+ lendemain si multi-jours)
      */
     public static List<CalendarEvent> fetchEventsFromUrl(String sourceUrl, LocalDateTime referenceDate) throws Exception {
         List<CalendarEvent> allEvents = fetchEventsFromUrl(sourceUrl);
         
-        // Filter to only include events on the reference date or next day
+        // Filtre sur la date et le jour suivant (évite de charger tous les événements)
         java.time.LocalDate targetDate = referenceDate.toLocalDate();
         java.time.LocalDate nextDate = targetDate.plusDays(1);
         
         List<CalendarEvent> filtered = new ArrayList<>();
         for (CalendarEvent event : allEvents) {
             java.time.LocalDate eventDate = event.getStart().toLocalDate();
-            // Keep event if it starts on targetDate or nextDate
             if (eventDate.equals(targetDate) || eventDate.equals(nextDate)) {
                 filtered.add(event);
             }
@@ -118,7 +116,7 @@ public class IcalEventProvider {
     }
 
     /**
-     * Parse a single VEVENT block
+     * Parse un bloc VEVENT (titre, dates, description)
      */
     private static CalendarEvent parseVEvent(String vEventBlock) {
         String title = extractField(vEventBlock, "SUMMARY");
@@ -140,7 +138,7 @@ public class IcalEventProvider {
     }
 
     /**
-     * Extract field value from VEVENT (handles DTSTART;TZID=...:value)
+     * Extrait un champ du VEVENT (ex: SUMMARY, DTSTART, DTEND)
      */
     private static String extractField(String vEventBlock, String fieldName) {
         Pattern pattern = Pattern.compile(fieldName + "(?:;[^:]*)?:([^\n\r]*)");
@@ -152,7 +150,7 @@ public class IcalEventProvider {
     }
 
     /**
-     * Parse iCalendar datetime (yyyyMMdd'T'HHmmss or yyyyMMdd)
+     * Parse une date iCal (format yyyyMMdd'T'HHmmss ou yyyyMMdd seul)
      */
     private static LocalDateTime parseICalDateTime(String dateStr) {
         dateStr = dateStr.trim();
@@ -171,7 +169,7 @@ public class IcalEventProvider {
     }
 
     /**
-     * Get events that overlap with the given time range
+     * Retourne les événements qui chevauchent le créneau demandé
      */
     public static List<CalendarEvent> getEventsInTimeRange(List<CalendarEvent> allEvents, LocalDateTime start, LocalDateTime end) {
         List<CalendarEvent> result = new ArrayList<>();
@@ -184,7 +182,7 @@ public class IcalEventProvider {
     }
 
     /**
-     * Check if person is available (no conflicting events)
+     * Vérifie si la personne est libre (pas d'événements conflictuels)
      */
     public static boolean isAvailable(List<CalendarEvent> allEvents, LocalDateTime start, LocalDateTime end) {
         return getEventsInTimeRange(allEvents, start, end).isEmpty();
