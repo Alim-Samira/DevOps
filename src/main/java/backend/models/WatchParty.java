@@ -142,6 +142,7 @@ public class WatchParty {
                 kickAllParticipants();
                 clearAllTickets();
             }
+            clearLiveData();
             return;
         }
         
@@ -152,6 +153,7 @@ public class WatchParty {
                 kickAllParticipants();
             }
             autoConfig.setCurrentMatch(null);
+            clearLiveData();
             return;
         }
         
@@ -168,6 +170,7 @@ public class WatchParty {
             status = WatchPartyStatus.CLOSED;
             kickAllParticipants();
             clearAllTickets();
+            clearLiveData();
         }
     }
     
@@ -324,6 +327,11 @@ public class WatchParty {
         if (userTickets != null) {
             userTickets.clear();
         }
+    }
+
+    private void clearLiveData() {
+        currentRiotGameId = null;
+        lastFrameProcessed = null;
     }
 
     public String getCurrentRiotGameId() { return currentRiotGameId; }

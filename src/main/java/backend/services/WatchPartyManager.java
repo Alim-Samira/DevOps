@@ -25,6 +25,12 @@ public class WatchPartyManager {
         this.scheduler = new AutoWatchPartyScheduler(this);
     }
 
+    public void setScheduler(AutoWatchPartyScheduler scheduler) {
+        if (scheduler != null) {
+            this.scheduler = scheduler;
+        }
+    }
+
     public void addWatchParty(WatchParty wp) {
         watchParties.add(wp);
         log.info("WatchParty ajoutée : {}", wp.name());

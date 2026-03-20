@@ -1,26 +1,34 @@
 package backend.integration.lolesports;
 
-import backend.models.WatchParty;
-import backend.services.BetService;
-import backend.integration.lolesports.dto.Frame;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Service;
-
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+
+import backend.integration.lolesports.dto.Frame;
+import backend.integration.lolesports.dto.WindowResponse;
+import backend.models.WatchParty;
+import backend.services.BetService;
+import backend.services.WatchPartyManager;
 
 @Service
 public class LiveMatchMonitorService {
 
+    private static final Logger log = LoggerFactory.getLogger(LiveMatchMonitorService.class);
+
     private final LolEsportsClient client;
     private final BetService betService;
-    private final WatchPartyManager manager; // ton manager existant
+    private final WatchPartyManager manager;
 
-    // gameId → WatchParty (pour savoir quel pari régler)
     private final Map<String, WatchParty> activeMonitors = new ConcurrentHashMap<>();
+    private final Map<String, ScheduledFuture<?>> scheduledTasks = new ConcurrentHashMap<>();
     private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(5);
 
     public LiveMatchMonitorService(LolEsportsClient client, BetService betService, WatchPartyManager manager) {
@@ -29,42 +37,56 @@ public class LiveMatchMonitorService {
         this.manager = manager;
     }
 
-    // Appelé par ton AutoWatchPartyScheduler quand un match passe "inProgress"
     public void startMonitoring(WatchParty wp, String gameId) {
-        if (activeMonitors.containsKey(gameId)) return;
+        if (wp == null || gameId == null || gameId.isBlank() || activeMonitors.containsKey(gameId)) {
+            return;
+        }
 
         wp.setCurrentRiotGameId(gameId);
         activeMonitors.put(gameId, wp);
 
-        executor.scheduleAtFixedRate(() -> pollAndResolve(gameId), 0, 8, TimeUnit.SECONDS);
+        ScheduledFuture<?> task = executor.scheduleAtFixedRate(() -> pollAndResolve(gameId), 0, 8, TimeUnit.SECONDS);
+        scheduledTasks.put(gameId, task);
     }
 
     private void pollAndResolve(String gameId) {
         try {
+            WatchParty wp = activeMonitors.get(gameId);
+            if (wp == null || manager.getWatchPartyByName(wp.getName()) == null) {
+                stopMonitoring(gameId);
+                return;
+            }
+
             WindowResponse window = client.getWindow(gameId);
-            if (window.frames().isEmpty()) return;
+            if (window.frames().isEmpty()) {
+                return;
+            }
 
             Frame latest = window.frames().get(window.frames().size() - 1);
-            WatchParty wp = activeMonitors.get(gameId);
-
+            wp.setLastFrameProcessed(LocalDateTime.now());
             betService.tryAutoResolveLiveBet(wp, latest);
 
-            // Optionnel : détecter fin de match → stop polling
             if (isGameFinished(latest)) {
                 stopMonitoring(gameId);
             }
         } catch (Exception e) {
-            // log silencieux
+            log.debug("Unable to poll live game {}", gameId, e);
         }
     }
 
     public void stopMonitoring(String gameId) {
-        activeMonitors.remove(gameId);
-        // tu peux annuler la task si besoin
+        WatchParty wp = activeMonitors.remove(gameId);
+        ScheduledFuture<?> task = scheduledTasks.remove(gameId);
+        if (task != null) {
+            task.cancel(false);
+        }
+        if (wp != null && gameId.equals(wp.getCurrentRiotGameId())) {
+            wp.setCurrentRiotGameId(null);
+            wp.setLastFrameProcessed(null);
+        }
     }
 
     private boolean isGameFinished(Frame frame) {
-        // logique selon tes events (GAME_END ou gold = 0 etc.)
-        return false;
+        return frame.events().stream().anyMatch(event -> "GAME_END".equalsIgnoreCase(event.type()));
     }
 }
