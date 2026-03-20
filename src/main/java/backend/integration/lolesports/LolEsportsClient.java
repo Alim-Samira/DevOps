@@ -1,6 +1,7 @@
 package backend.integration.lolesports;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -8,8 +9,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 
 import backend.integration.lolesports.dto.WindowResponse;
+import backend.models.Match;
 
 @Service
 public class LolEsportsClient {
@@ -48,17 +53,35 @@ public class LolEsportsClient {
                     .retrieve()
                     .body(String.class);
 
-            EventDetailsResponse response = gson.fromJson(json, EventDetailsResponse.class);
-            if (response != null
-                    && response.event() != null
-                    && response.event().games() != null
-                    && !response.event().games().isEmpty()) {
-                return Optional.of(response.event().games().get(0).id());
-            }
+            return extractFirstGameId(json);
         } catch (Exception ignored) {
             // Best effort client: the caller decides whether to retry or fall back.
         }
         return Optional.empty();
+    }
+
+    public Optional<String> findLiveEventId(Match match) {
+        if (match == null) {
+            return Optional.empty();
+        }
+        return findLiveEventId(match.getTeam1(), match.getTeam2(), match.getTournament());
+    }
+
+    public Optional<String> findLiveEventId(String team1, String team2, String tournamentName) {
+        if (isBlank(team1) || isBlank(team2)) {
+            return Optional.empty();
+        }
+
+        try {
+            String json = gwClient.get()
+                    .uri("/getLive?hl=fr-FR")
+                    .retrieve()
+                    .body(String.class);
+
+            return extractLiveEventId(json, team1, team2, tournamentName);
+        } catch (Exception ignored) {
+            return Optional.empty();
+        }
     }
 
     public WindowResponse getWindow(String gameId) {
@@ -66,6 +89,124 @@ public class LolEsportsClient {
                 .uri("/window/{gameId}", gameId)
                 .retrieve()
                 .body(WindowResponse.class);
+    }
+
+    Optional<String> extractFirstGameId(String json) {
+        EventDetailsResponse response = gson.fromJson(json, EventDetailsResponse.class);
+        if (response != null
+                && response.event() != null
+                && response.event().games() != null
+                && !response.event().games().isEmpty()) {
+            return Optional.ofNullable(response.event().games().get(0).id());
+        }
+        return Optional.empty();
+    }
+
+    Optional<String> extractLiveEventId(String json, String team1, String team2, String tournamentName) {
+        JsonObject root = gson.fromJson(json, JsonObject.class);
+        JsonArray events = getNestedArray(root, "data", "schedule", "events");
+        if (events == null) {
+            return Optional.empty();
+        }
+
+        for (JsonElement element : events) {
+            JsonObject event = safeObject(element);
+            if (event == null || !matchesLiveEvent(event, team1, team2, tournamentName)) {
+                continue;
+            }
+
+            String id = extractEventIdentifier(event);
+            if (!isBlank(id)) {
+                return Optional.of(id);
+            }
+        }
+
+        return Optional.empty();
+    }
+
+    private boolean matchesLiveEvent(JsonObject event, String team1, String team2, String tournamentName) {
+        JsonObject match = event.has("match") ? safeObject(event.get("match")) : null;
+        JsonArray teams = match != null && match.has("teams") ? match.getAsJsonArray("teams") : null;
+        if (teams == null || teams.size() < 2) {
+            return false;
+        }
+
+        String liveTeam1 = extractName(safeObject(teams.get(0)));
+        String liveTeam2 = extractName(safeObject(teams.get(1)));
+        if (isBlank(liveTeam1) || isBlank(liveTeam2)) {
+            return false;
+        }
+
+        boolean sameTeams = namesMatch(team1, liveTeam1) && namesMatch(team2, liveTeam2);
+        boolean swappedTeams = namesMatch(team1, liveTeam2) && namesMatch(team2, liveTeam1);
+        if (!sameTeams && !swappedTeams) {
+            return false;
+        }
+
+        if (isBlank(tournamentName)) {
+            return true;
+        }
+
+        JsonObject league = event.has("league") ? safeObject(event.get("league")) : null;
+        String liveTournament = extractName(league);
+        return isBlank(liveTournament) || namesClose(tournamentName, liveTournament);
+    }
+
+    private String extractEventIdentifier(JsonObject event) {
+        JsonObject match = event.has("match") ? safeObject(event.get("match")) : null;
+        String matchId = match == null ? null : getString(match, "id");
+        return !isBlank(matchId) ? matchId : getString(event, "id");
+    }
+
+    private String extractName(JsonObject object) {
+        if (object == null) {
+            return null;
+        }
+        String name = getString(object, "name");
+        return !isBlank(name) ? name : getString(object, "slug");
+    }
+
+    private JsonArray getNestedArray(JsonObject root, String... path) {
+        JsonElement current = root;
+        for (String segment : path) {
+            if (current == null || !current.isJsonObject()) {
+                return null;
+            }
+            JsonObject object = current.getAsJsonObject();
+            if (!object.has(segment)) {
+                return null;
+            }
+            current = object.get(segment);
+        }
+        return current != null && current.isJsonArray() ? current.getAsJsonArray() : null;
+    }
+
+    private JsonObject safeObject(JsonElement element) {
+        return element != null && element.isJsonObject() ? element.getAsJsonObject() : null;
+    }
+
+    private String getString(JsonObject object, String key) {
+        return object.has(key) && !object.get(key).isJsonNull() ? object.get(key).getAsString() : null;
+    }
+
+    private boolean namesMatch(String left, String right) {
+        return normalize(left).equals(normalize(right));
+    }
+
+    private boolean namesClose(String left, String right) {
+        String normalizedLeft = normalize(left);
+        String normalizedRight = normalize(right);
+        return normalizedLeft.equals(normalizedRight)
+                || normalizedLeft.contains(normalizedRight)
+                || normalizedRight.contains(normalizedLeft);
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
+    private String normalize(String value) {
+        return value == null ? "" : value.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "");
     }
 }
 

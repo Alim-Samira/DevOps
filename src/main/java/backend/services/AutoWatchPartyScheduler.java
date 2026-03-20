@@ -7,6 +7,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import jakarta.annotation.PreDestroy;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -43,10 +45,10 @@ public class AutoWatchPartyScheduler {
         manager.setScheduler(this);
     }
 
-    private AutoWatchPartyScheduler(WatchPartyManager manager,
-                                    LeaguepediaClient apiClient,
-                                    LolEsportsClient lolClient,
-                                    LiveMatchMonitorService liveMonitor) {
+    AutoWatchPartyScheduler(WatchPartyManager manager,
+                            LeaguepediaClient apiClient,
+                            LolEsportsClient lolClient,
+                            LiveMatchMonitorService liveMonitor) {
         this.manager = manager;
         this.apiClient = apiClient;
         this.lolClient = lolClient;
@@ -82,6 +84,11 @@ public class AutoWatchPartyScheduler {
             scheduler.shutdownNow();
             Thread.currentThread().interrupt();
         }
+    }
+
+    @PreDestroy
+    void shutdownOnContextClose() {
+        stop();
     }
 
     private void updateAllAutoWatchParties() {
@@ -127,11 +134,16 @@ public class AutoWatchPartyScheduler {
     private void maybeStartLiveMonitoring(WatchParty wp, Match nextMatch) {
         if (nextMatch == null
                 || !nextMatch.isInProgress()
-                || nextMatch.getRiotEventId() == null
-                || nextMatch.getRiotEventId().isBlank()
                 || wp.getCurrentRiotGameId() != null
                 || lolClient == null
                 || liveMonitor == null) {
+            return;
+        }
+
+        if (nextMatch.getRiotEventId() == null || nextMatch.getRiotEventId().isBlank()) {
+            lolClient.findLiveEventId(nextMatch).ifPresent(nextMatch::setRiotEventId);
+        }
+        if (nextMatch.getRiotEventId() == null || nextMatch.getRiotEventId().isBlank()) {
             return;
         }
 

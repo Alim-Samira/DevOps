@@ -6,6 +6,7 @@ import org.gradle.api.tasks.testing.Test
 
 plugins {
     java
+    jacoco
     id("org.springframework.boot") version "4.0.0" 
     id("io.spring.dependency-management") version "1.1.7"
 }
@@ -44,9 +45,69 @@ dependencies {
 }
 
 tasks.withType<Test> {
-    useJUnitPlatform() 
+    useJUnitPlatform()
+    finalizedBy(tasks.jacocoTestReport)
 }
 
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+        csv.required.set(false)
+    }
+}
+
+tasks.jacocoTestCoverageVerification {
+    dependsOn(tasks.test)
+    violationRules {
+        rule {
+            element = "BUNDLE"
+            limit {
+                counter = "LINE"
+                value = "COVEREDRATIO"
+                minimum = "0.60".toBigDecimal()
+            }
+        }
+        rule {
+            element = "PACKAGE"
+            includes = listOf("backend.integration.lolesports")
+            limit {
+                counter = "LINE"
+                value = "COVEREDRATIO"
+                minimum = "0.85".toBigDecimal()
+            }
+        }
+        rule {
+            element = "PACKAGE"
+            includes = listOf("backend.integration.lolesports.dto")
+            limit {
+                counter = "LINE"
+                value = "COVEREDRATIO"
+                minimum = "0.90".toBigDecimal()
+            }
+        }
+        rule {
+            element = "CLASS"
+            includes = listOf(
+                "backend.services.BetService",
+                "backend.services.BetSettlementService",
+                "backend.services.AutoWatchPartyScheduler",
+                "backend.integration.lolesports.LiveMatchMonitorService",
+                "backend.integration.lolesports.LolEsportsClient"
+            )
+            limit {
+                counter = "LINE"
+                value = "COVEREDRATIO"
+                minimum = "0.74".toBigDecimal()
+            }
+        }
+    }
+}
+
+tasks.check {
+    dependsOn(tasks.jacocoTestCoverageVerification)
+}
 
 tasks.named<Jar>("jar") {
 

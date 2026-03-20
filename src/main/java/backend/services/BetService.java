@@ -212,7 +212,7 @@ public class BetService {
             return false;
         }
 
-        Optional<Object> correctValue = settlementService.findCorrectValue(activeBet, frame);
+        Optional<Object> correctValue = settlementService.findCorrectValue(activeBet, frame, wp);
         if (correctValue.isEmpty()) {
             return false;
         }
@@ -223,12 +223,10 @@ public class BetService {
 
     private String resolveActiveBet(WatchParty wp, Bet bet, Object correctValue) {
         String result = bet.resolve(correctValue);
-        if (bet.getState() != Bet.State.RESOLVED) {
-            return result;
-        }
-
+        if (bet.getState() == Bet.State.RESOLVED) {
         refreshRankingCache(wp);
-        distributeTicketsIfNeeded(wp, bet);
+            distributeTicketsIfNeeded(wp, bet);
+        }
         return result;
     }
 

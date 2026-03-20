@@ -8,6 +8,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import jakarta.annotation.PreDestroy;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -84,6 +86,18 @@ public class LiveMatchMonitorService {
             wp.setCurrentRiotGameId(null);
             wp.setLastFrameProcessed(null);
         }
+    }
+
+    @PreDestroy
+    void shutdownOnContextClose() {
+        for (String gameId : activeMonitors.keySet()) {
+            stopMonitoring(gameId);
+        }
+        executor.shutdownNow();
+    }
+
+    void pollAndResolveOnce(String gameId) {
+        pollAndResolve(gameId);
     }
 
     private boolean isGameFinished(Frame frame) {
