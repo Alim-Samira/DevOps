@@ -390,6 +390,110 @@ function toggleWpMode(){
   }
 }
 
+// === Calendar Functions ===
+
+async function connectCalendar() {
+  const user = document.getElementById('cal-user').value.trim();
+  const provider = document.getElementById('cal-provider').value;
+  const url = document.getElementById('cal-url').value.trim();
+
+  if (!user || !url) {
+    log('Remplissez username et URL ICAL');
+    return;
+  }
+
+  try {
+    const payload = { provider, sourceUrl: url };
+    const res = await fetch(`/api/users/${encodeURIComponent(user)}/calendars`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const result = await res.json();
+    log('Connect Calendar → ' + JSON.stringify(result));
+    if (result.success) {
+      await listCalendars();
+    }
+  } catch(e) {
+    log('Erreur connexion calendar: ' + e);
+  }
+}
+
+async function listCalendars() {
+  const user = document.getElementById('cal-list-user').value.trim();
+  if (!user) {
+    log('Remplissez username');
+    return;
+  }
+
+  try {
+    const calendars = await fetchJson(`/api/users/${encodeURIComponent(user)}/calendars`);
+    const list = document.getElementById('cal-list');
+    list.innerHTML = '';
+    if (!calendars || calendars.length === 0) {
+      list.innerHTML = '<li style="color: #999;">Aucun calendrier connecté</li>';
+      return;
+    }
+    calendars.forEach(cal => {
+      const li = document.createElement('li');
+      li.textContent = `${cal.id} - ${cal.type} (${cal.sourceUrl})`;
+      list.appendChild(li);
+    });
+    log(`Calendriers de ${user} listés`);
+  } catch(e) {
+    log('Erreur list calendars: ' + e);
+  }
+}
+
+async function deleteCalendar() {
+  const user = document.getElementById('cal-delete-user').value.trim();
+  const connectionId = document.getElementById('cal-connection-id').value.trim();
+
+  if (!user || !connectionId) {
+    log('Remplissez username et connection ID');
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/users/${encodeURIComponent(user)}/calendars/${encodeURIComponent(connectionId)}`, {
+      method: 'DELETE'
+    });
+    const result = await res.json();
+    log('Delete Calendar → ' + JSON.stringify(result));
+    if (result.success) {
+      await listCalendars();
+    }
+  } catch(e) {
+    log('Erreur suppression calendar: ' + e);
+  }
+}
+
+async function getCalendarEvents() {
+  const user = document.getElementById('cal-events-user').value.trim();
+  const connectionId = document.getElementById('cal-events-connection-id').value.trim();
+  const start = document.getElementById('cal-events-start').value;
+  const end = document.getElementById('cal-events-end').value;
+
+  if (!user || !connectionId || !start || !end) {
+    log('Remplissez tous les champs');
+    return;
+  }
+
+  try {
+    const result = await fetchJson(`/api/users/${encodeURIComponent(user)}/calendars/${encodeURIComponent(connectionId)}/events?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`);
+    const resultEl = document.getElementById('cal-events-result');
+    if (result.success) {
+      resultEl.textContent = JSON.stringify(result.events, null, 2);
+      log(`Événements récupérés: ${result.count}`);
+    } else {
+      resultEl.textContent = 'Erreur: ' + JSON.stringify(result);
+    }
+  } catch(e) {
+    log('Erreur récupération événements: ' + e);
+    document.getElementById('cal-events-result').textContent = 'Erreur: ' + e;
+  }
+}
+
 function bind(){
   document.getElementById('btn-refresh-wp').onclick = refreshWatchParties;
   document.getElementById('btn-create-wp').onclick = createWatchParty;
@@ -412,6 +516,12 @@ function bind(){
   document.getElementById('btn-lookup-user').onclick = lookupUser;
   document.getElementById('btn-load-chat').onclick = loadWatchPartyChat;
   document.getElementById('btn-send-chat').onclick = sendChatMessage;
+
+  // Calendar bindings
+  document.getElementById('btn-connect-calendar').onclick = connectCalendar;
+  document.getElementById('btn-list-calendars').onclick = listCalendars;
+  document.getElementById('btn-delete-calendar').onclick = deleteCalendar;
+  document.getElementById('btn-get-events').onclick = getCalendarEvents;
 }
 
 window.addEventListener('DOMContentLoaded', async () => { bind(); toggleWpMode(); await refreshWatchParties(); updateChatWPSelector(); await refreshRankings(); await refreshWatchPartyRanking(); log('UI ready'); });

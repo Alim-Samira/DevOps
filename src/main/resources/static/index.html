@@ -164,6 +164,44 @@
         </div>
       </section>
 
+      <section id="calendar-section" class="card">
+        <h2>Calendriers ICAL</h2>
+        
+        <div class="controls">
+          <h3>Connecter un calendrier</h3>
+          <input id="cal-user" placeholder="Username (ex: alice)" style="width: 150px;" />
+          <select id="cal-provider" style="width: 120px;">
+            <option value="ICAL">ICAL</option>
+          </select>
+          <input id="cal-url" placeholder="URL ICAL" style="flex: 1;" />
+          <button id="btn-connect-calendar">Connecter</button>
+        </div>
+
+        <div class="controls">
+          <h3>Calendriers connectés</h3>
+          <input id="cal-list-user" placeholder="Username" style="width: 150px;" />
+          <button id="btn-list-calendars">Lister</button>
+          <ul id="cal-list" style="margin-top: 10px;"></ul>
+        </div>
+
+        <div class="controls">
+          <h3>Supprimer une connexion</h3>
+          <input id="cal-delete-user" placeholder="Username" style="width: 150px;" />
+          <input id="cal-connection-id" placeholder="Connection ID" style="width: 150px;" />
+          <button id="btn-delete-calendar">Supprimer</button>
+        </div>
+
+        <div class="controls">
+          <h3>Événements du calendrier</h3>
+          <input id="cal-events-user" placeholder="Username" style="width: 150px;" />
+          <input id="cal-events-connection-id" placeholder="Connection ID" style="width: 150px;" />
+          <input id="cal-events-start" placeholder="Start (ISO datetime)" value="2026-03-21T00:00:00" style="width: 180px;" />
+          <input id="cal-events-end" placeholder="End (ISO datetime)" value="2026-03-22T23:59:59" style="width: 180px;" />
+          <button id="btn-get-events">Voir événements</button>
+          <pre id="cal-events-result" class="mono" style="margin-top: 10px; max-height: 200px; overflow-y: auto;"></pre>
+        </div>
+      </section>
+
       <section id="log-section" class="card large">
         <h2>Log / réponses</h2>
         <div id="log"></div>
