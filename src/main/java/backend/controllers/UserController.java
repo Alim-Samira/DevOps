@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import backend.models.User;
 import backend.models.UserCreateRequest;
+import backend.models.UserNotification;
+import backend.services.NotificationService;
 import backend.services.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -21,10 +23,12 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class UserController {
 
     private final UserService userService;
+    private final NotificationService notificationService;
     private final backend.services.RankingService rankingService;
 
-    public UserController(UserService userService, backend.services.RankingService rankingService) {
+    public UserController(UserService userService, NotificationService notificationService, backend.services.RankingService rankingService) {
         this.userService = userService;
+        this.notificationService = notificationService;
         this.rankingService = rankingService;
     }
 
@@ -63,5 +67,11 @@ public class UserController {
         // Since your UserService.getUser() creates one if missing, 
         // we can just call that.
         return userService.getUser(username);
+    }
+
+    @Operation(summary = "Get user notifications")
+    @GetMapping("/{username}/notifications")
+    public List<UserNotification> getNotifications(@PathVariable("username") String username) {
+        return notificationService.getNotifications(username);
     }
 }

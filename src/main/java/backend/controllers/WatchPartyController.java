@@ -182,6 +182,7 @@ public class WatchPartyController {
         wp.setPublic(isPublic);
         if (creator != null) wp.setCreator(creator);
         manager.addWatchParty(wp);
+        manager.planifyWatchParty(wp);
         
         // Refresh global ranking cache when a public WP is created (especially with a creator)
         if (isPublic) {

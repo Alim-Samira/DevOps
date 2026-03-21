@@ -113,6 +113,14 @@ class ControllerIntegrationTest {
                 .andExpect(jsonPath("$.name").value("alice"));
     }
 
+        @Test
+        @DisplayName("GET /api/users/{username}/notifications should return notifications list")
+        void testGetUserNotifications() throws Exception {
+                mockMvc.perform(get("/api/users/alice/notifications"))
+                                .andExpect(status().isOk())
+                                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+        }
+
     // ==================== WATCHPARTY CONTROLLER TESTS ====================
 
     @Test

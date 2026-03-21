@@ -5,24 +5,41 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import backend.models.MatchState;
+import backend.models.User;
+import backend.models.UserNotification;
 import backend.models.WatchParty;
 
 @Service
 public class WatchPartyManager {
     private static final Logger log = LoggerFactory.getLogger(WatchPartyManager.class);
+    private static final int DEFAULT_WATCH_PARTY_DURATION_HOURS = 2;
 
     private List<WatchParty> watchParties;
     private List<WatchParty> watchPartiesPlanned;
     private AutoWatchPartyScheduler scheduler;
+    private final CalendarIntegrationService calendarIntegrationService;
+    private final UserService userService;
+    private final NotificationService notificationService;
 
-
-    public WatchPartyManager() {
+    @Autowired
+    public WatchPartyManager(
+            CalendarIntegrationService calendarIntegrationService,
+            UserService userService,
+            NotificationService notificationService) {
+        this.calendarIntegrationService = calendarIntegrationService;
+        this.userService = userService;
+        this.notificationService = notificationService;
         this.watchParties = new ArrayList<>();
         this.watchPartiesPlanned = new ArrayList<>();
         this.scheduler = new AutoWatchPartyScheduler(this);
+    }
+
+    public WatchPartyManager() {
+        this(new CalendarIntegrationService(), new UserService(), new NotificationService());
     }
 
     public void addWatchParty(WatchParty wp) {
@@ -33,7 +50,8 @@ public class WatchPartyManager {
     public void planifyWatchParty(WatchParty wp) {
         if (wp.date().isAfter(LocalDateTime.now())) {
             watchPartiesPlanned.add(wp);
-            wp.planify(); 
+            wp.planify();
+            notifyAvailableUsersForPresentiel(wp);
         } else {
             log.warn("Impossible de planifier une WatchParty passée : {}", wp.name());
         }
@@ -203,6 +221,35 @@ public class WatchPartyManager {
         }
 
         log.info("Demande de lancement de mini-jeu autorisée pour la WatchParty '{}'.", wp.name());
+    }
+
+    private void notifyAvailableUsersForPresentiel(WatchParty wp) {
+        if (wp == null || wp.date() == null) {
+            return;
+        }
+
+        LocalDateTime start = wp.date();
+        LocalDateTime end = start.plusHours(DEFAULT_WATCH_PARTY_DURATION_HOURS);
+
+        for (User user : wp.getParticipants()) {
+            if (user == null) {
+                continue;
+            }
+
+            if (!calendarIntegrationService.hasConnectedCalendar(user.getName())) {
+                continue;
+            }
+
+            if (!calendarIntegrationService.canAttendWatchParty(user.getName(), start, end)) {
+                continue;
+            }
+
+            String message = "Tu es dispo pour la watch party '" + wp.name() + "' le " + start + ". On peut te proposer du presentiel.";
+            notificationService.addNotification(
+                    user.getName(),
+                    new UserNotification("Watch party en presentiel", message, wp.name(), LocalDateTime.now()));
+            log.info("Notification envoyee a {} pour {}", user.getName(), wp.name());
+        }
     }
 }
 

@@ -52,6 +52,10 @@ public class CalendarIntegrationService {
         return new ArrayList<>(connectionsByUser.getOrDefault(user.trim().toLowerCase(), new ArrayList<>()));
     }
 
+    public boolean hasConnectedCalendar(String user) {
+        return !getConnectionsForUser(user).isEmpty();
+    }
+
     public boolean removeConnection(String user, String connectionId) {
         if (user == null || user.isBlank() || connectionId == null || connectionId.isBlank()) {
             return false;
@@ -176,5 +180,31 @@ public class CalendarIntegrationService {
         }
         
         return true;  // Aucun conflit
+    }
+
+    public boolean canAttendWatchParty(String user, LocalDateTime start, LocalDateTime end) {
+        List<Calendar> userConnections = getConnectionsForUser(user);
+        if (userConnections.isEmpty()) {
+            return false;
+        }
+
+        boolean checkedCalendar = false;
+
+        for (Calendar connection : userConnections) {
+            if (connection instanceof IcalCalendar) {
+                checkedCalendar = true;
+                IcalCalendar icalCal = (IcalCalendar) connection;
+                try {
+                    List<CalendarEvent> allEvents = IcalEventProvider.fetchEventsFromUrl(icalCal.getSourceUrl(), start);
+                    if (!IcalEventProvider.isAvailable(allEvents, start, end)) {
+                        return false;
+                    }
+                } catch (Exception e) {
+                    return false;
+                }
+            }
+        }
+
+        return checkedCalendar;
     }
 }
