@@ -99,9 +99,15 @@ public class WatchPartyController {
         WatchParty wp = manager.getWatchPartyByName(name);
         if (wp == null) return "❌ WatchParty introuvable: " + name;
         boolean joined = wp.join(userService.getUser(userName));
-        if (joined && wp.isPublic()) {
-            // Refresh global ranking cache when user joins a public WP
-            rankingService.refreshAll();
+        if (joined) {
+            if (wp.isPublic()) {
+                // Refresh global ranking cache when user joins a public WP
+                rankingService.refreshAll();
+            }
+            // Si la watch party est planifiée, notifier les participants disponibles pour le présentiel
+            if (wp.isPlanned()) {
+                manager.notifyAvailableUsersForPresentiel(wp);
+            }
         }
         return joined ? "✅ " + userName + " a rejoint " + name : "⚠️ " + userName + " est déjà participant";
     }

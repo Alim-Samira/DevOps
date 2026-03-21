@@ -494,6 +494,38 @@ async function getCalendarEvents() {
   }
 }
 
+async function loadNotifications() {
+  const user = document.getElementById('notif-user').value.trim();
+  if (!user) {
+    log('Remplissez username');
+    return;
+  }
+
+  try {
+    const notifications = await fetchJson(`/api/users/${encodeURIComponent(user)}/notifications`);
+    const list = document.getElementById('notif-list');
+    list.innerHTML = '';
+    if (!notifications || notifications.length === 0) {
+      list.innerHTML = '<li style="color: #999;">Aucune notification</li>';
+      return;
+    }
+    notifications.forEach(notif => {
+      const li = document.createElement('li');
+      li.style.cssText = 'margin-bottom: 10px; padding: 8px; background: #f0f8ff; border-left: 3px solid #007bff; border-radius: 3px;';
+      li.innerHTML = `
+        <strong>${escapeHtml(notif.title)}</strong><br/>
+        <span style="color: #555;">${escapeHtml(notif.message)}</span><br/>
+        <small style="color: #888;">${notif.createdAt ? new Date(notif.createdAt).toLocaleString('fr-FR') : ''}</small>
+        ${notif.watchPartyName ? `<br/><em>WatchParty: ${escapeHtml(notif.watchPartyName)}</em>` : ''}
+      `;
+      list.appendChild(li);
+    });
+    log(`Notifications de ${user} chargées (${notifications.length})`);
+  } catch(e) {
+    log('Erreur chargement notifications: ' + e);
+  }
+}
+
 function bind(){
   document.getElementById('btn-refresh-wp').onclick = refreshWatchParties;
   document.getElementById('btn-create-wp').onclick = createWatchParty;
@@ -522,6 +554,9 @@ function bind(){
   document.getElementById('btn-list-calendars').onclick = listCalendars;
   document.getElementById('btn-delete-calendar').onclick = deleteCalendar;
   document.getElementById('btn-get-events').onclick = getCalendarEvents;
+
+  // Notification bindings
+  document.getElementById('btn-load-notifications').onclick = loadNotifications;
 }
 
 window.addEventListener('DOMContentLoaded', async () => { bind(); toggleWpMode(); await refreshWatchParties(); updateChatWPSelector(); await refreshRankings(); await refreshWatchPartyRanking(); log('UI ready'); });

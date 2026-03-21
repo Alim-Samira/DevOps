@@ -223,7 +223,7 @@ public class WatchPartyManager {
         log.info("Demande de lancement de mini-jeu autorisée pour la WatchParty '{}'.", wp.name());
     }
 
-    private void notifyAvailableUsersForPresentiel(WatchParty wp) {
+    public void notifyAvailableUsersForPresentiel(WatchParty wp) {
         if (wp == null || wp.date() == null) {
             return;
         }
