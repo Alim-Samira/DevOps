@@ -4,6 +4,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.CollectionTable; // Importe all (Entity, Column, Id, ElementCollection...)
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
@@ -41,6 +43,7 @@ public class User {
     private int publicPoints;
 
     // save pts inside watchparty in liked table
+    @JsonIgnore
     @ElementCollection
     @CollectionTable(name = "user_wp_points", joinColumns = @JoinColumn(name = "user_id"))
     @MapKeyColumn(name = "wp_name")
@@ -57,6 +60,7 @@ public class User {
     @Column(name = "public_wins", nullable = false, columnDefinition = "int default 0")
     private int publicWins;
 
+    @JsonIgnore
     @ElementCollection
     @CollectionTable(name = "user_wp_wins", joinColumns = @JoinColumn(name = "user_id"))
     @MapKeyColumn(name = "wp_name")

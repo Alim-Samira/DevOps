@@ -99,8 +99,11 @@ public class WatchPartyController {
         if (userName == null || userName.isBlank()) return "❌ Missing user";
         WatchParty wp = manager.getWatchPartyByName(name);
         if (wp == null) return "❌ WatchParty introuvable: " + name;
-        boolean joined = wp.join(userService.getUser(userName));
+        User user = userService.getUser(userName);
+        boolean joined = wp.join(user);
         if (joined) {
+            userService.saveUser(user);
+            manager.saveWatchParty(wp);
             if (wp.isPublic()) {
                 // Refresh global ranking cache when user joins a public WP
                 rankingService.refreshAll();
@@ -121,6 +124,12 @@ public class WatchPartyController {
         WatchParty wp = manager.getWatchPartyByName(name);
         if (wp == null) return "❌ WatchParty introuvable: " + name;
         boolean removed = wp.leave(userService.getUser(userName));
+        if (removed) {
+            manager.saveWatchParty(wp);
+            if (wp.isPublic()) {
+                rankingService.refreshAll();
+            }
+        }
         return removed ? "✅ " + userName + " a quitté " + name : "⚠️ " + userName + " n'est pas participant";
     }
 
@@ -189,7 +198,10 @@ public class WatchPartyController {
 
         WatchParty wp = new WatchParty(name, date, game);
         wp.setPublic(isPublic);
-        if (creator != null) wp.setCreator(creator);
+        if (creator != null) {
+            wp.setCreator(creator);
+            userService.saveUser(creator);
+        }
         manager.addWatchParty(wp);
         manager.planifyWatchParty(wp);
         

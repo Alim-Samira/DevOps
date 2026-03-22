@@ -2,7 +2,9 @@ package backend.services;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,8 +28,7 @@ public class WatchPartyManager {
     private final UserService userService;
     private final NotificationService notificationService;
     private AutoWatchPartyScheduler scheduler;
-    
-    // In-memory fallback lists (for tests/legacy support)
+
     private final List<WatchParty> watchParties;
     private final List<WatchParty> watchPartiesPlanned;
 
@@ -50,21 +51,51 @@ public class WatchPartyManager {
         this(null, new CalendarIntegrationService(), new UserService(null), new NotificationService());
     }
 
+    public void setScheduler(AutoWatchPartyScheduler scheduler) {
+        if (scheduler != null) {
+            this.scheduler = scheduler;
+        }
+    }
+
     public void addWatchParty(WatchParty wp) {
+        if (wp == null) {
+            return;
+        }
+
+        replaceInMemoryWatchParty(wp);
+
+        if (watchPartyRepository != null) {
+            watchPartyRepository.findAll().stream()
+                .filter(existing -> existing.getName().equals(wp.getName()))
+                .filter(existing -> wp.getId() == null || !wp.getId().equals(existing.getId()))
+                .forEach(watchPartyRepository::delete);
+            watchPartyRepository.save(wp);
+        }
+
+        log.info("WatchParty ajoutee : {}", wp.name());
+    }
+
+    public void saveWatchParty(WatchParty wp) {
+        if (wp == null) {
+            return;
+        }
+
+        replaceInMemoryWatchParty(wp);
         if (watchPartyRepository != null) {
             watchPartyRepository.save(wp);
-        } else {
-            watchParties.add(wp);
         }
-        log.info("WatchParty ajoutée : {}", wp.name());
     }
 
     public void planifyWatchParty(WatchParty wp) {
         if (wp.date().isAfter(LocalDateTime.now())) {
-            watchPartiesPlanned.add(wp);
-            wp.planify(); 
+            if (!watchPartiesPlanned.contains(wp)) {
+                watchPartiesPlanned.add(wp);
+            }
+            wp.planify();
+            saveWatchParty(wp);
+            notifyAvailableUsersForPresentiel(wp);
         } else {
-            log.warn("Impossible de planifier une WatchParty passée : {}", wp.name());
+            log.warn("Impossible de planifier une WatchParty passee : {}", wp.name());
         }
     }
 
@@ -73,71 +104,21 @@ public class WatchPartyManager {
     }
 
     public void displayAllWatchParties() {
-        if (watchParties.isEmpty()) {
-            log.info("Aucune WatchParty enregistrée pour le moment.");
+        List<WatchParty> all = getAllWatchParties();
+        if (all.isEmpty()) {
+            log.info("Aucune WatchParty enregistree pour le moment.");
         } else {
             log.info("Liste des WatchParties :");
-            for (WatchParty wp : watchParties) {
+            for (WatchParty wp : all) {
                 log.info("- {}", wp.name());
             }
         }
     }
-    
-    // === Auto Watch Party Methods ===
-    
-    /**
-     * Get all auto watch parties
-     */
+
     public List<WatchParty> getAllAutoWatchParties() {
-        if (watchPartyRepository != null) {
-            return watchPartyRepository.findAll().stream()
-                .filter(WatchParty::isAutoWatchParty)
-                .toList();
-        }
-        List<WatchParty> autoWPs = new ArrayList<>();
-        for (WatchParty wp : watchParties) {
-            if (wp.isAutoWatchParty()) {
-                autoWPs.add(wp);
-            }
-        }
-        return autoWPs;
-    }
-
-    public boolean removeWatchParty(String name) {
-        if (watchPartyRepository != null) {
-            return watchPartyRepository.findByName(name).map(wp -> {
-                watchPartyRepository.delete(wp);
-                log.info("WatchParty removed: {}", name);
-                return true;
-            }).orElseGet(() -> {
-                log.warn("WatchParty not found: {}", name);
-                return false;
-            });
-        }
-        boolean removed = watchParties.removeIf(wp -> wp.name().equals(name));
-        if (removed) {
-            log.info("WatchParty removed: {}", name);
-        } else {
-            log.warn("WatchParty not found: {}", name);
-        }
-        return removed;
-    }
-
-    public WatchParty getWatchPartyByName(String name) {
-        if (watchPartyRepository != null) {
-            return watchPartyRepository.findByName(name).orElse(null);
-        }
-        return watchParties.stream()
-            .filter(wp -> wp.name().equals(name))
-            .findFirst()
-            .orElse(null);
-    }
-
-    public List<WatchParty> getAllWatchParties() {
-        if (watchPartyRepository != null) {
-            return watchPartyRepository.findAll();
-        }
-        return new ArrayList<>(watchParties);
+        return getAllWatchParties().stream()
+            .filter(WatchParty::isAutoWatchParty)
+            .toList();
     }
 
     public void addAutoWatchParty(WatchParty wp) {
@@ -147,6 +128,65 @@ public class WatchPartyManager {
         }
         addWatchParty(wp);
         log.info("Auto WatchParty added: {}", wp.name());
+    }
+
+    public boolean removeWatchParty(String name) {
+        boolean removedInMemory = watchParties.removeIf(wp -> wp.getName().equals(name));
+        watchPartiesPlanned.removeIf(wp -> wp.getName().equals(name));
+
+        boolean removedInRepository = false;
+        if (watchPartyRepository != null) {
+            List<WatchParty> matches = watchPartyRepository.findAll().stream()
+                .filter(wp -> wp.getName().equals(name))
+                .toList();
+            matches.forEach(watchPartyRepository::delete);
+            removedInRepository = !matches.isEmpty();
+        }
+
+        boolean removed = removedInMemory || removedInRepository;
+        if (removed) {
+            log.info("WatchParty removed: {}", name);
+        } else {
+            log.warn("WatchParty not found: {}", name);
+        }
+        return removed;
+    }
+
+    public WatchParty getWatchPartyByName(String name) {
+        WatchParty inMemory = watchParties.stream()
+            .filter(wp -> wp.getName().equals(name))
+            .findFirst()
+            .orElse(null);
+        if (inMemory != null) {
+            return inMemory;
+        }
+
+        if (watchPartyRepository == null) {
+            return null;
+        }
+
+        WatchParty fromRepository = watchPartyRepository.findAll().stream()
+            .filter(wp -> wp.getName().equals(name))
+            .reduce((first, second) -> second)
+            .orElse(null);
+
+        if (fromRepository != null) {
+            replaceInMemoryWatchParty(fromRepository);
+        }
+        return fromRepository;
+    }
+
+    public List<WatchParty> getAllWatchParties() {
+        Map<String, WatchParty> merged = new LinkedHashMap<>();
+        for (WatchParty wp : watchParties) {
+            merged.put(wp.getName(), wp);
+        }
+        if (watchPartyRepository != null) {
+            for (WatchParty wp : watchPartyRepository.findAll()) {
+                merged.putIfAbsent(wp.getName(), wp);
+            }
+        }
+        return new ArrayList<>(merged.values());
     }
 
     public void startScheduler() {
@@ -183,7 +223,7 @@ public class WatchPartyManager {
             return;
         }
         wp.setMatchState(newState);
-        watchPartyRepository.save(wp);
+        saveWatchParty(wp);
         log.info("Match state of '{}' changed to: {}", wp.name(), newState);
     }
 
@@ -215,20 +255,24 @@ public class WatchPartyManager {
             if (user == null) {
                 continue;
             }
-
             if (!calendarIntegrationService.hasConnectedCalendar(user.getName())) {
                 continue;
             }
-
             if (!calendarIntegrationService.canAttendWatchParty(user.getName(), start, end)) {
                 continue;
             }
 
-            String message = "Tu es dispo pour la watch party '" + wp.name() + "' le " + start + ". On peut te proposer du presentiel.";
+            String message = "Tu es dispo pour la watch party '" + wp.name() + "' le " + start
+                    + ". On peut te proposer du presentiel.";
             notificationService.addNotification(
                     user.getName(),
                     new UserNotification("Watch party en presentiel", message, wp.name(), LocalDateTime.now()));
             log.info("Notification envoyee a {} pour {}", user.getName(), wp.name());
         }
+    }
+
+    private void replaceInMemoryWatchParty(WatchParty wp) {
+        watchParties.removeIf(existing -> existing.getName().equals(wp.getName()));
+        watchParties.add(wp);
     }
 }
