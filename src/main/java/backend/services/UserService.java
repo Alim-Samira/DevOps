@@ -1,31 +1,27 @@
 package backend.services;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.springframework.stereotype.Service;
 
 import backend.models.User;
+import backend.repositories.UserRepository;
 
 @Service
 public class UserService {
-    private Map<String, User> users = new HashMap<>();
 
-    public UserService() {
-        
-        // Create a default admin
-        users.put("admin", new User("admin", true));
+    private final UserRepository userRepository;
+
+    public UserService(UserRepository userRepository) {
+        this.userRepository = userRepository;
     }
 
-    // Get or Create a user
     public User getUser(String username) {
-        String key = username.toLowerCase();
-        return users.computeIfAbsent(key, k -> new User(username, false));
+        return userRepository.findByName(username)
+            .orElseGet(() -> userRepository.save(new User(username, false)));
     }
 
     public List<User> getAllUsers() {
-        return new ArrayList<>(users.values());
+        return userRepository.findAll();
     }
 }

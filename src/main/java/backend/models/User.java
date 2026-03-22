@@ -1,65 +1,109 @@
 package backend.models;
+
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-public class User {
-    private String name;
-    private boolean isAdmin;
-    private boolean isModerator; 
+import jakarta.persistence.*; // Importe all (Entity, Column, Id, ElementCollection...)
 
-    // Nouveau système de points
-    // Points publics globaux (utilisés/obtenus dans les watchparties publiques)
+@Entity
+@Table(name = "users") // Maps this class to the 'users' table in Neon
+public class User {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id; // Unique ID required by the database
+
+    @Column(name = "created_at", updatable = false)
+    private Date createdAt; // To track when the user was created
+
+    @Column(name = "username", nullable = false, unique = true)
+    private String name;
+
+    @Column(name = "is_admin", nullable = false, columnDefinition = "boolean default false")
+    private boolean isAdmin;
+
+    // @Transient tells Java: to Keep this in memory, but don't try to save it to the DB
+    @Transient
+    private boolean isModerator;
+
+    @Column(name = "public_points", nullable = false, columnDefinition = "int default 200")
     private int publicPoints;
-    // Points par watchparty (privées ou publiques spécifiques)
-    // Clé: nom de la watchparty
-    private Map<String, Integer> pointsByWatchParty;
+
+    // save pts inside watchparty in liked table
+    @ElementCollection
+    @CollectionTable(name = "user_wp_points", joinColumns = @JoinColumn(name = "user_id"))
+    @MapKeyColumn(name = "wp_name")
+    @Column(name = "points")
+    private Map<String, Integer> pointsByWatchParty = new HashMap<>();
+
+    @Column(name = "ical_url")
+    private String icalUrl;
+
+    public String getIcalUrl() { return icalUrl; }
+    public void setIcalUrl(String url) { this.icalUrl = url; }
+
+    // Add wins
+    @Column(name = "public_wins", nullable = false, columnDefinition = "int default 0")
+    private int publicWins;
+
+    @ElementCollection
+    @CollectionTable(name = "user_wp_wins", joinColumns = @JoinColumn(name = "user_id"))
+    @MapKeyColumn(name = "wp_name")
+    @Column(name = "wins")
+    private Map<String, Integer> winsByWatchParty = new HashMap<>();
 
     // Master Constructor (Sets everything)
     public User(String name, boolean isAdmin, boolean isModerator) {
         this.name = name;
         this.isAdmin = isAdmin;
         this.isModerator = isModerator;
-        this.publicPoints = 200; // Default starting public points
+        this.publicPoints = 200; // Default points
+        this.createdAt = new Date();
+        // Initialisation des Maps
         this.pointsByWatchParty = new HashMap<>();
-        this.publicWins = 0;
         this.winsByWatchParty = new HashMap<>();
+        this.publicWins = 0;
     }
 
-    // Automatically sets isModerator to false.
     public User(String name, boolean isAdmin) {
-        this(name, isAdmin, false); // Chains to the Master Constructor
+        this(name, isAdmin, false);
     }
 
-    // Creates an Anonymous user with no permissions. 
     public User() {
-        this("Anonymous", false, false); 
+        this("Anonymous", false, false);
+    }
+
+    // Added Getter for ID (useful for DB operations)
+    public Long getId() {
+        return id;
     }
 
     public String getName() {
         return name;
     }
 
+    public void setName(String name) {
+        this.name = name;
+    }
+
     public boolean isAdmin() {
         return isAdmin;
+    }
+
+    public void setAdmin(boolean isAdmin) {
+        this.isAdmin = isAdmin;
     }
 
     public boolean isModerator() {
         return isModerator;
     }
 
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public void setAdmin(boolean isAdmin) {
-        this.isAdmin = isAdmin;
-    }
-    
     public void setModerator(boolean isModerator) {
         this.isModerator = isModerator;
     }
 
-    // Public points system
+    // MANAGE PUBLIC PTS
     public int getPublicPoints() {
         return publicPoints;
     }
@@ -68,46 +112,51 @@ public class User {
         this.publicPoints = Math.max(0, this.publicPoints + delta);
     }
 
-    public int getPointsForWatchParty(String watchPartyName) {
-        return pointsByWatchParty.getOrDefault(watchPartyName, 0);
+    // Alias
+    public int getPoints() {
+        return publicPoints;
     }
 
-    public void setPointsForWatchParty(String watchPartyName, int points) {
-        pointsByWatchParty.put(watchPartyName, Math.max(0, points));
+    public void setPoints(int points) {
+        this.publicPoints = points;
     }
 
-    public void addPointsForWatchParty(String watchPartyName, int delta) {
-        int current = pointsByWatchParty.getOrDefault(watchPartyName, 0);
-        pointsByWatchParty.put(watchPartyName, Math.max(0, current + delta));
+    // manage pts for watchparty
+    public void addPointsForWatchParty(String wpName, int delta) {
+        int current = pointsByWatchParty.getOrDefault(wpName, 0);
+        pointsByWatchParty.put(wpName, Math.max(0, current + delta));
+    }
+
+    public int getPointsForWatchParty(String wpName) {
+        return pointsByWatchParty.getOrDefault(wpName, 0);
+    }
+
+    public void setPointsForWatchParty(String wpName, int points) {
+        pointsByWatchParty.put(wpName, points);
     }
 
     public Map<String, Integer> getPointsByWatchParty() {
         return new HashMap<>(pointsByWatchParty);
     }
 
-    // Wins system
-    private int publicWins;
-    private Map<String, Integer> winsByWatchParty;
-
+    // manage wins
     public int getPublicWins() {
         return publicWins;
     }
 
     public void addPublicWin() {
-        this.publicWins = Math.max(0, this.publicWins + 1);
+        this.publicWins++;
     }
 
-    public int getWinsForWatchParty(String watchPartyName) {
-        return winsByWatchParty.getOrDefault(watchPartyName, 0);
+    public void addWinForWatchParty(String wpName) {
+        winsByWatchParty.put(wpName, winsByWatchParty.getOrDefault(wpName, 0) + 1);
     }
 
-    public void addWinForWatchParty(String watchPartyName) {
-        int current = winsByWatchParty.getOrDefault(watchPartyName, 0);
-        winsByWatchParty.put(watchPartyName, Math.max(0, current + 1));
+    public int getWinsForWatchParty(String wpName) {
+        return winsByWatchParty.getOrDefault(wpName, 0);
     }
 
     public Map<String, Integer> getWinsByWatchParty() {
         return new HashMap<>(winsByWatchParty);
     }
 }
-// 
