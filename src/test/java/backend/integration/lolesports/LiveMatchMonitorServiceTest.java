@@ -2,6 +2,7 @@ package backend.integration.lolesports;
 
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -46,7 +47,7 @@ class LiveMatchMonitorServiceTest {
         service.startMonitoring(watchParty, "game-1");
         service.pollAndResolveOnce("game-1");
 
-        verify(betService, atLeastOnce()).tryAutoResolveLiveBet(eq(watchParty), eq(latestFrame));
+        verify(betService, atLeastOnce()).tryAutoResolveLiveBet(eq(watchParty), isNull(), eq(latestFrame));
         assertNull(watchParty.getCurrentRiotGameId());
     }
 

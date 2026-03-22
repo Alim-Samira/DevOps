@@ -19,9 +19,11 @@ import backend.models.Match;
 @Service
 public class LolEsportsClient {
 
+    @java.lang.SuppressWarnings("java:S6418") // La clé API est publique
     private static final String DEFAULT_API_KEY = "0TvQnueqKa5mxJntVWt0w4LpLfEkrV1Ta8rQBb9Z";
     private static final String DEFAULT_GW_BASE_URL = "https://esports-api.lolesports.com/persisted/gw";
     private static final String DEFAULT_LIVE_BASE_URL = "https://feed.lolesports.com/livestats/v1";
+    private static final String STRING_MATCH = "match";
 
     private final RestClient gwClient;
     private final RestClient liveClient;
@@ -125,7 +127,7 @@ public class LolEsportsClient {
     }
 
     private boolean matchesLiveEvent(JsonObject event, String team1, String team2, String tournamentName) {
-        JsonObject match = event.has("match") ? safeObject(event.get("match")) : null;
+        JsonObject match = event.has(STRING_MATCH) ? safeObject(event.get(STRING_MATCH)) : null;
         JsonArray teams = match != null && match.has("teams") ? match.getAsJsonArray("teams") : null;
         if (teams == null || teams.size() < 2) {
             return false;
@@ -153,7 +155,7 @@ public class LolEsportsClient {
     }
 
     private String extractEventIdentifier(JsonObject event) {
-        JsonObject match = event.has("match") ? safeObject(event.get("match")) : null;
+        JsonObject match = event.has(STRING_MATCH) ? safeObject(event.get(STRING_MATCH)) : null;
         String matchId = match == null ? null : getString(match, "id");
         return !isBlank(matchId) ? matchId : getString(event, "id");
     }

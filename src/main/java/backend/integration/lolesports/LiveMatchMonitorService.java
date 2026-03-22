@@ -30,6 +30,7 @@ public class LiveMatchMonitorService {
     private final WatchPartyManager manager;
 
     private final Map<String, WatchParty> activeMonitors = new ConcurrentHashMap<>();
+    private final Map<String, Frame> lastFrames = new ConcurrentHashMap<>();
     private final Map<String, ScheduledFuture<?>> scheduledTasks = new ConcurrentHashMap<>();
     private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(5);
 
@@ -65,8 +66,10 @@ public class LiveMatchMonitorService {
             }
 
             Frame latest = window.frames().get(window.frames().size() - 1);
+            Frame previousFrame = lastFrames.get(gameId);
             wp.setLastFrameProcessed(LocalDateTime.now());
-            betService.tryAutoResolveLiveBet(wp, latest);
+            betService.tryAutoResolveLiveBet(wp, previousFrame, latest);
+            lastFrames.put(gameId, latest);
 
             if (isGameFinished(latest)) {
                 stopMonitoring(gameId);
@@ -78,6 +81,7 @@ public class LiveMatchMonitorService {
 
     public void stopMonitoring(String gameId) {
         WatchParty wp = activeMonitors.remove(gameId);
+        lastFrames.remove(gameId);
         ScheduledFuture<?> task = scheduledTasks.remove(gameId);
         if (task != null) {
             task.cancel(false);

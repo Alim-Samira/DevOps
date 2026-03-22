@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import backend.integration.lolesports.dto.Frame;
 import backend.integration.lolesports.dto.GameEvent;
+import backend.integration.lolesports.dto.ParticipantFrame;
 import backend.integration.lolesports.dto.TeamFrame;
 import backend.models.Bet;
 import backend.models.TicketType;
@@ -138,5 +139,47 @@ class BetServiceAutoResolveTest {
         assertTrue(result.contains("rembours"));
         assertEquals(Bet.State.CANCELED, watchParty.getActiveBet().getState());
         assertEquals(200, alice.getPointsForWatchParty(watchParty.getName()));
+    }
+
+    @Test
+    void tryAutoResolveLiveBetShouldRememberMilestoneReachedBeforeVotingClosed() {
+        betService.createDiscreteChoiceBet(
+                watchParty.getName(),
+                admin.getName(),
+                "Quel joueur atteindra le plus rapidement 10 kills ?",
+                List.of("Faker", "Chovy"),
+                10);
+
+        Bet activeBet = watchParty.getActiveBet();
+        betService.vote(watchParty.getName(), alice.getName(), "Chovy", 50);
+        betService.vote(watchParty.getName(), bob.getName(), "Faker", 50);
+
+        Frame preThreshold = new Frame(
+                600_000L,
+                new TeamFrame(32000, 7, List.of(
+                        new ParticipantFrame("Ahri", "Faker", 9, 1, 4, 12000, 11))),
+                new TeamFrame(30500, 6, List.of(
+                        new ParticipantFrame("Orianna", "Chovy", 8, 1, 5, 11800, 11))),
+                List.of());
+        Frame thresholdReached = new Frame(
+                660_000L,
+                new TeamFrame(34000, 8, List.of(
+                        new ParticipantFrame("Ahri", "Faker", 10, 1, 4, 12800, 12))),
+                new TeamFrame(31800, 7, List.of(
+                        new ParticipantFrame("Orianna", "Chovy", 8, 1, 6, 12200, 11))),
+                List.of());
+
+        assertFalse(betService.tryAutoResolveLiveBet(watchParty, null, preThreshold));
+        assertFalse(betService.tryAutoResolveLiveBet(watchParty, preThreshold, thresholdReached));
+        assertEquals(Bet.State.VOTING, activeBet.getState());
+
+        betService.endVoting(watchParty.getName(), admin.getName());
+
+        boolean resolved = betService.tryAutoResolveLiveBet(watchParty, thresholdReached, thresholdReached);
+
+        assertTrue(resolved);
+        assertEquals(Bet.State.RESOLVED, activeBet.getState());
+        assertEquals(150, alice.getPointsForWatchParty(watchParty.getName()));
+        assertEquals(250, bob.getPointsForWatchParty(watchParty.getName()));
     }
 }

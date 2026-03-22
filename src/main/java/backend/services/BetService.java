@@ -170,6 +170,7 @@ public class BetService {
         Bet bet = wp.getActiveBet();
         String result = bet.cancel();
         if (bet.getState() == Bet.State.CANCELED) {
+            settlementService.clear(bet);
             refreshRankingCache(wp);
         }
         return result;
@@ -194,7 +195,11 @@ public class BetService {
     }
 
     public boolean tryAutoResolveLiveBet(WatchParty wp, Frame frame) {
-        if (wp == null || frame == null) {
+        return tryAutoResolveLiveBet(wp, null, frame);
+    }
+
+    public boolean tryAutoResolveLiveBet(WatchParty wp, Frame previousFrame, Frame currentFrame) {
+        if (wp == null || currentFrame == null) {
             return false;
         }
 
@@ -202,6 +207,8 @@ public class BetService {
         if (activeBet == null) {
             return false;
         }
+
+        settlementService.observe(activeBet, previousFrame, currentFrame, wp);
 
         if (activeBet.getState() == Bet.State.VOTING
                 && LocalDateTime.now().isAfter(activeBet.getVotingEndTime())) {
@@ -212,7 +219,7 @@ public class BetService {
             return false;
         }
 
-        Optional<Object> correctValue = settlementService.findCorrectValue(activeBet, frame, wp);
+        Optional<Object> correctValue = settlementService.findCorrectValue(activeBet, previousFrame, currentFrame, wp);
         if (correctValue.isEmpty()) {
             return false;
         }
@@ -224,7 +231,8 @@ public class BetService {
     private String resolveActiveBet(WatchParty wp, Bet bet, Object correctValue) {
         String result = bet.resolve(correctValue);
         if (bet.getState() == Bet.State.RESOLVED) {
-        refreshRankingCache(wp);
+            settlementService.clear(bet);
+            refreshRankingCache(wp);
             distributeTicketsIfNeeded(wp, bet);
         }
         return result;

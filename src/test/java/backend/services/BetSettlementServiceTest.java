@@ -202,6 +202,38 @@ class BetSettlementServiceTest {
                 settlementService.findCorrectValue(leastDeathsBet, frame, autoWatchParty).orElseThrow());
     }
 
+    @Test
+    void findCorrectValueShouldUseTrackedMilestoneWinnerFromRegularPolling() {
+        DiscreteChoiceBet bet = new DiscreteChoiceBet(
+                "Quel joueur atteindra le plus rapidement 10 kills ?",
+                creator,
+                autoWatchParty,
+                LocalDateTime.now().plusMinutes(5),
+                List.of("Faker", "Chovy"));
+
+        Frame previousFrame = frame(
+                600_000L,
+                List.of(),
+                new TeamFrame(32000, 7, List.of(
+                        new ParticipantFrame("Ahri", "Faker", 9, 1, 4, 12000, 11))),
+                new TeamFrame(30500, 6, List.of(
+                        new ParticipantFrame("Orianna", "Chovy", 8, 1, 5, 11800, 11))));
+        Frame currentFrame = frame(
+                660_000L,
+                List.of(),
+                new TeamFrame(34000, 8, List.of(
+                        new ParticipantFrame("Ahri", "Faker", 10, 1, 4, 12800, 12))),
+                new TeamFrame(31800, 7, List.of(
+                        new ParticipantFrame("Orianna", "Chovy", 8, 1, 6, 12200, 11))));
+
+        settlementService.observe(bet, previousFrame, currentFrame, autoWatchParty);
+
+        Optional<Object> correctValue = settlementService.findCorrectValue(bet, currentFrame, autoWatchParty);
+
+        assertTrue(correctValue.isPresent());
+        assertEquals("Faker", correctValue.get());
+    }
+
     private Frame frame(long timestamp, List<GameEvent> events, TeamFrame blueTeam, TeamFrame redTeam) {
         return new Frame(timestamp, blueTeam, redTeam, events);
     }
