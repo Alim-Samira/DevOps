@@ -101,6 +101,11 @@ public abstract class Bet {
     public boolean isVotingOpen() {
         return state == State.VOTING && LocalDateTime.now().isBefore(votingEndTime);
     }
+
+    public boolean isResolved() {
+        return state == State.RESOLVED;
+    }
+    
     
     /**
      * Calcule le pot total

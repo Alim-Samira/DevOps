@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -125,6 +126,7 @@ public class WatchPartyController {
 
     // 6. CHAT for a watchparty
     @GetMapping("/{name}/chat")
+    @Transactional(readOnly = true)
     public List<Message> getWatchPartyChat(@PathVariable("name") String name) {
         WatchParty wp = manager.getWatchPartyByName(name);
         if (wp == null) return List.of();
@@ -132,6 +134,7 @@ public class WatchPartyController {
     }
 
     @PostMapping("/{name}/chat")
+    @Transactional
     public String sendWatchPartyMessage(@PathVariable("name") String name, @RequestBody Map<String, String> payload) {
         String user = payload.get("user");
         String text = payload.get("text");

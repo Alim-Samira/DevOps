@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -16,6 +17,7 @@ import static org.mockito.Mockito.when;
 import backend.models.User;
 import backend.models.UserNotification;
 import backend.models.WatchParty;
+import backend.repositories.WatchPartyRepository;
 import backend.services.CalendarIntegrationService;
 import backend.services.NotificationService;
 import backend.services.UserService;
@@ -26,11 +28,12 @@ class WatchPartyManagerNotificationTest {
     @Test
     @DisplayName("Planifying a watch party notifies available participants")
     void testPlanifyWatchPartyNotifiesAvailableParticipants() {
-        CalendarIntegrationService calendarIntegrationService = org.mockito.Mockito.mock(CalendarIntegrationService.class);
-        UserService userService = org.mockito.Mockito.mock(UserService.class);
-        NotificationService notificationService = org.mockito.Mockito.mock(NotificationService.class);
+        WatchPartyRepository watchPartyRepository = mock(WatchPartyRepository.class);
+        CalendarIntegrationService calendarIntegrationService = mock(CalendarIntegrationService.class);
+        UserService userService = mock(UserService.class);
+        NotificationService notificationService = mock(NotificationService.class);
 
-        WatchPartyManager manager = new WatchPartyManager(calendarIntegrationService, userService, notificationService);
+        WatchPartyManager manager = new WatchPartyManager(watchPartyRepository, calendarIntegrationService, userService, notificationService);
 
         User alice = new User("alice", false);
         User bob = new User("bob", false);
@@ -43,8 +46,8 @@ class WatchPartyManagerNotificationTest {
 
         // Create watch party with alice and bob as participants
         WatchParty wp = new WatchParty("IRL Finals", LocalDateTime.now().plusDays(1), "LoL");
-        wp.addParticipant(alice);
-        wp.addParticipant(bob);
+        wp.join(alice);
+        wp.join(bob);
 
         manager.planifyWatchParty(wp);
 
