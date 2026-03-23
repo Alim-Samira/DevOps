@@ -10,8 +10,12 @@ name: Java CI with Gradle
 on:
   push:
     branches: [ "main" ]
+    paths-ignore:
+      - ".github/badges/**"
   pull_request:
     branches: [ "main" ]
+    paths-ignore:
+      - ".github/badges/**"
 
 jobs:
   build:
