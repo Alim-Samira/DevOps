@@ -2,6 +2,7 @@ package backend.controllers;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -28,8 +29,21 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @RestController
 @RequestMapping("/api/watchparties")
 @Tag(name = "WatchParty System", description = "Create and manage watchparties ")
-
 public class WatchPartyController {
+
+    private static final String KEY_SUCCESS = "success";
+    private static final String KEY_ERROR = "error";
+    private static final String KEY_USER = "user";
+    private static final String KEY_NAME = "name";
+    private static final String KEY_GAME = "game";
+    private static final String KEY_DATE = "date";
+    private static final String KEY_TEXT = "text";
+    private static final String KEY_CONNECTION_ID = "connectionId";
+    private static final String KEY_TYPE = "type";
+    private static final String KEY_EVENT = "event";
+    private static final String KEY_ADD_TO_CALENDAR = "addToCalendar";
+    private static final String KEY_CALENDAR_CONNECTION_ID = "calendarConnectionId";
+    private static final String DEFAULT_GAME = "League of Legends";
 
     private final WatchPartyManager manager;
     private final UserService userService;
@@ -48,25 +62,22 @@ public class WatchPartyController {
         this.calendarIntegrationService = calendarIntegrationService;
     }
 
-    // 1. GET (Read all)
     @GetMapping
     public List<WatchParty> getAllWatchParties() {
         return manager.getAllWatchParties();
     }
 
-    // 2. POST (Create new)
     @PostMapping
     public String createWatchParty(@RequestBody Map<String, String> payload) {
-        String name = payload.get("name");
-        String typeStr = payload.get("type");
-        String userName = payload.get("user");
+        String name = payload.get(KEY_NAME);
+        String typeStr = payload.get(KEY_TYPE);
+        String userName = payload.get(KEY_USER);
 
-        if (name == null || typeStr == null || userName == null) return "Error: Missing name, type or user";
+        if (name == null || typeStr == null || userName == null) {
+            return "Error: Missing name, type or user";
+        }
 
-        // Use the caller (payload.user) as the creator of the watchparty.
-        // Do NOT promote the creator to a global admin here — WatchParty-scoped admin checks use `WatchParty.isAdmin(User)`.
         User creator = userService.getUser(userName);
-
         try {
             AutoType type = AutoType.valueOf(typeStr.toUpperCase());
             WatchParty wp = WatchParty.createAutoWatchParty(creator, name, type);
@@ -77,59 +88,64 @@ public class WatchPartyController {
         }
     }
 
-    // 2b. POST manual public watchparty
     @PostMapping("/public")
     public String createPublicWatchParty(@RequestBody Map<String, String> payload) {
         return createManualWatchParty(payload, true);
     }
 
-    // 2c. POST manual private watchparty
     @PostMapping("/private")
     public String createPrivateWatchParty(@RequestBody Map<String, String> payload) {
         return createManualWatchParty(payload, false);
     }
 
-    // 3. DELETE (Remove)
     @DeleteMapping(value = "/{name}", produces = "text/plain")
     public String deleteWatchParty(@PathVariable("name") String name) {
         boolean removed = manager.removeWatchParty(name);
-        if (removed) {
-            return "🗑️ Deleted: ";
-        }
-        return "⚠️ Not found: ";
+        return removed ? "🗑️ Deleted: " : "⚠️ Not found: ";
     }
 
-    // 4. JOIN a watchparty (user becomes participant and gets initial WP points)
     @PostMapping("/{name}/join")
     public String joinWatchParty(@PathVariable("name") String name, @RequestBody Map<String, String> payload) {
-        String userName = payload.get("user");
-        if (userName == null || userName.isBlank()) return "❌ Missing user";
+        String userName = payload.get(KEY_USER);
+        if (userName == null || userName.isBlank()) {
+            return "❌ Missing user";
+        }
+
         WatchParty wp = manager.getWatchPartyByName(name);
-        if (wp == null) return "❌ WatchParty introuvable: " + name;
+        if (wp == null) {
+            return "❌ WatchParty introuvable: " + name;
+        }
+
         User user = userService.getUser(userName);
         boolean joined = wp.join(user);
         if (joined) {
             userService.saveUser(user);
             manager.saveWatchParty(wp);
             if (wp.isPublic()) {
-                // Refresh global ranking cache when user joins a public WP
                 rankingService.refreshAll();
             }
-            // Si la watch party est planifiée, notifier les participants disponibles pour le présentiel
             if (wp.isPlanned()) {
                 manager.notifyAvailableUsersForPresentiel(wp);
             }
         }
-        return joined ? "✅ " + userName + " a rejoint " + name : "⚠️ " + userName + " est déjà participant";
+
+        return joined
+                ? "✅ " + userName + " a rejoint " + name
+                : "⚠️ " + userName + " est déjà participant";
     }
 
-    // 5. LEAVE a watchparty
     @PostMapping("/{name}/leave")
     public String leaveWatchParty(@PathVariable("name") String name, @RequestBody Map<String, String> payload) {
-        String userName = payload.get("user");
-        if (userName == null || userName.isBlank()) return "❌ Missing user";
+        String userName = payload.get(KEY_USER);
+        if (userName == null || userName.isBlank()) {
+            return "❌ Missing user";
+        }
+
         WatchParty wp = manager.getWatchPartyByName(name);
-        if (wp == null) return "❌ WatchParty introuvable: " + name;
+        if (wp == null) {
+            return "❌ WatchParty introuvable: " + name;
+        }
+
         boolean removed = wp.leave(userService.getUser(userName));
         if (removed) {
             manager.saveWatchParty(wp);
@@ -137,30 +153,35 @@ public class WatchPartyController {
                 rankingService.refreshAll();
             }
         }
-        return removed ? "✅ " + userName + " a quitté " + name : "⚠️ " + userName + " n'est pas participant";
+
+        return removed
+                ? "✅ " + userName + " a quitté " + name
+                : "⚠️ " + userName + " n'est pas participant";
     }
 
-    // 6. CHAT for a watchparty
     @GetMapping("/{name}/chat")
     @Transactional(readOnly = true)
     public List<ChatMessageResponse> getWatchPartyChat(@PathVariable("name") String name) {
         WatchParty wp = manager.getWatchPartyByName(name);
-        if (wp == null) return List.of();
+        if (wp == null) {
+            return List.of();
+        }
+
         return wp.getChat().getMessages().stream()
-            .filter(Objects::nonNull)
-            .map(message -> new ChatMessageResponse(
-                message.getId(),
-                message.getSender() != null ? message.getSender().getName() : "System",
-                message.getContent(),
-                message.getTimestamp()))
-            .toList();
+                .filter(Objects::nonNull)
+                .map(message -> new ChatMessageResponse(
+                        message.getId(),
+                        message.getSender() != null ? message.getSender().getName() : "System",
+                        message.getContent(),
+                        message.getTimestamp()))
+                .toList();
     }
 
     @PostMapping("/{name}/chat")
     @Transactional
     public String sendWatchPartyMessage(@PathVariable("name") String name, @RequestBody Map<String, String> payload) {
-        String user = payload.get("user");
-        String text = payload.get("text");
+        String user = payload.get(KEY_USER);
+        String text = payload.get(KEY_TEXT);
 
         if (user == null || text == null) {
             return "❌ Missing 'user' or 'text'";
@@ -175,8 +196,6 @@ public class WatchPartyController {
         if (sender == null) {
             return "❌ Utilisateur introuvable: " + user;
         }
-
-        // Vérifier que l'utilisateur est participant de la WatchParty
         if (!wp.getParticipants().contains(sender)) {
             return "❌ Vous devez être participant de la watch party pour envoyer des messages";
         }
@@ -190,85 +209,106 @@ public class WatchPartyController {
     public Map<String, Object> addWatchPartyToCalendar(
             @PathVariable("name") String name,
             @RequestBody Map<String, String> payload) {
-        Map<String, Object> response = new java.util.HashMap<>();
-        String user = payload.get("user");
-        String connectionId = payload.get("connectionId");
+        Map<String, Object> response = new HashMap<>();
+        String user = payload.get(KEY_USER);
+        String connectionId = payload.get(KEY_CONNECTION_ID);
 
         WatchParty wp = manager.getWatchPartyByName(name);
         if (wp == null) {
-            response.put("success", false);
-            response.put("error", "Watch party introuvable: " + name);
+            response.put(KEY_SUCCESS, false);
+            response.put(KEY_ERROR, "Watch party introuvable: " + name);
             return response;
         }
 
         try {
-            Map<String, Object> createdEvent = calendarIntegrationService.addWatchPartyToGoogleCalendar(user, wp, connectionId);
-            response.put("success", true);
-            response.put("event", createdEvent);
+            Map<String, Object> createdEvent =
+                    calendarIntegrationService.addWatchPartyToGoogleCalendar(user, wp, connectionId);
+            response.put(KEY_SUCCESS, true);
+            response.put(KEY_EVENT, createdEvent);
             return response;
         } catch (Exception ex) {
-            response.put("success", false);
-            response.put("error", ex.getMessage());
+            response.put(KEY_SUCCESS, false);
+            response.put(KEY_ERROR, ex.getMessage());
             return response;
         }
     }
 
-    // Helpers
     private String createManualWatchParty(Map<String, String> payload, boolean isPublic) {
-        String name = payload.get("name");
-        if (name == null || name.isBlank()) return "❌ Missing name";
-
-        // Optional creator supplied by caller (useful for manual creation from UI)
-        String userName = payload.get("user");
-        User creator = null;
-        if (userName != null && !userName.isBlank()) {
-            creator = userService.getUser(userName);
+        String name = payload.get(KEY_NAME);
+        if (name == null || name.isBlank()) {
+            return "❌ Missing name";
         }
 
-        String game = payload.getOrDefault("game", "League of Legends");
-        String dateStr = payload.get("date");
-        LocalDateTime date = null;
-        if (dateStr != null && !dateStr.isBlank()) {
-            try {
-                date = LocalDateTime.parse(dateStr);
-            } catch (DateTimeParseException e) {
-                return "❌ Invalid date format. Use ISO-8601 (e.g., 2026-01-17T20:00:00)";
-            }
-        } else {
-            date = LocalDateTime.now().plusDays(1);
+        User creator = resolveCreator(payload.get(KEY_USER));
+        String game = payload.getOrDefault(KEY_GAME, DEFAULT_GAME);
+        LocalDateTime date = parseWatchPartyDate(payload.get(KEY_DATE));
+        if (date == null) {
+            return "❌ Invalid date format. Use ISO-8601 (e.g., 2026-01-17T20:00:00)";
         }
 
+        WatchParty wp = buildWatchParty(name, game, date, isPublic, creator);
+        String calendarError = addToCalendarIfRequested(payload, creator, wp);
+        if (calendarError != null) {
+            return calendarError;
+        }
+
+        manager.addWatchParty(wp);
+        manager.planifyWatchParty(wp);
+        if (isPublic) {
+            rankingService.refreshAll();
+        }
+
+        return (isPublic ? "✅ Public" : "✅ Private") + " watchparty created: " + name;
+    }
+
+    private User resolveCreator(String userName) {
+        if (userName == null || userName.isBlank()) {
+            return null;
+        }
+        return userService.getUser(userName);
+    }
+
+    private LocalDateTime parseWatchPartyDate(String dateStr) {
+        if (dateStr == null || dateStr.isBlank()) {
+            return LocalDateTime.now().plusDays(1);
+        }
+        try {
+            return LocalDateTime.parse(dateStr);
+        } catch (DateTimeParseException e) {
+            return null;
+        }
+    }
+
+    private WatchParty buildWatchParty(
+            String name, String game, LocalDateTime date, boolean isPublic, User creator) {
         WatchParty wp = new WatchParty(name, date, game);
         wp.setPublic(isPublic);
         if (creator != null) {
             wp.setCreator(creator);
             userService.saveUser(creator);
         }
-
-        if (Boolean.parseBoolean(payload.getOrDefault("addToCalendar", "false"))) {
-            if (creator == null) {
-                return "❌ Impossible d'ajouter au calendrier sans utilisateur createur";
-            }
-            try {
-                calendarIntegrationService.addWatchPartyToGoogleCalendar(
-                        creator.getName(),
-                        wp,
-                        payload.get("calendarConnectionId"));
-            } catch (IllegalArgumentException ex) {
-                return "❌ Impossible d'ajouter au Google Calendar: " + ex.getMessage();
-            }
-        }
-
-        manager.addWatchParty(wp);
-        manager.planifyWatchParty(wp);
-        
-        // Refresh global ranking cache when a public WP is created (especially with a creator)
-        if (isPublic) {
-            rankingService.refreshAll();
-        }
-        
-        return (isPublic ? "✅ Public" : "✅ Private") + " watchparty created: " + name;
+        return wp;
     }
 
-    public record ChatMessageResponse(Long id, String senderName, String content, String timestamp) {}
+    private String addToCalendarIfRequested(Map<String, String> payload, User creator, WatchParty wp) {
+        if (!Boolean.parseBoolean(payload.getOrDefault(KEY_ADD_TO_CALENDAR, "false"))) {
+            return null;
+        }
+        if (creator == null) {
+            return "❌ Impossible d'ajouter au calendrier sans utilisateur createur";
+        }
+
+        try {
+            calendarIntegrationService.addWatchPartyToGoogleCalendar(
+                    creator.getName(),
+                    wp,
+                    payload.get(KEY_CALENDAR_CONNECTION_ID));
+            return null;
+        } catch (IllegalArgumentException ex) {
+            return "❌ Impossible d'ajouter au Google Calendar: " + ex.getMessage();
+        }
+    }
+
+    public record ChatMessageResponse(Long id, String senderName, String content, String timestamp) {
+    }
 }

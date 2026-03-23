@@ -3,7 +3,10 @@ package backend.integration.lolesports;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
@@ -19,29 +22,23 @@ import backend.models.Match;
 @Service
 public class LolEsportsClient {
 
-    @java.lang.SuppressWarnings("java:S6418") // La clé API est publique
-    private static final String DEFAULT_API_KEY = "0TvQnueqKa5mxJntVWt0w4LpLfEkrV1Ta8rQBb9Z";
+    private static final Logger log = LoggerFactory.getLogger(LolEsportsClient.class);
     private static final String DEFAULT_GW_BASE_URL = "https://esports-api.lolesports.com/persisted/gw";
     private static final String DEFAULT_LIVE_BASE_URL = "https://feed.lolesports.com/livestats/v1";
+    private static final String HEADER_AUTH_TOKEN = "x-api-key";
     private static final String STRING_MATCH = "match";
+    private static final Pattern NON_ALPHANUMERIC = Pattern.compile("[^a-z0-9]+");
+    private static final Gson GSON = new Gson();
 
     private final RestClient gwClient;
     private final RestClient liveClient;
-    private final Gson gson = new Gson();
 
     public LolEsportsClient(
-            @Value("${lolesports.api-key:" + DEFAULT_API_KEY + "}") String apiKey,
+            @Value("${lolesports.auth-token:}") String authToken,
             @Value("${lolesports.gw-base-url:" + DEFAULT_GW_BASE_URL + "}") String gwBaseUrl,
             @Value("${lolesports.live-base-url:" + DEFAULT_LIVE_BASE_URL + "}") String liveBaseUrl) {
-        this.gwClient = RestClient.builder()
-                .baseUrl(gwBaseUrl)
-                .defaultHeader("x-api-key", apiKey)
-                .build();
-
-        this.liveClient = RestClient.builder()
-                .baseUrl(liveBaseUrl)
-                .defaultHeader("x-api-key", apiKey)
-                .build();
+        this.gwClient = buildClient(gwBaseUrl, authToken);
+        this.liveClient = buildClient(liveBaseUrl, authToken);
     }
 
     public Optional<String> getFirstGameId(String eventId) {
@@ -56,10 +53,10 @@ public class LolEsportsClient {
                     .body(String.class);
 
             return extractFirstGameId(json);
-        } catch (Exception ignored) {
-            // Best effort client: the caller decides whether to retry or fall back.
+        } catch (RuntimeException ex) {
+            log.debug("Unable to fetch first game id for event {}", eventId, ex);
+            return Optional.empty();
         }
-        return Optional.empty();
     }
 
     public Optional<String> findLiveEventId(Match match) {
@@ -81,7 +78,8 @@ public class LolEsportsClient {
                     .body(String.class);
 
             return extractLiveEventId(json, team1, team2, tournamentName);
-        } catch (Exception ignored) {
+        } catch (RuntimeException ex) {
+            log.debug("Unable to find live event id for {} vs {}", team1, team2, ex);
             return Optional.empty();
         }
     }
@@ -94,7 +92,7 @@ public class LolEsportsClient {
     }
 
     Optional<String> extractFirstGameId(String json) {
-        EventDetailsResponse response = gson.fromJson(json, EventDetailsResponse.class);
+        EventDetailsResponse response = GSON.fromJson(json, EventDetailsResponse.class);
         if (response != null
                 && response.event() != null
                 && response.event().games() != null
@@ -105,7 +103,7 @@ public class LolEsportsClient {
     }
 
     Optional<String> extractLiveEventId(String json, String team1, String team2, String tournamentName) {
-        JsonObject root = gson.fromJson(json, JsonObject.class);
+        JsonObject root = GSON.fromJson(json, JsonObject.class);
         JsonArray events = getNestedArray(root, "data", "schedule", "events");
         if (events == null) {
             return Optional.empty();
@@ -124,6 +122,14 @@ public class LolEsportsClient {
         }
 
         return Optional.empty();
+    }
+
+    private RestClient buildClient(String baseUrl, String authToken) {
+        RestClient.Builder builder = RestClient.builder().baseUrl(baseUrl);
+        if (!isBlank(authToken)) {
+            builder.defaultHeader(HEADER_AUTH_TOKEN, authToken);
+        }
+        return builder.build();
     }
 
     private boolean matchesLiveEvent(JsonObject event, String team1, String team2, String tournamentName) {
@@ -208,7 +214,7 @@ public class LolEsportsClient {
     }
 
     private String normalize(String value) {
-        return value == null ? "" : value.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "");
+        return value == null ? "" : NON_ALPHANUMERIC.matcher(value.toLowerCase(Locale.ROOT)).replaceAll("");
     }
 }
 

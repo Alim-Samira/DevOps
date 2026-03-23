@@ -1,7 +1,6 @@
 
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.jvm.toolchain.JavaLanguageVersion
-import org.gradle.jvm.tasks.Jar
 import org.gradle.api.tasks.testing.Test
 
 plugins {
@@ -111,8 +110,4 @@ tasks.jacocoTestCoverageVerification {
 
 tasks.check {
     dependsOn(tasks.jacocoTestCoverageVerification)
-}
-
-tasks.named<Jar>("jar") {
-
 }

@@ -14,6 +14,8 @@ import backend.repositories.UserRepository;
 @Service
 public class UserService {
 
+    private static final String ADMIN_USERNAME = "admin";
+
     private final UserRepository userRepository;
     private final Map<String, User> inMemoryUsers;
 
@@ -21,7 +23,7 @@ public class UserService {
     public UserService(UserRepository userRepository) {
         this.userRepository = userRepository;
         this.inMemoryUsers = new HashMap<>();
-        this.inMemoryUsers.put("admin", new User("admin", true));
+        this.inMemoryUsers.put(ADMIN_USERNAME, new User(ADMIN_USERNAME, true));
     }
 
     public UserService() {
@@ -29,7 +31,7 @@ public class UserService {
     }
 
     public User getUser(String username) {
-        boolean shouldBeAdmin = "admin".equalsIgnoreCase(username);
+        boolean shouldBeAdmin = ADMIN_USERNAME.equalsIgnoreCase(username);
         if (userRepository == null) {
             String key = username.toLowerCase();
             User user = inMemoryUsers.computeIfAbsent(key, ignored -> new User(username, shouldBeAdmin));

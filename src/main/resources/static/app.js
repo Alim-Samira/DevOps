@@ -31,7 +31,13 @@ async function refreshWatchParties(){
     wps.forEach(wp => {
       const li = document.createElement('li');
       const isPublic = wp.public === true || wp.isPublic === true;
-      const typeLabel = wp.autoConfig ? `auto(${wp.autoConfig.type}${wp.autoConfig.target? ':'+wp.autoConfig.target : ''})` : (isPublic ? 'public' : 'private');
+      let typeLabel = 'private';
+      if (wp.autoConfig) {
+        const autoTarget = wp.autoConfig.target ? `:${wp.autoConfig.target}` : '';
+        typeLabel = `auto(${wp.autoConfig.type}${autoTarget})`;
+      } else if (isPublic) {
+        typeLabel = 'public';
+      }
       li.textContent = `${wp.name} — ${typeLabel}` + (wp.creator? ` (creator=${wp.creator.name})` : '');
       list.appendChild(li);
       const opt = document.createElement('option');
@@ -52,7 +58,7 @@ function setWpAdminFromSelector(){
   if (!sel) return;
   const opt = sel.options[sel.selectedIndex];
   if (!opt) return;
-  const creator = opt.dataset && opt.dataset.creator;
+  const creator = opt.dataset?.creator;
   if (creator && creator.length>0) {
     const adminEl = document.getElementById('bet-admin');
     const adminActionEl = document.getElementById('bet-admin-action');
@@ -100,7 +106,7 @@ async function createBet(){
   const admin = document.getElementById('bet-admin').value || 'alice';
   const question = document.getElementById('bet-question').value || 'Who wins?';
   const choices = (document.getElementById('bet-choices').value || 'Team A,Team B').split(',').map(s=>s.trim());
-  const minutes = parseInt(document.getElementById('bet-minutes').value || '5',10);
+  const minutes = Number.parseInt(document.getElementById('bet-minutes').value || '5',10);
   const payload = { admin, question, choices, votingMinutes: minutes };
   const res = await fetch(`/api/watchparties/${encodeName(name)}/bets/discrete`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
   const text = await res.text();
@@ -114,10 +120,10 @@ async function createNumericBet(){
   const isInteger = document.getElementById('bet-num-int').checked === true;
   const minStr = document.getElementById('bet-num-min').value;
   const maxStr = document.getElementById('bet-num-max').value;
-  const minutes = parseInt(document.getElementById('bet-minutes-num').value || '5',10);
+  const minutes = Number.parseInt(document.getElementById('bet-minutes-num').value || '5',10);
   const payload = { admin, question, isInteger, votingMinutes: minutes };
   if (minStr !== '') {
-    const minVal = parseFloat(minStr);
+    const minVal = Number.parseFloat(minStr);
     if (Number.isNaN(minVal)) {
       log('Valeur min invalide');
       return;
@@ -125,7 +131,7 @@ async function createNumericBet(){
     payload.minValue = minVal;
   }
   if (maxStr !== '') {
-    const maxVal = parseFloat(maxStr);
+    const maxVal = Number.parseFloat(maxStr);
     if (Number.isNaN(maxVal)) {
       log('Valeur max invalide');
       return;
@@ -142,7 +148,7 @@ async function createRankingBet(){
   const admin = document.getElementById('bet-admin').value || 'alice';
   const question = document.getElementById('bet-question-rank').value || 'Ranking question?';
   const items = parseCsv(document.getElementById('bet-items').value || 'A,B,C');
-  const minutes = parseInt(document.getElementById('bet-minutes-rank').value || '5',10);
+  const minutes = Number.parseInt(document.getElementById('bet-minutes-rank').value || '5',10);
   const payload = { admin, question, items, votingMinutes: minutes };
   const res = await fetch(`/api/watchparties/${encodeName(name)}/bets/ranking`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
   const text = await res.text();
@@ -153,7 +159,7 @@ async function vote(){
   const name = document.getElementById('bet-wp').value;
   const user = document.getElementById('vote-user').value || 'bob';
   const value = document.getElementById('vote-value').value || 'Team A';
-  const points = parseInt(document.getElementById('vote-points').value || '10',10);
+  const points = Number.parseInt(document.getElementById('vote-points').value || '10',10);
   const payload = { user, value, points };
   const res = await fetch(`/api/watchparties/${encodeName(name)}/bets/vote`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
   const text = await res.text();
@@ -164,8 +170,8 @@ async function voteNumeric(){
   const name = document.getElementById('bet-wp').value;
   const user = document.getElementById('vote-user').value || 'bob';
   const valStr = document.getElementById('vote-value-num').value;
-  const value = parseFloat(valStr);
-  const points = parseInt(document.getElementById('vote-points').value || '10',10);
+  const value = Number.parseFloat(valStr);
+  const points = Number.parseInt(document.getElementById('vote-points').value || '10',10);
   if (Number.isNaN(value)) {
     log('Valeur numerique invalide');
     return;
@@ -180,7 +186,7 @@ async function voteRanking(){
   const name = document.getElementById('bet-wp').value;
   const user = document.getElementById('vote-user').value || 'bob';
   const value = parseCsv(document.getElementById('vote-value-rank').value);
-  const points = parseInt(document.getElementById('vote-points').value || '10',10);
+  const points = Number.parseInt(document.getElementById('vote-points').value || '10',10);
   if (value.length === 0) {
     log('Classement invalide');
     return;
@@ -212,7 +218,7 @@ async function resolveNumeric(){
   const name = document.getElementById('bet-wp').value;
   const admin = document.getElementById('bet-admin-action').value || 'alice';
   const valStr = document.getElementById('resolve-value-num').value;
-  const correctValue = parseFloat(valStr);
+  const correctValue = Number.parseFloat(valStr);
   if (Number.isNaN(correctValue)) {
     log('Valeur numerique invalide');
     return;
@@ -272,7 +278,7 @@ async function refreshRankings(){
 
 async function refreshWatchPartyRanking(){
   const sel = document.getElementById('bet-wp');
-  const name = sel && sel.value;
+  const name = sel?.value;
   if (!name) {
     document.getElementById('wp-ranking').textContent = 'Aucune watchparty sélectionnée';
     return;
@@ -311,11 +317,11 @@ function updateChatWPSelector() {
 function escapeHtml(text) {
   if (!text) return '';
   return String(text)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+    .replaceAll(/&/g, '&amp;')
+    .replaceAll(/</g, '&lt;')
+    .replaceAll(/>/g, '&gt;')
+    .replaceAll(/"/g, '&quot;')
+    .replaceAll(/'/g, '&#039;');
 }
 
 async function loadWatchPartyChat() {
@@ -442,9 +448,12 @@ async function connectCalendar() {
   }
 
   try {
-    const payload = provider === 'GOOGLE'
-      ? { provider, oauthAccessToken: token, externalCalendarId }
-      : { provider, sourceUrl: url };
+    let payload;
+    if (provider === 'GOOGLE') {
+      payload = { provider, oauthAccessToken: token, externalCalendarId };
+    } else {
+      payload = { provider, sourceUrl: url };
+    }
     const res = await fetch(`/api/users/${encodeURIComponent(user)}/calendars`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -477,9 +486,10 @@ async function listCalendars() {
     }
     calendars.forEach(cal => {
       const li = document.createElement('li');
-      const details = cal.type === 'GOOGLE'
-        ? (cal.calendarId || 'primary')
-        : cal.sourceUrl;
+      let details = cal.sourceUrl;
+      if (cal.type === 'GOOGLE') {
+        details = cal.calendarId || 'primary';
+      }
       li.textContent = `${cal.id} - ${cal.type} (${details})`;
       list.appendChild(li);
     });
@@ -604,4 +614,4 @@ function bind(){
   document.getElementById('btn-load-notifications').onclick = loadNotifications;
 }
 
-window.addEventListener('DOMContentLoaded', async () => { bind(); toggleWpMode(); toggleCalendarProviderFields(); await refreshWatchParties(); updateChatWPSelector(); await refreshRankings(); await refreshWatchPartyRanking(); log('UI ready'); });
+globalThis.addEventListener('DOMContentLoaded', async () => { bind(); toggleWpMode(); toggleCalendarProviderFields(); await refreshWatchParties(); updateChatWPSelector(); await refreshRankings(); await refreshWatchPartyRanking(); log('UI ready'); });

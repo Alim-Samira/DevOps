@@ -27,6 +27,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @Tag(name = "Calendars", description = "Connect user calendars (simple version)")
 public class CalendarController {
 
+    private static final String KEY_SUCCESS = "success";
+    private static final String KEY_ERROR = "error";
+
     private final CalendarIntegrationService calendarIntegrationService;
 
     public CalendarController(CalendarIntegrationService calendarIntegrationService) {
@@ -47,13 +50,13 @@ public class CalendarController {
         try {
             Calendar connection = calendarIntegrationService.connect(user, request);
             Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
+            response.put(KEY_SUCCESS, true);
             response.put("connection", connection);
             return response;
         } catch (IllegalArgumentException ex) {
             Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("error", ex.getMessage());
+            response.put(KEY_SUCCESS, false);
+            response.put(KEY_ERROR, ex.getMessage());
             return response;
         }
     }
@@ -71,9 +74,9 @@ public class CalendarController {
             @PathVariable("connectionId") String connectionId) {
         boolean removed = calendarIntegrationService.removeConnection(user, connectionId);
         Map<String, Object> response = new HashMap<>();
-        response.put("success", removed);
+        response.put(KEY_SUCCESS, removed);
         if (!removed) {
-            response.put("error", "Connexion introuvable");
+            response.put(KEY_ERROR, "Connexion introuvable");
         }
         return response;
     }
@@ -93,14 +96,14 @@ public class CalendarController {
             List<CalendarEvent> events = calendarIntegrationService.getEventsForCalendar(user, connectionId, start, end);
             
             Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
+            response.put(KEY_SUCCESS, true);
             response.put("events", events);
             response.put("count", events.size());
             return response;
         } catch (Exception ex) {
             Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("error", ex.getMessage());
+            response.put(KEY_SUCCESS, false);
+            response.put(KEY_ERROR, ex.getMessage());
             return response;
         }
     }
@@ -114,13 +117,13 @@ public class CalendarController {
         try {
             Map<String, Object> createdEvent = calendarIntegrationService.createGoogleCalendarEvent(user, connectionId, event);
             Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
+            response.put(KEY_SUCCESS, true);
             response.put("event", createdEvent);
             return response;
         } catch (Exception ex) {
             Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("error", ex.getMessage());
+            response.put(KEY_SUCCESS, false);
+            response.put(KEY_ERROR, ex.getMessage());
             return response;
         }
     }
@@ -146,8 +149,8 @@ public class CalendarController {
             return response;
         } catch (Exception ex) {
             Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("error", ex.getMessage());
+            response.put(KEY_SUCCESS, false);
+            response.put(KEY_ERROR, ex.getMessage());
             return response;
         }
     }

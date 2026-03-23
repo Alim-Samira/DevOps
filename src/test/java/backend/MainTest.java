@@ -597,7 +597,7 @@ class MainTest {
         // Add bet to WP and verify it's in VOTING state
         wp.createBet(expiredBet);
         assertTrue(wp.hasActiveBet(), "WP should have active bet");
-        assertEquals(expiredBet.getState(), backend.models.Bet.State.VOTING, "Bet should start in VOTING state");
+        assertEquals(backend.models.Bet.State.VOTING, expiredBet.getState(), "Bet should start in VOTING state");
         
         // Manually invoke the auto-close logic (what the scheduler would do)
         backend.models.Bet activeBet = wp.getActiveBet();
@@ -607,7 +607,7 @@ class MainTest {
         }
         
         // Verify the bet has been transitioned to PENDING
-        assertEquals(wp.getActiveBet().getState(), backend.models.Bet.State.PENDING, 
+        assertEquals(backend.models.Bet.State.PENDING, wp.getActiveBet().getState(),
                      "Expired bet should be auto-closed to PENDING state");
     }
 }
