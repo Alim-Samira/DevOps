@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>DevOps — Frontend de test</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header>
+      <h1>DevOps — Frontend de test (vanilla JS)</h1>
+      <p class="muted">Aucune installation requise — servi par Spring Boot (root <code>/</code>).</p>
+    </header>
+
+    <main class="grid">
+      <section id="wp-section" class="card">
+        <h2>WatchParties</h2>
+        <div class="controls">
+          <input id="wp-name" placeholder="Nom (ex: TestWP)" />
+          <input id="wp-user" placeholder="User créateur (ex: alice)" />
+
+          <label for="wp-mode" style="margin-left:6px">Mode</label>
+          <select id="wp-mode" style="margin-right:8px">
+            <option value="AUTO" selected>Auto</option>
+            <option value="PUBLIC">Public</option>
+            <option value="PRIVATE">Privé</option>
+          </select>
+
+          <select id="wp-type"><option>TEAM</option><option>TOURNAMENT</option></select>
+
+          <input id="wp-game" placeholder="Game (manual only)" style="display:none; width:160px; margin-left:6px" />
+          <input id="wp-date" placeholder="Date ISO (manual only)" style="display:none; width:200px; margin-left:6px" />
+          <label id="wp-calendar-label" style="display:none; align-items:center; gap:4px;">
+            <input id="wp-add-calendar" type="checkbox" />
+            Ajouter a Google Calendar
+          </label>
+          <input id="wp-calendar-connection-id" placeholder="Connection ID Google (optionnel)" style="display:none; width:220px; margin-left:6px" />
+
+          <button id="btn-create-wp">Créer</button>
+        </div>
+        <div>
+          <button id="btn-refresh-wp">Rafraîchir la liste</button>
+          <ul id="wp-list"></ul>
+        </div>
+      </section>
+
+      <section id="bet-section" class="card">
+        <h2>Paris</h2>
+        <div class="controls">
+          <select id="bet-wp"></select>
+          <input id="bet-admin" placeholder="admin (ex: alice)" />
+        </div>
+        <div class="controls">
+          <strong style="min-width:90px;">Discrete</strong>
+          <input id="bet-question" placeholder="Question" />
+          <input id="bet-choices" placeholder="Choices (csv)" />
+          <input id="bet-minutes" placeholder="Minutes" value="5" style="width:70px" />
+          <button id="btn-create-bet">Créer pari</button>
+        </div>
+        <div class="controls">
+          <strong style="min-width:90px;">Numeric</strong>
+          <input id="bet-question-num" placeholder="Question" />
+          <label style="display:flex;align-items:center;gap:4px;">
+            <input type="checkbox" id="bet-num-int" checked /> Int
+          </label>
+          <input id="bet-num-min" placeholder="Min" style="width:70px" />
+          <input id="bet-num-max" placeholder="Max" style="width:70px" />
+          <input id="bet-minutes-num" placeholder="Minutes" value="5" style="width:70px" />
+          <button id="btn-create-bet-num">Créer pari</button>
+        </div>
+        <div class="controls">
+          <strong style="min-width:90px;">Ranking</strong>
+          <input id="bet-question-rank" placeholder="Question" />
+          <input id="bet-items" placeholder="Items (csv)" />
+          <input id="bet-minutes-rank" placeholder="Minutes" value="5" style="width:70px" />
+          <button id="btn-create-bet-rank">Créer pari</button>
+        </div>
+        <div class="controls">
+          <input id="vote-user" placeholder="voter (user)" />
+          <input id="vote-points" placeholder="points" value="10" style="width:70px" />
+        </div>
+        <div class="controls">
+          <strong style="min-width:90px;">Discrete</strong>
+          <input id="vote-value" placeholder="voted value" />
+          <button id="btn-vote">Voter</button>
+        </div>
+        <div class="controls">
+          <strong style="min-width:90px;">Numeric</strong>
+          <input id="vote-value-num" placeholder="numeric value" style="width:120px" />
+          <button id="btn-vote-num">Voter</button>
+        </div>
+        <div class="controls">
+          <strong style="min-width:90px;">Ranking</strong>
+          <input id="vote-value-rank" placeholder="ranking (csv)" />
+          <button id="btn-vote-rank">Voter</button>
+        </div>
+        <div class="controls">
+          <input id="bet-admin-action" placeholder="admin" />
+          <button id="btn-end-voting">Clore vote</button>
+        </div>
+        <div class="controls">
+          <strong style="min-width:90px;">Discrete</strong>
+          <input id="resolve-value" placeholder="correctValue" />
+          <button id="btn-resolve">Résoudre</button>
+        </div>
+        <div class="controls">
+          <strong style="min-width:90px;">Numeric</strong>
+          <input id="resolve-value-num" placeholder="correctValue" style="width:120px" />
+          <button id="btn-resolve-num">Résoudre</button>
+        </div>
+        <div class="controls">
+          <strong style="min-width:90px;">Ranking</strong>
+          <input id="resolve-value-rank" placeholder="correctValue (csv)" />
+          <button id="btn-resolve-rank">Résoudre</button>
+        </div>
+
+        <div class="controls">
+          <h3>Participer / Quitter une WatchParty</h3>
+          <input id="join-user" placeholder="user (ex: bob)" />
+          <button id="btn-join-wp">Rejoindre WP</button>
+          <button id="btn-leave-wp">Quitter WP</button>
+        </div>
+      </section>
+
+      <section id="ranking-section" class="card">
+        <h2>Rankings / Users</h2>
+        <div class="controls">
+          <button id="btn-refresh-rank">Rafraîchir (global)</button>
+          <button id="btn-refresh-wp-rank">Rafraîchir (watchparty sélectionnée)</button>
+        </div>
+
+        <div class="controls">
+          <h3 style="margin:0.2rem 0">Global (public) — points</h3>
+          <pre id="global-ranking" class="mono"></pre>
+        </div>
+
+        <div class="controls">
+          <h3 style="margin:0.2rem 0">WatchParty — points</h3>
+          <div style="font-size:0.9rem;margin-bottom:0.5rem">Sélectionnez une WatchParty dans le sélecteur `Pari` ci‑dessus</div>
+          <pre id="wp-ranking" class="mono"></pre>
+        </div>
+
+        <div class="controls">
+          <input id="lookup-user" placeholder="username" />
+          <button id="btn-lookup-user">Chercher user</button>
+          <pre id="user-result" class="mono"></pre>
+        </div>
+      </section>
+
+      <section id="chat-section" class="card">
+        <h2>Chat de WatchParty</h2>
+        <div class="controls">
+          <select id="chat-wp">
+            <option value="">-- Sélectionner une WP --</option>
+          </select>
+          <button id="btn-load-chat">Charger chat</button>
+        </div>
+        
+        <div style="display: flex; flex-direction: column; gap: 10px; height: 250px;">
+          <div style="flex: 1; border: 1px solid #ccc; overflow-y: auto; padding: 10px; background: #f9f9f9; border-radius: 4px;" id="chat-messages">
+            <div style="color: #574d4d00; font-size: 0.9rem;">Aucun message</div>
+          </div>
+        </div>
+
+        <div class="controls" style="margin-top: 10px;">
+          <input id="chat-user" placeholder="username" style="width: 120px;" />
+          <input id="chat-text" placeholder="Votre message..." style="flex: 1;" />
+          <button id="btn-send-chat">Envoyer</button>
+        </div>
+      </section>
+
+      <section id="calendar-section" class="card">
+        <h2>Calendriers</h2>
+        
+        <div class="controls">
+          <h3>Connecter un calendrier</h3>
+          <input id="cal-user" placeholder="Username (ex: alice)" style="width: 150px;" />
+          <select id="cal-provider" style="width: 120px;">
+            <option value="ICAL">ICAL</option>
+            <option value="GOOGLE">GOOGLE</option>
+          </select>
+          <input id="cal-url" placeholder="URL ICAL" style="flex: 1;" />
+          <input id="cal-token" placeholder="OAuth access token Google" style="display:none; flex: 1;" />
+          <input id="cal-external-id" placeholder="Calendar ID Google (optionnel)" style="display:none; width: 220px;" />
+          <button id="btn-connect-calendar">Connecter</button>
+        </div>
+
+        <div class="controls">
+          <h3>Calendriers connectés</h3>
+          <input id="cal-list-user" placeholder="Username" style="width: 150px;" />
+          <button id="btn-list-calendars">Lister</button>
+          <ul id="cal-list" style="margin-top: 10px;"></ul>
+        </div>
+
+        <div class="controls">
+          <h3>Supprimer une connexion</h3>
+          <input id="cal-delete-user" placeholder="Username" style="width: 150px;" />
+          <input id="cal-connection-id" placeholder="Connection ID" style="width: 150px;" />
+          <button id="btn-delete-calendar">Supprimer</button>
+        </div>
+
+        <div class="controls">
+          <h3>Événements du calendrier</h3>
+          <input id="cal-events-user" placeholder="Username" style="width: 150px;" />
+          <input id="cal-events-connection-id" placeholder="Connection ID" style="width: 150px;" />
+          <input id="cal-events-start" placeholder="Start (ISO datetime)" value="2026-03-21T00:00:00" style="width: 180px;" />
+          <input id="cal-events-end" placeholder="End (ISO datetime)" value="2026-03-22T23:59:59" style="width: 180px;" />
+          <button id="btn-get-events">Voir événements</button>
+          <pre id="cal-events-result" class="mono" style="margin-top: 10px; max-height: 200px; overflow-y: auto;"></pre>
+        </div>
+      </section>
+
+      <section id="notification-section" class="card">
+        <h2>Notifications</h2>
+        
+        <div class="controls">
+          <h3>Voir les notifications</h3>
+          <input id="notif-user" placeholder="Username (ex: alice)" style="width: 150px;" />
+          <button id="btn-load-notifications">Charger les notifications</button>
+          <ul id="notif-list" style="margin-top: 10px;"></ul>
+        </div>
+      </section>
+
+      <section id="log-section" class="card large">
+        <h2>Log / réponses</h2>
+        <div id="log"></div>
+      </section>
+    </main>
+
+    <footer>
+      <small>UI de démonstration — accessible à la racine <code>/</code></small>
+    </footer>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

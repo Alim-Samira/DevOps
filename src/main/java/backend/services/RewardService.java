@@ -8,11 +8,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
-
-import backend.models.User;
 
 @Service
 public class RewardService {
@@ -38,16 +35,21 @@ public class RewardService {
 
     /**
      * Evaluate public point thresholds for all users and grant rewards (placeholder logging).
+     * Uses the sum of points in all public watch parties (same calculation as global ranking).
      */
     public List<String> evaluateThresholdRewards() {
         List<String> rewards = new ArrayList<>();
-        for (User user : userService.getAllUsers()) {
-            int points = user.getPublicPoints();
-            Set<Integer> granted = awardedThresholds.computeIfAbsent(user.getName(), k -> ConcurrentHashMap.newKeySet());
+        // Get global points (sum of all public WP points) from ranking service
+        Map<String, Integer> globalPoints = rankingService.getGlobalPublicPoints(true);
+        
+        for (Map.Entry<String, Integer> entry : globalPoints.entrySet()) {
+            String username = entry.getKey();
+            int points = entry.getValue();
+            Set<Integer> granted = awardedThresholds.computeIfAbsent(username, k -> ConcurrentHashMap.newKeySet());
             for (int threshold : THRESHOLDS) {
                 if (points >= threshold && !granted.contains(threshold)) {
                     granted.add(threshold);
-                    String msg = "🎁 Reward threshold reached: " + user.getName() + " -> " + threshold + " pts (public)";
+                    String msg = "🎁 Reward threshold reached: " + username + " -> " + threshold + " pts (global public)";
                     rewards.add(msg);
                     log.info(msg);
                 }

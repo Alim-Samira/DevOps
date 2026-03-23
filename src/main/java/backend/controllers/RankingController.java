@@ -38,14 +38,14 @@ public class RankingController {
 
     @Operation(summary = "Classement par points d'une watchparty (public ou privée)")
     @GetMapping("/watchparties/{name}/rankings/points")
-    public Map<String, Integer> getWatchPartyPoints(@PathVariable String name,
+    public Map<String, Integer> getWatchPartyPoints(@PathVariable("name") String name,
                                                     @RequestParam(name = "refresh", defaultValue = "false") boolean refresh) {
         return rankingService.getWatchPartyPoints(name, refresh);
     }
 
     @Operation(summary = "Classement par victoires d'une watchparty (public ou privée)")
     @GetMapping("/watchparties/{name}/rankings/wins")
-    public Map<String, Integer> getWatchPartyWins(@PathVariable String name,
+    public Map<String, Integer> getWatchPartyWins(@PathVariable("name") String name,
                                                   @RequestParam(name = "refresh", defaultValue = "false") boolean refresh) {
         return rankingService.getWatchPartyWins(name, refresh);
     }
@@ -59,7 +59,7 @@ public class RankingController {
 
     @Operation(summary = "Rafraîchir les caches d'une watchparty")
     @PostMapping("/watchparties/{name}/rankings/refresh")
-    public String refreshWatchParty(@PathVariable String name) {
+    public String refreshWatchParty(@PathVariable("name") String name) {
         rankingService.refreshWatchParty(name);
         return "✅ Cache de classement rafraîchi";
     }

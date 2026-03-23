@@ -178,11 +178,55 @@ class UserService {
   + getUser(String)
   + getAllUsers()
 }
-class ChatService {
-  - Chat publicChat
-  - UserService userService
-  + addMessage(String, String)
-  + getMessages()
+abstract class Calendar {
+  - String id
+  - String user
+  - CalendarProviderType type
+}
+class IcalCalendar {
+  - String sourceUrl
+}
+class GoogleCalendar {
+  - String calendarId
+  - String oauthAccessToken
+}
+class CalendarEvent {
+  - String title
+  - LocalDateTime start
+  - LocalDateTime end
+  - String description
+}
+class CalendarConnectionRequest {
+  - String provider
+  - String label
+  - String sourceUrl
+  - String oauthAccessToken
+  - String externalCalendarId
+}
+enum CalendarProviderType {
+  ICAL
+  GOOGLE
+}
+class CalendarIntegrationService {
+  - Map<String, List<Calendar>> connectionsByUser
+  + supportedProviders()
+  + connect(String, CalendarConnectionRequest) : Calendar
+  + getConnectionsForUser(String) : List<Calendar>
+  + removeConnection(String, String) : boolean
+  + createGoogleCalendarEvent(String, String, CalendarEvent) : Map<String, Object>
+  + addWatchPartyToGoogleCalendar(String, WatchParty, String) : Map<String, Object>
+  + getEventsForCalendar(String, String, LocalDateTime, LocalDateTime) : List<CalendarEvent>
+  + checkAvailability(String, LocalDateTime, LocalDateTime) : boolean
+  + canAttendWatchParty(String, LocalDateTime, LocalDateTime) : boolean
+}
+class NotificationService {
+  + addNotification(String, UserNotification)
+}
+class UserNotification {
+  - String title
+  - String message
+  - String watchPartyName
+  - LocalDateTime createdAt
 }
 class WatchPartyManager {
   - List<WatchParty> watchParties
@@ -256,23 +300,32 @@ RewardScheduler o-- RewardService
 
 ' Controllers -> Services
 class BetController
-class ChatController
 class QuizController
 class RankingController
 class RewardController
 class UserController
 class WatchPartyController
+class CalendarController
 
 BetController --> BetService
-ChatController --> ChatService
-QuizController --> QuizService
 QuizController --> UserService
 RankingController --> RankingService
 RewardController --> RewardService
 UserController --> UserService
 WatchPartyController --> WatchPartyManager
+WatchPartyController --> CalendarIntegrationService
+CalendarController --> CalendarIntegrationService
 
 ' Domain links
+Calendar <|-- IcalCalendar
+Calendar <|-- GoogleCalendar
+Calendar o-- CalendarProviderType
+CalendarIntegrationService o-- Calendar
+CalendarIntegrationService o-- CalendarEvent
+CalendarIntegrationService o-- CalendarConnectionRequest
+WatchPartyManager o-- CalendarIntegrationService
+WatchPartyManager o-- NotificationService
+NotificationService o-- UserNotification
 WatchPartyManager o-- WatchParty
 WatchPartyManager o-- AutoWatchPartyScheduler
 AutoWatchPartyScheduler o-- LeaguepediaClient
@@ -282,8 +335,6 @@ RankingService o-- UserService
 RankingService o-- WatchPartyManager
 RewardService o-- UserService
 RewardService o-- RankingService
-ChatService o-- Chat
-ChatService o-- UserService
 QuizService o-- QuizGame
 
 @enduml

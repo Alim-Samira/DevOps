@@ -13,9 +13,15 @@ public class Match {
     private String streamUrl;
     private MatchState state;
     private String bestOf; // "BO1", "BO3", "BO5"
+    private String riotEventId;
 
     public Match(String id, String team1, String team2, LocalDateTime scheduledTime, 
                  String tournament, String streamUrl, String bestOf) {
+        this(id, team1, team2, scheduledTime, tournament, streamUrl, bestOf, null);
+    }
+
+    public Match(String id, String team1, String team2, LocalDateTime scheduledTime,
+                 String tournament, String streamUrl, String bestOf, String riotEventId) {
         this.id = id;
         this.team1 = team1;
         this.team2 = team2;
@@ -24,6 +30,7 @@ public class Match {
         this.streamUrl = streamUrl;
         this.bestOf = bestOf;
         this.state = MatchState.PRE_MATCH;
+        this.riotEventId = riotEventId;
     }
 
     public String getId() { return id; }
@@ -34,8 +41,14 @@ public class Match {
     public String getStreamUrl() { return streamUrl; }
     public MatchState getStatus() { return state; }
     public String getBestOf() { return bestOf; }
+    public String getRiotEventId() { return riotEventId; }
 
     public void setStatus(MatchState state) { this.state = state; }
+    public void setRiotEventId(String riotEventId) { this.riotEventId = riotEventId; }
+
+    public boolean isInProgress() {
+        return state == MatchState.IN_PROGRESS;
+    }
 
     public boolean isFinished() {
         return state == MatchState.FINISHED;

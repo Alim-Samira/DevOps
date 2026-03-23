@@ -1,0 +1,109 @@
+@startuml
+left to right direction
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+
+title Feature Calendrier - Diagramme de classes
+
+abstract class Calendar {
+  - String id
+  - String user
+  - CalendarProviderType type
+  + getId() : String
+  + getUser() : String
+  + getType() : CalendarProviderType
+}
+
+class IcalCalendar {
+  - String sourceUrl
+  + getSourceUrl() : String
+}
+
+class GoogleCalendar {
+  - String calendarId
+  - String oauthAccessToken
+  + getCalendarId() : String
+  + getOauthAccessToken() : String
+}
+
+class CalendarEvent {
+  - String title
+  - LocalDateTime start
+  - LocalDateTime end
+  - String description
+}
+
+class CalendarConnectionRequest {
+  - String provider
+  - String label
+  - String sourceUrl
+  - String oauthAccessToken
+  - String externalCalendarId
+}
+
+enum CalendarProviderType {
+  ICAL
+  GOOGLE
+}
+
+class CalendarIntegrationService {
+  - Map<String, List<Calendar>> connectionsByUser
+  + supportedProviders() : List<Map<String, Object>>
+  + connect(String, CalendarConnectionRequest) : Calendar
+  + getConnectionsForUser(String) : List<Calendar>
+  + removeConnection(String, String) : boolean
+  + getEventsForCalendar(String, String, LocalDateTime, LocalDateTime) : List<CalendarEvent>
+  + createGoogleCalendarEvent(String, String, CalendarEvent) : Map<String, Object>
+  + checkAvailability(String, LocalDateTime, LocalDateTime) : boolean
+  + canAttendWatchParty(String, LocalDateTime, LocalDateTime) : boolean
+}
+
+class CalendarController {
+  + getProviders()
+  + connect(String, CalendarConnectionRequest)
+  + getUserConnections(String)
+  + deleteConnection(String, String)
+  + getEvents(String, String, String, String)
+  + createEvent(String, String, CalendarEvent)
+  + checkAvailability(String, String, String)
+}
+
+class IcalEventProvider {
+  - cache : Map<String, CachedCalendarData>
+  + fetchEventsFromUrl(String) : List<CalendarEvent>
+  + fetchEventsFromUrl(String, LocalDateTime) : List<CalendarEvent>
+  + getEventsInTimeRange(List<CalendarEvent>, LocalDateTime, LocalDateTime) : List<CalendarEvent>
+  + isAvailable(List<CalendarEvent>, LocalDateTime, LocalDateTime) : boolean
+}
+
+Calendar <|-- IcalCalendar
+Calendar <|-- GoogleCalendar
+Calendar o-- CalendarProviderType
+
+CalendarIntegrationService --> CalendarConnectionRequest : utilise pour connecter
+CalendarIntegrationService --> Calendar : stocke et retourne
+CalendarIntegrationService --> CalendarEvent : manipule
+CalendarIntegrationService --> IcalEventProvider : lit les flux .ics
+
+CalendarController --> CalendarIntegrationService : expose l'API REST
+
+IcalEventProvider --> CalendarEvent : construit
+GoogleCalendar ..> CalendarEvent : cree dans Google
+
+note right of CalendarIntegrationService
+  Service central de la feature.
+  Il orchestre:
+  - la connexion des calendriers
+  - la lecture des evenements ICAL
+  - la creation d'evenements Google
+  - la verification de disponibilite
+end note
+
+note bottom of IcalEventProvider
+  Provider utilitaire statique.
+  Parse les fichiers .ics
+  et met en cache les evenements
+  pendant 30 minutes.
+end note
+
+@enduml

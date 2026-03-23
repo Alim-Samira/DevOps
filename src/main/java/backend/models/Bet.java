@@ -32,8 +32,9 @@ public abstract class Bet {
      * Constructeur protégé - utiliser les factory methods des sous-classes
      */
     protected Bet(String question, User creator, WatchParty watchParty, LocalDateTime votingEndTime) {
-        if (!creator.isAdmin()) {
-            throw new IllegalArgumentException("Seuls les admins peuvent créer des paris");
+        // Use WatchParty helper to decide authorization (creator preferred, fallback to global admin)
+        if (!watchParty.isAdmin(creator)) {
+            throw new IllegalArgumentException("Seuls le créateur de la watchparty ou les admins globaux peuvent créer des paris");
         }
         this.question = question;
         this.creator = creator;
@@ -100,6 +101,11 @@ public abstract class Bet {
     public boolean isVotingOpen() {
         return state == State.VOTING && LocalDateTime.now().isBefore(votingEndTime);
     }
+
+    public boolean isResolved() {
+        return state == State.RESOLVED;
+    }
+    
     
     /**
      * Calcule le pot total
@@ -168,37 +174,27 @@ public abstract class Bet {
     }
 
     protected boolean hasSufficientPoints(User user, int points) {
-        if (isPublic) {
-            return user.getPublicPoints() >= points;
-        }
+        // Always use WatchParty-specific points
+        // Rankings for public WPs sum these same points, ensuring consistency
         return user.getPointsForWatchParty(watchPartyName) >= points;
     }
 
     protected void debitUserPoints(User user, int points) {
-        if (isPublic) {
-            user.addPublicPoints(-points);
-        } else {
-            user.addPointsForWatchParty(watchPartyName, -points);
-        }
+        // Always debit from WatchParty-specific points
+        user.addPointsForWatchParty(watchPartyName, -points);
     }
 
     protected void creditUserPoints(User user, int points) {
-        if (isPublic) {
-            user.addPublicPoints(points);
-        } else {
-            user.addPointsForWatchParty(watchPartyName, points);
-        }
+        // Always credit to WatchParty-specific points
+        user.addPointsForWatchParty(watchPartyName, points);
     }
 
     /**
-     * Enregistre une victoire pour l'utilisateur selon le type de watchparty.
+     * Enregistre une victoire pour l'utilisateur dans la WP spécifique.
      */
     protected void recordWin(User user) {
-        if (isPublic) {
-            user.addPublicWin();
-        } else {
-            user.addWinForWatchParty(watchPartyName);
-        }
+        // Always record win for the specific watch party
+        user.addWinForWatchParty(watchPartyName);
     }
     
     // Getters

@@ -64,9 +64,84 @@ Trouver les bonnes récompenses à offrir pour satisfaire les utilisateurs
 ### Ce que ça fait :
 L’application est directement connectée à une API spécialisée dans les compétitions de _League of Legends_. Elle récupère automatiquement les matchs à venir et crée les watchparties correspondantes. Cette automatisation permet d’assurer une synchronisation totale entre l’événement réel et la plateforme, sans intervention manuelle. Les utilisateurs peuvent ainsi suivre les matchs en temps réel et interagir dès qu’un nouvel événement est détecté.
 
+## Calendrier
+### Ce que ça fait :
+La nouvelle fonctionnalité calendrier permet de connecter un calendrier utilisateur, de lire ses événements et, selon le provider, d’ajouter de nouveaux événements. Elle sert aussi à interagir avec les watchparties.
+
+Lorsqu’une watchparty est planifiée, l’application peut vérifier les calendriers connectés des participants. Si un utilisateur est libre sur le créneau concerné, une notification lui est envoyée pour lui proposer une participation en présentiel.
+
+Deux providers sont actuellement supportés :
+- `ICAL` pour connecter un agenda à partir d’un lien public `.ics`
+- `GOOGLE` pour créer des événements dans Google Calendar via OAuth
+
+### Diagramme de classe calendrier
+
+![Class Diagram Calendrier](calendar-class-diagram.png)
+
+## Connexion à l’API Riot
+### Ce que ça fait :
+En plus de la récupération des matchs à venir, l’application se connecte désormais à l’API Riot via les services `LolEsportsClient` et `LiveMatchMonitorService`.
+
+Cette intégration permet :
+- d’identifier plus précisément l’événement Riot correspondant à un match suivi
+- de récupérer l’identifiant de la partie en cours
+- de suivre le déroulement d’une game live en interrogeant régulièrement les données de fenêtre de jeu
+- d’alimenter la logique applicative en temps réel, notamment pour la surveillance des matchs et la résolution automatique de certains paris
+
+# Base de données
+## Technologie utilisée
+L’application utilise une base de données **PostgreSQL**, hébergée sur **Neon Cloud**. L’accès aux données est géré avec **Spring Data JPA** et Hibernate.
+
+## Ce qui est persisté
+La base de données permet de conserver les principales données métier de l’application, notamment :
+- les utilisateurs
+- les watchparties
+- les chats
+- les messages
+
+Les repositories principaux sont :
+- `UserRepository`
+- `WatchPartyRepository`
+
+## Intérêt dans le projet
+L’ajout de la base de données permet de ne plus dépendre uniquement du stockage en mémoire pour les entités principales. Les données importantes restent disponibles même après un redémarrage de l’application, ce qui rend la plateforme plus réaliste et plus robuste.
+
+## Limites actuelles
+Certaines données sont encore gérées en mémoire uniquement, notamment :
+- les connexions calendrier
+- les notifications
+- certains états temporaires liés au suivi temps réel
+Cela signifie qu’une partie des nouvelles fonctionnalités repose encore sur un stockage non persistant.
+
+# Front de test
+## Ce que c'est
+Le projet contient aussi un **frontend de test** en **HTML / CSS / JavaScript vanilla**, accessible directement à la racine de l’application Spring Boot.
+
+Il se trouve dans :
+- `src/main/resources/static/index.html`
+- `src/main/resources/static/styles.css`
+- `src/main/resources/static/app.js`
+
+## Son rôle
+Ce frontend sert de **prototype d’interface** pour tester rapidement les endpoints REST sans passer uniquement par Swagger.
+
+Il permet notamment de tester :
+- la création et la gestion des watchparties
+- les paris et leur résolution
+- les classements
+- le chat
+- les calendriers
+- les notifications
+
+## Intérêt dans le projet
+Ce front de test facilite les démonstrations et les validations fonctionnelles. Il permet de manipuler les principales features du projet depuis une interface simple, sans étape de build supplémentaire.
+
+## Accès
+Une fois l’application lancée avec `./gradlew bootRun`, l’interface est accessible à l’adresse :
+- `http://localhost:8080/`
+
 # Critères du Done
 Une fonctionnalité est considérée comme terminée lorsqu’elle dispose d’une API REST fonctionnelle, testée via des tests unitaires et d’intégration, validée par les outils d’analyse de qualité (sonarcloud).
 
 # Utilisation de l'IA
 L'IA a été utilisé afin de familiariser les développeurs avec les nouvelles technologies disponibles et employées. Par exemple lors de la compréhension et mise en place de l'API REST.
-
