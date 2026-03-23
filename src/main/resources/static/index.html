@@ -30,6 +30,11 @@
 
           <input id="wp-game" placeholder="Game (manual only)" style="display:none; width:160px; margin-left:6px" />
           <input id="wp-date" placeholder="Date ISO (manual only)" style="display:none; width:200px; margin-left:6px" />
+          <label id="wp-calendar-label" style="display:none; align-items:center; gap:4px;">
+            <input id="wp-add-calendar" type="checkbox" />
+            Ajouter a Google Calendar
+          </label>
+          <input id="wp-calendar-connection-id" placeholder="Connection ID Google (optionnel)" style="display:none; width:220px; margin-left:6px" />
 
           <button id="btn-create-wp">Créer</button>
         </div>
@@ -165,15 +170,18 @@
       </section>
 
       <section id="calendar-section" class="card">
-        <h2>Calendriers ICAL</h2>
+        <h2>Calendriers</h2>
         
         <div class="controls">
           <h3>Connecter un calendrier</h3>
           <input id="cal-user" placeholder="Username (ex: alice)" style="width: 150px;" />
           <select id="cal-provider" style="width: 120px;">
             <option value="ICAL">ICAL</option>
+            <option value="GOOGLE">GOOGLE</option>
           </select>
           <input id="cal-url" placeholder="URL ICAL" style="flex: 1;" />
+          <input id="cal-token" placeholder="OAuth access token Google" style="display:none; flex: 1;" />
+          <input id="cal-external-id" placeholder="Calendar ID Google (optionnel)" style="display:none; width: 220px;" />
           <button id="btn-connect-calendar">Connecter</button>
         </div>
 

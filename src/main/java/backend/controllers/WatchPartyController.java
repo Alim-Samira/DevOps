@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import backend.models.AutoType;
 import backend.models.User;
 import backend.models.WatchParty;
+import backend.services.CalendarIntegrationService;
 import backend.services.RankingService;
 import backend.services.UserService;
 import backend.services.WatchPartyManager;
@@ -33,12 +34,18 @@ public class WatchPartyController {
     private final WatchPartyManager manager;
     private final UserService userService;
     private final RankingService rankingService;
+    private final CalendarIntegrationService calendarIntegrationService;
 
     @Autowired
-    public WatchPartyController(WatchPartyManager manager, UserService userService, RankingService rankingService) {
+    public WatchPartyController(
+            WatchPartyManager manager,
+            UserService userService,
+            RankingService rankingService,
+            CalendarIntegrationService calendarIntegrationService) {
         this.manager = manager;
         this.userService = userService;
         this.rankingService = rankingService;
+        this.calendarIntegrationService = calendarIntegrationService;
     }
 
     // 1. GET (Read all)
@@ -179,6 +186,33 @@ public class WatchPartyController {
         return "✅ Message sent";
     }
 
+    @PostMapping("/{name}/calendar")
+    public Map<String, Object> addWatchPartyToCalendar(
+            @PathVariable("name") String name,
+            @RequestBody Map<String, String> payload) {
+        Map<String, Object> response = new java.util.HashMap<>();
+        String user = payload.get("user");
+        String connectionId = payload.get("connectionId");
+
+        WatchParty wp = manager.getWatchPartyByName(name);
+        if (wp == null) {
+            response.put("success", false);
+            response.put("error", "Watch party introuvable: " + name);
+            return response;
+        }
+
+        try {
+            Map<String, Object> createdEvent = calendarIntegrationService.addWatchPartyToGoogleCalendar(user, wp, connectionId);
+            response.put("success", true);
+            response.put("event", createdEvent);
+            return response;
+        } catch (Exception ex) {
+            response.put("success", false);
+            response.put("error", ex.getMessage());
+            return response;
+        }
+    }
+
     // Helpers
     private String createManualWatchParty(Map<String, String> payload, boolean isPublic) {
         String name = payload.get("name");
@@ -210,6 +244,21 @@ public class WatchPartyController {
             wp.setCreator(creator);
             userService.saveUser(creator);
         }
+
+        if (Boolean.parseBoolean(payload.getOrDefault("addToCalendar", "false"))) {
+            if (creator == null) {
+                return "❌ Impossible d'ajouter au calendrier sans utilisateur createur";
+            }
+            try {
+                calendarIntegrationService.addWatchPartyToGoogleCalendar(
+                        creator.getName(),
+                        wp,
+                        payload.get("calendarConnectionId"));
+            } catch (IllegalArgumentException ex) {
+                return "❌ Impossible d'ajouter au Google Calendar: " + ex.getMessage();
+            }
+        }
+
         manager.addWatchParty(wp);
         manager.planifyWatchParty(wp);
         

@@ -105,6 +105,26 @@ public class CalendarController {
         }
     }
 
+    @Operation(summary = "Create an event in a Google calendar")
+    @PostMapping("/users/{user}/calendars/{connectionId}/events")
+    public Map<String, Object> createEvent(
+            @PathVariable("user") String user,
+            @PathVariable("connectionId") String connectionId,
+            @RequestBody CalendarEvent event) {
+        try {
+            Map<String, Object> createdEvent = calendarIntegrationService.createGoogleCalendarEvent(user, connectionId, event);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("event", createdEvent);
+            return response;
+        } catch (Exception ex) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("error", ex.getMessage());
+            return response;
+        }
+    }
+
     @Operation(summary = "Check if a user is available during a time slot")
     @GetMapping("/users/{user}/availability")
     public Map<String, Object> checkAvailability(

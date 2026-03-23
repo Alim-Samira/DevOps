@@ -74,12 +74,16 @@ async function createWatchParty(){
   } else if (mode === 'PUBLIC') {
     const game = document.getElementById('wp-game').value || 'League of Legends';
     const date = document.getElementById('wp-date').value || '';
-    const payload = { name, game, date, user };
+    const addToCalendar = document.getElementById('wp-add-calendar').checked === true;
+    const calendarConnectionId = document.getElementById('wp-calendar-connection-id').value || '';
+    const payload = { name, game, date, user, addToCalendar, calendarConnectionId };
     res = await fetch('/api/watchparties/public',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
   } else { // PRIVATE
     const game = document.getElementById('wp-game').value || 'League of Legends';
     const date = document.getElementById('wp-date').value || '';
-    const payload = { name, game, date, user };
+    const addToCalendar = document.getElementById('wp-add-calendar').checked === true;
+    const calendarConnectionId = document.getElementById('wp-calendar-connection-id').value || '';
+    const payload = { name, game, date, user, addToCalendar, calendarConnectionId };
     res = await fetch('/api/watchparties/private',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
   }
 
@@ -376,17 +380,40 @@ function toggleWpMode(){
   const wpType = document.getElementById('wp-type');
   const wpGame = document.getElementById('wp-game');
   const wpDate = document.getElementById('wp-date');
+  const wpCalendarLabel = document.getElementById('wp-calendar-label');
+  const wpCalendarConnectionId = document.getElementById('wp-calendar-connection-id');
   const createBtn = document.getElementById('btn-create-wp');
   if (mode === 'AUTO') {
     wpType.style.display = '';
     wpGame.style.display = 'none';
     wpDate.style.display = 'none';
+    wpCalendarLabel.style.display = 'none';
+    wpCalendarConnectionId.style.display = 'none';
     createBtn.textContent = 'Créer (auto)';
   } else {
     wpType.style.display = 'none';
     wpGame.style.display = '';
     wpDate.style.display = '';
+    wpCalendarLabel.style.display = 'inline-flex';
+    wpCalendarConnectionId.style.display = '';
     createBtn.textContent = mode === 'PUBLIC' ? 'Créer (public)' : 'Créer (privé)';
+  }
+}
+
+function toggleCalendarProviderFields() {
+  const provider = document.getElementById('cal-provider').value;
+  const url = document.getElementById('cal-url');
+  const token = document.getElementById('cal-token');
+  const externalId = document.getElementById('cal-external-id');
+
+  if (provider === 'GOOGLE') {
+    url.style.display = 'none';
+    token.style.display = '';
+    externalId.style.display = '';
+  } else {
+    url.style.display = '';
+    token.style.display = 'none';
+    externalId.style.display = 'none';
   }
 }
 
@@ -396,14 +423,28 @@ async function connectCalendar() {
   const user = document.getElementById('cal-user').value.trim();
   const provider = document.getElementById('cal-provider').value;
   const url = document.getElementById('cal-url').value.trim();
+  const token = document.getElementById('cal-token').value.trim();
+  const externalCalendarId = document.getElementById('cal-external-id').value.trim();
 
-  if (!user || !url) {
-    log('Remplissez username et URL ICAL');
+  if (!user) {
+    log('Remplissez username');
+    return;
+  }
+
+  if (provider === 'GOOGLE' && !token) {
+    log('Remplissez le token OAuth Google');
+    return;
+  }
+
+  if (provider === 'ICAL' && !url) {
+    log('Remplissez l URL ICAL');
     return;
   }
 
   try {
-    const payload = { provider, sourceUrl: url };
+    const payload = provider === 'GOOGLE'
+      ? { provider, oauthAccessToken: token, externalCalendarId }
+      : { provider, sourceUrl: url };
     const res = await fetch(`/api/users/${encodeURIComponent(user)}/calendars`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -436,7 +477,10 @@ async function listCalendars() {
     }
     calendars.forEach(cal => {
       const li = document.createElement('li');
-      li.textContent = `${cal.id} - ${cal.type} (${cal.sourceUrl})`;
+      const details = cal.type === 'GOOGLE'
+        ? (cal.calendarId || 'primary')
+        : cal.sourceUrl;
+      li.textContent = `${cal.id} - ${cal.type} (${details})`;
       list.appendChild(li);
     });
     log(`Calendriers de ${user} listés`);
@@ -545,6 +589,7 @@ function bind(){
   document.getElementById('btn-refresh-wp-rank').onclick = refreshWatchPartyRanking;
   document.getElementById('bet-wp').onchange = () => { refreshWatchPartyRanking(); setWpAdminFromSelector(); updateChatWPSelector(); };
   document.getElementById('wp-mode').onchange = toggleWpMode;
+  document.getElementById('cal-provider').onchange = toggleCalendarProviderFields;
   document.getElementById('btn-lookup-user').onclick = lookupUser;
   document.getElementById('btn-load-chat').onclick = loadWatchPartyChat;
   document.getElementById('btn-send-chat').onclick = sendChatMessage;
@@ -559,4 +604,4 @@ function bind(){
   document.getElementById('btn-load-notifications').onclick = loadNotifications;
 }
 
-window.addEventListener('DOMContentLoaded', async () => { bind(); toggleWpMode(); await refreshWatchParties(); updateChatWPSelector(); await refreshRankings(); await refreshWatchPartyRanking(); log('UI ready'); });
+window.addEventListener('DOMContentLoaded', async () => { bind(); toggleWpMode(); toggleCalendarProviderFields(); await refreshWatchParties(); updateChatWPSelector(); await refreshRankings(); await refreshWatchPartyRanking(); log('UI ready'); });
