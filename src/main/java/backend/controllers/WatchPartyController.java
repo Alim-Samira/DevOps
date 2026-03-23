@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,7 +17,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import backend.models.AutoType;
-import backend.models.Message;
 import backend.models.User;
 import backend.models.WatchParty;
 import backend.services.RankingService;
@@ -136,10 +136,17 @@ public class WatchPartyController {
     // 6. CHAT for a watchparty
     @GetMapping("/{name}/chat")
     @Transactional(readOnly = true)
-    public List<Message> getWatchPartyChat(@PathVariable("name") String name) {
+    public List<ChatMessageResponse> getWatchPartyChat(@PathVariable("name") String name) {
         WatchParty wp = manager.getWatchPartyByName(name);
         if (wp == null) return List.of();
-        return wp.getChat().getMessages();
+        return wp.getChat().getMessages().stream()
+            .filter(Objects::nonNull)
+            .map(message -> new ChatMessageResponse(
+                message.getId(),
+                message.getSender() != null ? message.getSender().getName() : "System",
+                message.getContent(),
+                message.getTimestamp()))
+            .toList();
     }
 
     @PostMapping("/{name}/chat")
@@ -168,6 +175,7 @@ public class WatchPartyController {
         }
 
         wp.getChat().sendMessage(sender, text);
+        manager.saveWatchParty(wp);
         return "✅ Message sent";
     }
 
@@ -212,4 +220,6 @@ public class WatchPartyController {
         
         return (isPublic ? "✅ Public" : "✅ Private") + " watchparty created: " + name;
     }
+
+    public record ChatMessageResponse(Long id, String senderName, String content, String timestamp) {}
 }
