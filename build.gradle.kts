@@ -11,7 +11,7 @@ plugins {
 }
 
 group = "com.devops"
-version = "1.0-alpha"
+version = "2.0"
 
 repositories {
     mavenCentral()
