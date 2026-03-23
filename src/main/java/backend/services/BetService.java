@@ -1,10 +1,10 @@
 package backend.services;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.ThreadLocalRandom;
 
 import org.springframework.stereotype.Service;
 
@@ -21,6 +21,7 @@ import backend.models.WatchParty;
 public class BetService {
 
     private static final double BONUS_IN_OR_OUT_TICKET_CHANCE = 0.10;
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private static final String ADMIN_REQUIRED_ERROR = "❌ Seuls les admins peuvent créer des paris";
     private static final String WATCH_PARTY_NOT_FOUND = "❌ Watch party introuvable: ";
     private static final String ACTIVE_BET_EXISTS = "❌ Un pari est déjà actif pour cette watch party";
@@ -254,7 +255,7 @@ public class BetService {
         TicketType ticketType = getTicketTypeForBet(bet);
         for (User winner : bet.getLastWinners()) {
             wp.grantTicket(winner, ticketType);
-            if (ThreadLocalRandom.current().nextDouble() < BONUS_IN_OR_OUT_TICKET_CHANCE) {
+            if (SECURE_RANDOM.nextDouble() < BONUS_IN_OR_OUT_TICKET_CHANCE) {
                 wp.grantTicket(winner, TicketType.IN_OR_OUT);
             }
         }
