@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -111,6 +112,14 @@ class ControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("alice"));
     }
+
+        @Test
+        @DisplayName("GET /api/users/{username}/notifications should return notifications list")
+        void testGetUserNotifications() throws Exception {
+                mockMvc.perform(get("/api/users/alice/notifications"))
+                                .andExpect(status().isOk())
+                                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+        }
 
     // ==================== WATCHPARTY CONTROLLER TESTS ====================
 
@@ -347,6 +356,152 @@ class ControllerIntegrationTest {
         mockMvc.perform(get("/api/watchparties/CreatorBetWP/bets"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.state").value("PENDING"));
+    }
+
+    // ==================== CALENDAR CONTROLLER TESTS ====================
+
+    @Test
+    @DisplayName("GET /api/calendars/providers should return supported providers")
+    void testGetCalendarProviders() throws Exception {
+        mockMvc.perform(get("/api/calendars/providers"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$[0].provider").exists());
+    }
+
+    @Test
+    @DisplayName("POST /api/users/{user}/calendars should connect ICAL calendar")
+    void testConnectIcsCalendar() throws Exception {
+        mockMvc.perform(post("/api/users/alice/calendars")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"provider\":\"ICAL\",\"label\":\"Mon agenda\",\"sourceUrl\":\"https://example.com/my.ics\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.connection.type").value("ICAL"));
+
+        mockMvc.perform(get("/api/users/alice/calendars"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].type").value("ICAL"));
+    }
+
+    @Test
+    @DisplayName("POST /api/users/{user}/calendars should reject invalid payload")
+    void testConnectCalendarInvalidPayload() throws Exception {
+        mockMvc.perform(post("/api/users/bob/calendars")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"provider\":\"ICAL\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error").exists());
+    }
+
+    @Test
+    @DisplayName("POST /api/users/{user}/calendars should connect Google calendar")
+    void testConnectGoogleCalendar() throws Exception {
+        mockMvc.perform(post("/api/users/gina/calendars")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"provider\":\"GOOGLE\",\"oauthAccessToken\":\"fake-token\",\"externalCalendarId\":\"primary\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.connection.type").value("GOOGLE"))
+                .andExpect(jsonPath("$.connection.calendarId").value("primary"));
+
+        mockMvc.perform(get("/api/users/gina/calendars"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].type").value("GOOGLE"))
+                .andExpect(jsonPath("$[0].calendarId").value("primary"));
+    }
+
+    @Test
+    @DisplayName("DELETE /api/users/{user}/calendars/{connectionId} should remove connection")
+    void testDeleteCalendarConnection() throws Exception {
+        String response = mockMvc.perform(post("/api/users/carol/calendars")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"provider\":\"ICAL\",\"sourceUrl\":\"https://example.com/carol.ics\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String connectionId = response.split("\\\"id\\\":\\\"")[1].split("\\\"")[0];
+
+        mockMvc.perform(delete("/api/users/carol/calendars/" + connectionId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+    }
+
+    @Test
+    @DisplayName("GET /api/users/{user}/calendars/{connectionId}/events should return events in time range")
+    void testGetEventsInTimeRange() throws Exception {
+        // Connect a calendar first
+        String response = mockMvc.perform(post("/api/users/david/calendars")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"provider\":\"ICAL\",\"sourceUrl\":\"https://example.com/david.ics\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        String connectionId = response.split("\\\"id\\\":\\\"")[1].split("\\\"")[0];
+
+        // Try to get events (this will fail for invalid URLs, which is expected)
+        mockMvc.perform(get("/api/users/david/calendars/" + connectionId + "/events")
+                .param("start", "2026-02-23T09:00:00")
+                .param("end", "2026-02-23T10:00:00"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("GET /api/users/{user}/availability should check if user is available")
+    void testCheckUserAvailability() throws Exception {
+        // Connect a calendar first
+        mockMvc.perform(post("/api/users/eve/calendars")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"provider\":\"ICAL\",\"sourceUrl\":\"https://example.com/eve.ics\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        // Check availability for a time slot
+        mockMvc.perform(get("/api/users/eve/availability")
+                .param("start", "2026-02-23T09:00:00")
+                .param("end", "2026-02-23T10:00:00"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user").value("eve"))
+                .andExpect(jsonPath("$.available").exists());
+    }
+
+    @Test
+    @DisplayName("POST /api/users/{user}/calendars/{connectionId}/events should fail if Google calendar does not exist")
+    void testCreateGoogleCalendarEventWithoutConnection() throws Exception {
+        mockMvc.perform(post("/api/users/harry/calendars/missing-connection/events")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\":\"WatchParty\",\"start\":\"2026-04-08T20:00:00\",\"end\":\"2026-04-08T22:00:00\",\"description\":\"LoL finals\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error").exists());
+    }
+
+    @Test
+    @DisplayName("POST /api/watchparties/{name}/calendar should fail if watch party does not exist")
+    void testAddWatchPartyToCalendarMissingWatchParty() throws Exception {
+        mockMvc.perform(post("/api/watchparties/UnknownCalendarWP/calendar")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"user\":\"alice\",\"connectionId\":\"missing-google\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error").value("Watch party introuvable: UnknownCalendarWP"));
+    }
+
+    @Test
+    @DisplayName("POST /api/watchparties/public with addToCalendar should fail when user is missing")
+    void testCreateWatchPartyWithCalendarButWithoutCreator() throws Exception {
+        mockMvc.perform(post("/api/watchparties/public")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"CalendarNoUserWP\",\"game\":\"LoL\",\"date\":\"2026-04-09T20:00:00\",\"addToCalendar\":\"true\"}"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("❌ Impossible d'ajouter au calendrier sans utilisateur createur"));
     }
 
 }

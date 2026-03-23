@@ -30,6 +30,11 @@
 
           <input id="wp-game" placeholder="Game (manual only)" style="display:none; width:160px; margin-left:6px" />
           <input id="wp-date" placeholder="Date ISO (manual only)" style="display:none; width:200px; margin-left:6px" />
+          <label id="wp-calendar-label" style="display:none; align-items:center; gap:4px;">
+            <input id="wp-add-calendar" type="checkbox" />
+            Ajouter a Google Calendar
+          </label>
+          <input id="wp-calendar-connection-id" placeholder="Connection ID Google (optionnel)" style="display:none; width:220px; margin-left:6px" />
 
           <button id="btn-create-wp">Créer</button>
         </div>
@@ -161,6 +166,58 @@
           <input id="chat-user" placeholder="username" style="width: 120px;" />
           <input id="chat-text" placeholder="Votre message..." style="flex: 1;" />
           <button id="btn-send-chat">Envoyer</button>
+        </div>
+      </section>
+
+      <section id="calendar-section" class="card">
+        <h2>Calendriers</h2>
+        
+        <div class="controls">
+          <h3>Connecter un calendrier</h3>
+          <input id="cal-user" placeholder="Username (ex: alice)" style="width: 150px;" />
+          <select id="cal-provider" style="width: 120px;">
+            <option value="ICAL">ICAL</option>
+            <option value="GOOGLE">GOOGLE</option>
+          </select>
+          <input id="cal-url" placeholder="URL ICAL" style="flex: 1;" />
+          <input id="cal-token" placeholder="OAuth access token Google" style="display:none; flex: 1;" />
+          <input id="cal-external-id" placeholder="Calendar ID Google (optionnel)" style="display:none; width: 220px;" />
+          <button id="btn-connect-calendar">Connecter</button>
+        </div>
+
+        <div class="controls">
+          <h3>Calendriers connectés</h3>
+          <input id="cal-list-user" placeholder="Username" style="width: 150px;" />
+          <button id="btn-list-calendars">Lister</button>
+          <ul id="cal-list" style="margin-top: 10px;"></ul>
+        </div>
+
+        <div class="controls">
+          <h3>Supprimer une connexion</h3>
+          <input id="cal-delete-user" placeholder="Username" style="width: 150px;" />
+          <input id="cal-connection-id" placeholder="Connection ID" style="width: 150px;" />
+          <button id="btn-delete-calendar">Supprimer</button>
+        </div>
+
+        <div class="controls">
+          <h3>Événements du calendrier</h3>
+          <input id="cal-events-user" placeholder="Username" style="width: 150px;" />
+          <input id="cal-events-connection-id" placeholder="Connection ID" style="width: 150px;" />
+          <input id="cal-events-start" placeholder="Start (ISO datetime)" value="2026-03-21T00:00:00" style="width: 180px;" />
+          <input id="cal-events-end" placeholder="End (ISO datetime)" value="2026-03-22T23:59:59" style="width: 180px;" />
+          <button id="btn-get-events">Voir événements</button>
+          <pre id="cal-events-result" class="mono" style="margin-top: 10px; max-height: 200px; overflow-y: auto;"></pre>
+        </div>
+      </section>
+
+      <section id="notification-section" class="card">
+        <h2>Notifications</h2>
+        
+        <div class="controls">
+          <h3>Voir les notifications</h3>
+          <input id="notif-user" placeholder="Username (ex: alice)" style="width: 150px;" />
+          <button id="btn-load-notifications">Charger les notifications</button>
+          <ul id="notif-list" style="margin-top: 10px;"></ul>
         </div>
       </section>
 

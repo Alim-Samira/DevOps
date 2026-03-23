@@ -74,12 +74,16 @@ async function createWatchParty(){
   } else if (mode === 'PUBLIC') {
     const game = document.getElementById('wp-game').value || 'League of Legends';
     const date = document.getElementById('wp-date').value || '';
-    const payload = { name, game, date, user };
+    const addToCalendar = document.getElementById('wp-add-calendar').checked === true;
+    const calendarConnectionId = document.getElementById('wp-calendar-connection-id').value || '';
+    const payload = { name, game, date, user, addToCalendar, calendarConnectionId };
     res = await fetch('/api/watchparties/public',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
   } else { // PRIVATE
     const game = document.getElementById('wp-game').value || 'League of Legends';
     const date = document.getElementById('wp-date').value || '';
-    const payload = { name, game, date, user };
+    const addToCalendar = document.getElementById('wp-add-calendar').checked === true;
+    const calendarConnectionId = document.getElementById('wp-calendar-connection-id').value || '';
+    const payload = { name, game, date, user, addToCalendar, calendarConnectionId };
     res = await fetch('/api/watchparties/private',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
   }
 
@@ -330,7 +334,7 @@ async function loadWatchPartyChat() {
     }
     container.innerHTML = messages.map(m => 
       `<div style="margin-bottom: 8px; padding: 6px; background: #e8f0ff; border-radius: 3px; border-left: 3px solid #007bff; color: #000;">
-        <strong style="color: #0056b3;">${escapeHtml(m.sender?.name || 'System')}</strong>: <span style="color: #222;">${escapeHtml(m.content || m.text)}</span><br/>
+        <strong style="color: #0056b3;">${escapeHtml(m.senderName || m.sender?.name || 'System')}</strong>: <span style="color: #222;">${escapeHtml(m.content || m.text)}</span><br/>
         <small style="color: #666;">${m.timestamp || ''}</small>
       </div>`
     ).join('');
@@ -376,17 +380,193 @@ function toggleWpMode(){
   const wpType = document.getElementById('wp-type');
   const wpGame = document.getElementById('wp-game');
   const wpDate = document.getElementById('wp-date');
+  const wpCalendarLabel = document.getElementById('wp-calendar-label');
+  const wpCalendarConnectionId = document.getElementById('wp-calendar-connection-id');
   const createBtn = document.getElementById('btn-create-wp');
   if (mode === 'AUTO') {
     wpType.style.display = '';
     wpGame.style.display = 'none';
     wpDate.style.display = 'none';
+    wpCalendarLabel.style.display = 'none';
+    wpCalendarConnectionId.style.display = 'none';
     createBtn.textContent = 'Créer (auto)';
   } else {
     wpType.style.display = 'none';
     wpGame.style.display = '';
     wpDate.style.display = '';
+    wpCalendarLabel.style.display = 'inline-flex';
+    wpCalendarConnectionId.style.display = '';
     createBtn.textContent = mode === 'PUBLIC' ? 'Créer (public)' : 'Créer (privé)';
+  }
+}
+
+function toggleCalendarProviderFields() {
+  const provider = document.getElementById('cal-provider').value;
+  const url = document.getElementById('cal-url');
+  const token = document.getElementById('cal-token');
+  const externalId = document.getElementById('cal-external-id');
+
+  if (provider === 'GOOGLE') {
+    url.style.display = 'none';
+    token.style.display = '';
+    externalId.style.display = '';
+  } else {
+    url.style.display = '';
+    token.style.display = 'none';
+    externalId.style.display = 'none';
+  }
+}
+
+// === Calendar Functions ===
+
+async function connectCalendar() {
+  const user = document.getElementById('cal-user').value.trim();
+  const provider = document.getElementById('cal-provider').value;
+  const url = document.getElementById('cal-url').value.trim();
+  const token = document.getElementById('cal-token').value.trim();
+  const externalCalendarId = document.getElementById('cal-external-id').value.trim();
+
+  if (!user) {
+    log('Remplissez username');
+    return;
+  }
+
+  if (provider === 'GOOGLE' && !token) {
+    log('Remplissez le token OAuth Google');
+    return;
+  }
+
+  if (provider === 'ICAL' && !url) {
+    log('Remplissez l URL ICAL');
+    return;
+  }
+
+  try {
+    const payload = provider === 'GOOGLE'
+      ? { provider, oauthAccessToken: token, externalCalendarId }
+      : { provider, sourceUrl: url };
+    const res = await fetch(`/api/users/${encodeURIComponent(user)}/calendars`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const result = await res.json();
+    log('Connect Calendar → ' + JSON.stringify(result));
+    if (result.success) {
+      await listCalendars();
+    }
+  } catch(e) {
+    log('Erreur connexion calendar: ' + e);
+  }
+}
+
+async function listCalendars() {
+  const user = document.getElementById('cal-list-user').value.trim();
+  if (!user) {
+    log('Remplissez username');
+    return;
+  }
+
+  try {
+    const calendars = await fetchJson(`/api/users/${encodeURIComponent(user)}/calendars`);
+    const list = document.getElementById('cal-list');
+    list.innerHTML = '';
+    if (!calendars || calendars.length === 0) {
+      list.innerHTML = '<li style="color: #999;">Aucun calendrier connecté</li>';
+      return;
+    }
+    calendars.forEach(cal => {
+      const li = document.createElement('li');
+      const details = cal.type === 'GOOGLE'
+        ? (cal.calendarId || 'primary')
+        : cal.sourceUrl;
+      li.textContent = `${cal.id} - ${cal.type} (${details})`;
+      list.appendChild(li);
+    });
+    log(`Calendriers de ${user} listés`);
+  } catch(e) {
+    log('Erreur list calendars: ' + e);
+  }
+}
+
+async function deleteCalendar() {
+  const user = document.getElementById('cal-delete-user').value.trim();
+  const connectionId = document.getElementById('cal-connection-id').value.trim();
+
+  if (!user || !connectionId) {
+    log('Remplissez username et connection ID');
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/users/${encodeURIComponent(user)}/calendars/${encodeURIComponent(connectionId)}`, {
+      method: 'DELETE'
+    });
+    const result = await res.json();
+    log('Delete Calendar → ' + JSON.stringify(result));
+    if (result.success) {
+      await listCalendars();
+    }
+  } catch(e) {
+    log('Erreur suppression calendar: ' + e);
+  }
+}
+
+async function getCalendarEvents() {
+  const user = document.getElementById('cal-events-user').value.trim();
+  const connectionId = document.getElementById('cal-events-connection-id').value.trim();
+  const start = document.getElementById('cal-events-start').value;
+  const end = document.getElementById('cal-events-end').value;
+
+  if (!user || !connectionId || !start || !end) {
+    log('Remplissez tous les champs');
+    return;
+  }
+
+  try {
+    const result = await fetchJson(`/api/users/${encodeURIComponent(user)}/calendars/${encodeURIComponent(connectionId)}/events?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`);
+    const resultEl = document.getElementById('cal-events-result');
+    if (result.success) {
+      resultEl.textContent = JSON.stringify(result.events, null, 2);
+      log(`Événements récupérés: ${result.count}`);
+    } else {
+      resultEl.textContent = 'Erreur: ' + JSON.stringify(result);
+    }
+  } catch(e) {
+    log('Erreur récupération événements: ' + e);
+    document.getElementById('cal-events-result').textContent = 'Erreur: ' + e;
+  }
+}
+
+async function loadNotifications() {
+  const user = document.getElementById('notif-user').value.trim();
+  if (!user) {
+    log('Remplissez username');
+    return;
+  }
+
+  try {
+    const notifications = await fetchJson(`/api/users/${encodeURIComponent(user)}/notifications`);
+    const list = document.getElementById('notif-list');
+    list.innerHTML = '';
+    if (!notifications || notifications.length === 0) {
+      list.innerHTML = '<li style="color: #999;">Aucune notification</li>';
+      return;
+    }
+    notifications.forEach(notif => {
+      const li = document.createElement('li');
+      li.style.cssText = 'margin-bottom: 10px; padding: 8px; background: #f0f8ff; border-left: 3px solid #007bff; border-radius: 3px;';
+      li.innerHTML = `
+        <strong>${escapeHtml(notif.title)}</strong><br/>
+        <span style="color: #555;">${escapeHtml(notif.message)}</span><br/>
+        <small style="color: #888;">${notif.createdAt ? new Date(notif.createdAt).toLocaleString('fr-FR') : ''}</small>
+        ${notif.watchPartyName ? `<br/><em>WatchParty: ${escapeHtml(notif.watchPartyName)}</em>` : ''}
+      `;
+      list.appendChild(li);
+    });
+    log(`Notifications de ${user} chargées (${notifications.length})`);
+  } catch(e) {
+    log('Erreur chargement notifications: ' + e);
   }
 }
 
@@ -409,9 +589,19 @@ function bind(){
   document.getElementById('btn-refresh-wp-rank').onclick = refreshWatchPartyRanking;
   document.getElementById('bet-wp').onchange = () => { refreshWatchPartyRanking(); setWpAdminFromSelector(); updateChatWPSelector(); };
   document.getElementById('wp-mode').onchange = toggleWpMode;
+  document.getElementById('cal-provider').onchange = toggleCalendarProviderFields;
   document.getElementById('btn-lookup-user').onclick = lookupUser;
   document.getElementById('btn-load-chat').onclick = loadWatchPartyChat;
   document.getElementById('btn-send-chat').onclick = sendChatMessage;
+
+  // Calendar bindings
+  document.getElementById('btn-connect-calendar').onclick = connectCalendar;
+  document.getElementById('btn-list-calendars').onclick = listCalendars;
+  document.getElementById('btn-delete-calendar').onclick = deleteCalendar;
+  document.getElementById('btn-get-events').onclick = getCalendarEvents;
+
+  // Notification bindings
+  document.getElementById('btn-load-notifications').onclick = loadNotifications;
 }
 
-window.addEventListener('DOMContentLoaded', async () => { bind(); toggleWpMode(); await refreshWatchParties(); updateChatWPSelector(); await refreshRankings(); await refreshWatchPartyRanking(); log('UI ready'); });
+window.addEventListener('DOMContentLoaded', async () => { bind(); toggleWpMode(); toggleCalendarProviderFields(); await refreshWatchParties(); updateChatWPSelector(); await refreshRankings(); await refreshWatchPartyRanking(); log('UI ready'); });

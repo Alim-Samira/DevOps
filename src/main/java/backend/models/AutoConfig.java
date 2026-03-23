@@ -1,14 +1,21 @@
 package backend.models;
-import java.time.LocalDateTime;
 
-/**
- * Configuration for automatic watch party management
- */
+import java.time.LocalDateTime;
+import jakarta.persistence.Embeddable;
+import jakarta.persistence.Transient;
+
+@Embeddable
 public class AutoConfig {
+
     private AutoType type;
-    private String target; // Team name or tournament name
-    private Match currentMatch; // The current or upcoming match
+    private String target;
+
+    @Transient
+    private Match currentMatch;
+
     private LocalDateTime lastChecked;
+
+    public AutoConfig() {}
 
     public AutoConfig(AutoType type, String target) {
         this.type = type;
@@ -22,8 +29,8 @@ public class AutoConfig {
     public Match getCurrentMatch() { return currentMatch; }
     public LocalDateTime getLastChecked() { return lastChecked; }
 
-    public void setCurrentMatch(Match match) { 
-        this.currentMatch = match; 
+    public void setCurrentMatch(Match match) {
+        this.currentMatch = match;
     }
 
     public void updateLastChecked() {
@@ -40,7 +47,7 @@ public class AutoConfig {
 
     @Override
     public String toString() {
-        return String.format("%s: %s (Last checked: %s)", 
+        return String.format("%s: %s (Last checked: %s)",
             type, target, lastChecked);
     }
 }

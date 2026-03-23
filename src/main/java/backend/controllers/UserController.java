@@ -1,7 +1,6 @@
 package backend.controllers;
 
 import java.util.List;
-import java.util.Map;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -11,6 +10,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import backend.models.User;
+import backend.models.UserCreateRequest;
+import backend.models.UserNotification;
+import backend.services.NotificationService;
 import backend.services.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -21,10 +23,12 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class UserController {
 
     private final UserService userService;
+    private final NotificationService notificationService;
     private final backend.services.RankingService rankingService;
 
-    public UserController(UserService userService, backend.services.RankingService rankingService) {
+    public UserController(UserService userService, NotificationService notificationService, backend.services.RankingService rankingService) {
         this.userService = userService;
+        this.notificationService = notificationService;
         this.rankingService = rankingService;
     }
 
@@ -56,12 +60,18 @@ public class UserController {
 
     @Operation(summary = "Register/Reset User", description = "Resets a user to 200 points or creates them.")
     @PostMapping
-    public User createUser(@RequestBody Map<String, String> payload) {
-        String username = payload.get("username");
+    public User createUser(@RequestBody UserCreateRequest payload) {
+        String username = payload.getName();
         if(username == null) return null;
         
         // Since your UserService.getUser() creates one if missing, 
         // we can just call that.
         return userService.getUser(username);
+    }
+
+    @Operation(summary = "Get user notifications")
+    @GetMapping("/{username}/notifications")
+    public List<UserNotification> getNotifications(@PathVariable("username") String username) {
+        return notificationService.getNotifications(username);
     }
 }

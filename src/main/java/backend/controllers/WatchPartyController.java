@@ -4,8 +4,10 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,9 +17,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import backend.models.AutoType;
-import backend.models.Message;
 import backend.models.User;
 import backend.models.WatchParty;
+import backend.services.CalendarIntegrationService;
 import backend.services.RankingService;
 import backend.services.UserService;
 import backend.services.WatchPartyManager;
@@ -32,12 +34,18 @@ public class WatchPartyController {
     private final WatchPartyManager manager;
     private final UserService userService;
     private final RankingService rankingService;
+    private final CalendarIntegrationService calendarIntegrationService;
 
     @Autowired
-    public WatchPartyController(WatchPartyManager manager, UserService userService, RankingService rankingService) {
+    public WatchPartyController(
+            WatchPartyManager manager,
+            UserService userService,
+            RankingService rankingService,
+            CalendarIntegrationService calendarIntegrationService) {
         this.manager = manager;
         this.userService = userService;
         this.rankingService = rankingService;
+        this.calendarIntegrationService = calendarIntegrationService;
     }
 
     // 1. GET (Read all)
@@ -98,10 +106,19 @@ public class WatchPartyController {
         if (userName == null || userName.isBlank()) return "❌ Missing user";
         WatchParty wp = manager.getWatchPartyByName(name);
         if (wp == null) return "❌ WatchParty introuvable: " + name;
-        boolean joined = wp.join(userService.getUser(userName));
-        if (joined && wp.isPublic()) {
-            // Refresh global ranking cache when user joins a public WP
-            rankingService.refreshAll();
+        User user = userService.getUser(userName);
+        boolean joined = wp.join(user);
+        if (joined) {
+            userService.saveUser(user);
+            manager.saveWatchParty(wp);
+            if (wp.isPublic()) {
+                // Refresh global ranking cache when user joins a public WP
+                rankingService.refreshAll();
+            }
+            // Si la watch party est planifiée, notifier les participants disponibles pour le présentiel
+            if (wp.isPlanned()) {
+                manager.notifyAvailableUsersForPresentiel(wp);
+            }
         }
         return joined ? "✅ " + userName + " a rejoint " + name : "⚠️ " + userName + " est déjà participant";
     }
@@ -114,18 +131,33 @@ public class WatchPartyController {
         WatchParty wp = manager.getWatchPartyByName(name);
         if (wp == null) return "❌ WatchParty introuvable: " + name;
         boolean removed = wp.leave(userService.getUser(userName));
+        if (removed) {
+            manager.saveWatchParty(wp);
+            if (wp.isPublic()) {
+                rankingService.refreshAll();
+            }
+        }
         return removed ? "✅ " + userName + " a quitté " + name : "⚠️ " + userName + " n'est pas participant";
     }
 
     // 6. CHAT for a watchparty
     @GetMapping("/{name}/chat")
-    public List<Message> getWatchPartyChat(@PathVariable("name") String name) {
+    @Transactional(readOnly = true)
+    public List<ChatMessageResponse> getWatchPartyChat(@PathVariable("name") String name) {
         WatchParty wp = manager.getWatchPartyByName(name);
         if (wp == null) return List.of();
-        return wp.getChat().getMessages();
+        return wp.getChat().getMessages().stream()
+            .filter(Objects::nonNull)
+            .map(message -> new ChatMessageResponse(
+                message.getId(),
+                message.getSender() != null ? message.getSender().getName() : "System",
+                message.getContent(),
+                message.getTimestamp()))
+            .toList();
     }
 
     @PostMapping("/{name}/chat")
+    @Transactional
     public String sendWatchPartyMessage(@PathVariable("name") String name, @RequestBody Map<String, String> payload) {
         String user = payload.get("user");
         String text = payload.get("text");
@@ -150,7 +182,35 @@ public class WatchPartyController {
         }
 
         wp.getChat().sendMessage(sender, text);
+        manager.saveWatchParty(wp);
         return "✅ Message sent";
+    }
+
+    @PostMapping("/{name}/calendar")
+    public Map<String, Object> addWatchPartyToCalendar(
+            @PathVariable("name") String name,
+            @RequestBody Map<String, String> payload) {
+        Map<String, Object> response = new java.util.HashMap<>();
+        String user = payload.get("user");
+        String connectionId = payload.get("connectionId");
+
+        WatchParty wp = manager.getWatchPartyByName(name);
+        if (wp == null) {
+            response.put("success", false);
+            response.put("error", "Watch party introuvable: " + name);
+            return response;
+        }
+
+        try {
+            Map<String, Object> createdEvent = calendarIntegrationService.addWatchPartyToGoogleCalendar(user, wp, connectionId);
+            response.put("success", true);
+            response.put("event", createdEvent);
+            return response;
+        } catch (Exception ex) {
+            response.put("success", false);
+            response.put("error", ex.getMessage());
+            return response;
+        }
     }
 
     // Helpers
@@ -180,8 +240,27 @@ public class WatchPartyController {
 
         WatchParty wp = new WatchParty(name, date, game);
         wp.setPublic(isPublic);
-        if (creator != null) wp.setCreator(creator);
+        if (creator != null) {
+            wp.setCreator(creator);
+            userService.saveUser(creator);
+        }
+
+        if (Boolean.parseBoolean(payload.getOrDefault("addToCalendar", "false"))) {
+            if (creator == null) {
+                return "❌ Impossible d'ajouter au calendrier sans utilisateur createur";
+            }
+            try {
+                calendarIntegrationService.addWatchPartyToGoogleCalendar(
+                        creator.getName(),
+                        wp,
+                        payload.get("calendarConnectionId"));
+            } catch (IllegalArgumentException ex) {
+                return "❌ Impossible d'ajouter au Google Calendar: " + ex.getMessage();
+            }
+        }
+
         manager.addWatchParty(wp);
+        manager.planifyWatchParty(wp);
         
         // Refresh global ranking cache when a public WP is created (especially with a creator)
         if (isPublic) {
@@ -190,4 +269,6 @@ public class WatchPartyController {
         
         return (isPublic ? "✅ Public" : "✅ Private") + " watchparty created: " + name;
     }
+
+    public record ChatMessageResponse(Long id, String senderName, String content, String timestamp) {}
 }

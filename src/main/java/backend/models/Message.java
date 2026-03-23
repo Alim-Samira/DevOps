@@ -1,13 +1,60 @@
 package backend.models;
 
+import java.util.Date;
 
+import org.hibernate.annotations.CreationTimestamp;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
+
+@Entity
+@Table(name = "messages")
 public class Message {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    // link to Chat 
+    @ManyToOne
+    @JoinColumn(name = "chat_id")
+    private Chat chat;
+
+    // actual date stored in DB
+    @Column(name = "timestamp", nullable = false, updatable = false)
+    @CreationTimestamp
+    private Date dbTimestamp;
+
+    @ManyToOne
+    @JoinColumn(name = "sender_id") //link object User to column sender_id
     private User sender;
+
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
+
+    // @Transient = dtells to not touch to it in the DB.
+    @Transient
     private String timestamp;
-    private int likes;
-    private int reports;
+
+    @Column(name = "likes_count", nullable = false, columnDefinition = "int default 0") // Mappe 'likes' Java to 'likes_count' SQL
+    private int likes = 0;
+
+    @Column(name = "report_count", nullable = false, columnDefinition = "int default 0") // Mappe 'reports' Java to 'report_count' SQL
+    private int reports = 0;
+
+    @ManyToOne
+    @JoinColumn(name = "reply_to_id") 
     private Message replyTo;
+
+    // necessity for JPA
+    public Message() {}
 
     public Message(User sender, String content, String timestamp) {
         this.sender = sender;
@@ -15,7 +62,11 @@ public class Message {
         this.timestamp = timestamp;
         this.likes = 0;
         this.reports = 0;
-        this.replyTo = null;  // No reply initially
+        this.replyTo = null;
+    }
+    
+    public void setChat(Chat chat) {
+        this.chat = chat;
     }
 
     public User getSender() {
@@ -27,6 +78,10 @@ public class Message {
     }
 
     public String getTimestamp() {
+        //if the timestamp is empty (at start) we can recreate it from the DB date
+        if (timestamp == null && dbTimestamp != null) {
+            return dbTimestamp.toString();
+        }
         return timestamp;
     }
 
@@ -54,18 +109,21 @@ public class Message {
         this.replyTo = message;
     }
 
-    // Method to get unique message ID
+    // Votre logique existante
     public String getMessageId() {
-        return this.timestamp; // Use full timestamp internally
+        return this.timestamp; 
     }
 
-    // get a snippet of the message being replied to for display
     public String getReplyContentSnippet() {
         if (this.replyTo == null) {
             return "";
         }
         String contenu = this.replyTo.getContent();
-        // Truncate the content to a max of 20 characters for a clean reply reference
         return contenu.length() > 20 ? contenu.substring(0, 17) + "..." : contenu;
+    }
+    
+    // Getter technique pour l'ID BDD (optionnel mais utile)
+    public Long getId() {
+        return id;
     }
 }
