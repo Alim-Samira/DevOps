@@ -128,7 +128,7 @@ public class User {
 
     // Alias
     public int getPoints() {
-        return publicPoints;
+        return getPublicPoints();
     }
 
     public void setPoints(int points) {
@@ -177,8 +177,7 @@ public class User {
     @Override
     public boolean equals(Object obj) {
         if (this == obj) return true;
-        if (obj == null || !(obj instanceof User)) return false;
-        User other = (User) obj;
+        if (!(obj instanceof User other)) return false;
         // Compare by username (case-insensitive) or by ID if both are persisted
         if (this.name != null && other.name != null) {
             return this.name.equalsIgnoreCase(other.name);
@@ -189,6 +188,12 @@ public class User {
     @Override
     public int hashCode() {
         // Use username for hashCode to be consistent with equals
-        return this.name != null ? this.name.toLowerCase().hashCode() : (this.id != null ? this.id.hashCode() : 0);
+        if (this.name != null) {
+            return this.name.toLowerCase().hashCode();
+        }
+        if (this.id != null) {
+            return this.id.hashCode();
+        }
+        return 0;
     }
 }

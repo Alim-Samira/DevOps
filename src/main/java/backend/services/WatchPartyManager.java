@@ -22,10 +22,11 @@ public class WatchPartyManager {
 
     private static final Logger log = LoggerFactory.getLogger(WatchPartyManager.class);
     private static final int DEFAULT_WATCH_PARTY_DURATION_HOURS = 2;
+    private static final String WATCH_PARTY_REMOVED_LOG = "WatchParty removed";
+    private static final String WATCH_PARTY_NOT_FOUND_LOG = "WatchParty not found";
 
     private final WatchPartyRepository watchPartyRepository;
     private final CalendarIntegrationService calendarIntegrationService;
-    private final UserService userService;
     private final NotificationService notificationService;
     private AutoWatchPartyScheduler scheduler;
 
@@ -40,7 +41,6 @@ public class WatchPartyManager {
             NotificationService notificationService) {
         this.watchPartyRepository = watchPartyRepository;
         this.calendarIntegrationService = calendarIntegrationService;
-        this.userService = userService;
         this.notificationService = notificationService;
         this.watchParties = new ArrayList<>();
         this.watchPartiesPlanned = new ArrayList<>();
@@ -145,9 +145,9 @@ public class WatchPartyManager {
 
         boolean removed = removedInMemory || removedInRepository;
         if (removed) {
-            log.info("WatchParty removed: {}", name);
+            log.info(WATCH_PARTY_REMOVED_LOG);
         } else {
-            log.warn("WatchParty not found: {}", name);
+            log.warn(WATCH_PARTY_NOT_FOUND_LOG);
         }
         return removed;
     }
@@ -252,23 +252,21 @@ public class WatchPartyManager {
         LocalDateTime end = start.plusHours(DEFAULT_WATCH_PARTY_DURATION_HOURS);
 
         for (User user : wp.getParticipants()) {
-            if (user == null) {
-                continue;
+            if (shouldNotifyUserForPresentiel(user, start, end)) {
+                String message = "Tu es dispo pour la watch party '" + wp.name() + "' le " + start
+                        + ". On peut te proposer du presentiel.";
+                notificationService.addNotification(
+                        user.getName(),
+                        new UserNotification("Watch party en presentiel", message, wp.name(), LocalDateTime.now()));
+                log.info("Notification envoyee pour une watch party en presentiel");
             }
-            if (!calendarIntegrationService.hasConnectedCalendar(user.getName())) {
-                continue;
-            }
-            if (!calendarIntegrationService.canAttendWatchParty(user.getName(), start, end)) {
-                continue;
-            }
-
-            String message = "Tu es dispo pour la watch party '" + wp.name() + "' le " + start
-                    + ". On peut te proposer du presentiel.";
-            notificationService.addNotification(
-                    user.getName(),
-                    new UserNotification("Watch party en presentiel", message, wp.name(), LocalDateTime.now()));
-            log.info("Notification envoyee a {} pour {}", user.getName(), wp.name());
         }
+    }
+
+    private boolean shouldNotifyUserForPresentiel(User user, LocalDateTime start, LocalDateTime end) {
+        return user != null
+                && calendarIntegrationService.hasConnectedCalendar(user.getName())
+                && calendarIntegrationService.canAttendWatchParty(user.getName(), start, end);
     }
 
     private void replaceInMemoryWatchParty(WatchParty wp) {

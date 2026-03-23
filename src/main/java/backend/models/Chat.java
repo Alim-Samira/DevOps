@@ -77,7 +77,7 @@ public class Chat {
         messages.add(msg);
     }
 
-    public String launchGame(User launcher, String gameCommand) {
+    public String launchGame(String gameCommand) {
         if (activeGame != null) return "[X] Jeu en cours.";
         for (MiniGame game : availableGames) {
             if (game.getCommandName().equalsIgnoreCase(gameCommand)) {
@@ -110,7 +110,7 @@ public class Chat {
         return null;
     }
 
-    public void deleteMessage(User remover, String messageShortId) {
+    public void deleteMessage(String messageShortId) {
         Message m = findMessageById(messageShortId);
         if (m != null) messages.remove(m);
     }

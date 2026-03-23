@@ -1,9 +1,11 @@
 package backend.integration.lolesports;
 
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -65,5 +67,43 @@ class LiveMatchMonitorServiceTest {
         service.shutdownOnContextClose();
 
         assertNull(watchParty.getCurrentRiotGameId());
+    }
+
+    @Test
+    void pollAndResolveOnceShouldStopWhenWatchPartyNoLongerExists() {
+        LolEsportsClient client = mock(LolEsportsClient.class);
+        BetService betService = mock(BetService.class);
+        WatchPartyManager manager = mock(WatchPartyManager.class);
+        LiveMatchMonitorService service = new LiveMatchMonitorService(client, betService, manager);
+
+        WatchParty watchParty = new WatchParty("Removed WP", LocalDateTime.now().plusDays(1), "LoL");
+        watchParty.setCreator(new User("admin", true));
+        service.startMonitoring(watchParty, "game-removed");
+
+        when(manager.getWatchPartyByName("Removed WP")).thenReturn(null);
+
+        service.pollAndResolveOnce("game-removed");
+
+        assertNull(watchParty.getCurrentRiotGameId());
+        verify(client, never()).getWindow("game-removed");
+    }
+
+    @Test
+    void startMonitoringShouldIgnoreDuplicateGameId() {
+        LolEsportsClient client = mock(LolEsportsClient.class);
+        BetService betService = mock(BetService.class);
+        WatchPartyManager manager = mock(WatchPartyManager.class);
+        LiveMatchMonitorService service = new LiveMatchMonitorService(client, betService, manager);
+
+        WatchParty firstWatchParty = new WatchParty("First WP", LocalDateTime.now().plusDays(1), "LoL");
+        WatchParty secondWatchParty = new WatchParty("Second WP", LocalDateTime.now().plusDays(1), "LoL");
+
+        service.startMonitoring(firstWatchParty, "shared-game");
+        service.startMonitoring(secondWatchParty, "shared-game");
+
+        assertEquals("shared-game", firstWatchParty.getCurrentRiotGameId());
+        assertNull(secondWatchParty.getCurrentRiotGameId());
+
+        service.stopMonitoring("shared-game");
     }
 }

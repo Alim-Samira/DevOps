@@ -5,6 +5,8 @@ import java.time.LocalDateTime;
  * Represents a League of Legends esports match
  */
 public class Match {
+    private static final int DEFAULT_ESTIMATED_DURATION_HOURS = 2;
+
     private String id;
     private String team1;
     private String team2;
@@ -15,13 +17,8 @@ public class Match {
     private String bestOf; // "BO1", "BO3", "BO5"
     private String riotEventId;
 
-    public Match(String id, String team1, String team2, LocalDateTime scheduledTime, 
-                 String tournament, String streamUrl, String bestOf) {
-        this(id, team1, team2, scheduledTime, tournament, streamUrl, bestOf, null);
-    }
-
     public Match(String id, String team1, String team2, LocalDateTime scheduledTime,
-                 String tournament, String streamUrl, String bestOf, String riotEventId) {
+                 String tournament, String streamUrl, String bestOf) {
         this.id = id;
         this.team1 = team1;
         this.team2 = team2;
@@ -30,7 +27,7 @@ public class Match {
         this.streamUrl = streamUrl;
         this.bestOf = bestOf;
         this.state = MatchState.PRE_MATCH;
-        this.riotEventId = riotEventId;
+        this.riotEventId = null;
     }
 
     public String getId() { return id; }
@@ -74,7 +71,7 @@ public class Match {
             case "BO1": return 1;
             case "BO3": return 2;
             case "BO5": return 4;
-            default: return 2;
+            default: return DEFAULT_ESTIMATED_DURATION_HOURS;
         }
     }
 

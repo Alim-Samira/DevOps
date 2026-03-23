@@ -27,14 +27,14 @@ public class NumericValueBetResolutionDelegate implements BetResolutionDelegate 
                 && BetResolutionSupport.isGameFinished(frame)) {
             int totalKills = BetResolutionSupport.safeKills(frame.blueTeam())
                     + BetResolutionSupport.safeKills(frame.redTeam());
-            return Optional.of((Object) (double) totalKills);
+            return Optional.<Object>of(Double.valueOf(totalKills));
         }
 
         if (BetResolutionSupport.containsAny(normalizedQuestion, "gold diff", "ecart de gold", "difference de gold")
                 && BetResolutionSupport.isGameFinished(frame)) {
             int goldDiff = Math.abs(BetResolutionSupport.safeGold(frame.blueTeam())
                     - BetResolutionSupport.safeGold(frame.redTeam()));
-            return Optional.of((Object) (double) goldDiff);
+            return Optional.<Object>of(Double.valueOf(goldDiff));
         }
 
         if (BetResolutionSupport.containsAny(normalizedQuestion, "duration", "duree", "durÃ©e", "temps de jeu")

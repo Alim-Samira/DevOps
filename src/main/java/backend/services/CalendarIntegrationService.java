@@ -1,5 +1,6 @@
 package backend.services;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -9,6 +10,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -25,6 +30,8 @@ import backend.models.WatchParty;
 
 @Service
 public class CalendarIntegrationService {
+
+    private static final Logger log = LoggerFactory.getLogger(CalendarIntegrationService.class);
     private static final int DEFAULT_WATCH_PARTY_DURATION_HOURS = 2;
 
     private final Map<String, List<Calendar>> connectionsByUser = new HashMap<>();
@@ -34,8 +41,9 @@ public class CalendarIntegrationService {
         this(RestClient.builder().build());
     }
 
-    public CalendarIntegrationService(RestClient.Builder restClientBuilder) {
-        this(restClientBuilder.build());
+    @Autowired
+    public CalendarIntegrationService(ObjectProvider<RestClient.Builder> restClientBuilderProvider) {
+        this(restClientBuilderProvider.getIfAvailable(RestClient::builder).build());
     }
 
     CalendarIntegrationService(RestClient restClient) {
@@ -45,7 +53,10 @@ public class CalendarIntegrationService {
     public List<Map<String, Object>> supportedProviders() {
         List<Map<String, Object>> providers = new ArrayList<>();
         providers.add(providerInfo(CalendarProviderType.ICAL, "Lien public .ics", List.of("sourceUrl")));
-        providers.add(providerInfo(CalendarProviderType.GOOGLE, "Google Calendar OAuth", List.of("oauthAccessToken", "externalCalendarId (optionnel)")));
+        providers.add(providerInfo(
+                CalendarProviderType.GOOGLE,
+                "Google Calendar OAuth",
+                List.of("oauthAccessToken", "externalCalendarId (optionnel)")));
         return providers;
     }
 
@@ -125,7 +136,8 @@ public class CalendarIntegrationService {
         try {
             @SuppressWarnings("unchecked")
             Map<String, Object> response = restClient.post()
-                    .uri("https://www.googleapis.com/calendar/v3/calendars/{calendarId}/events", googleCalendar.getCalendarId())
+                    .uri("https://www.googleapis.com/calendar/v3/calendars/{calendarId}/events",
+                            googleCalendar.getCalendarId())
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + googleCalendar.getOauthAccessToken())
                     .contentType(MediaType.APPLICATION_JSON)
                     .accept(MediaType.APPLICATION_JSON)
@@ -141,7 +153,66 @@ public class CalendarIntegrationService {
         }
     }
 
-    private Map<String, Object> providerInfo(CalendarProviderType type, String description, List<String> requiredFields) {
+    public List<CalendarEvent> getEventsForCalendar(
+            String user, String connectionId, LocalDateTime start, LocalDateTime end) {
+        for (Calendar connection : getConnectionsForUser(user)) {
+            if (connection.getId().equals(connectionId) && connection instanceof IcalCalendar icalCal) {
+                try {
+                    List<CalendarEvent> allEvents = IcalEventProvider.fetchEventsFromUrl(icalCal.getSourceUrl(), start);
+                    return IcalEventProvider.getEventsInTimeRange(allEvents, start, end);
+                } catch (IOException e) {
+                    throw new CalendarAccessException("Erreur lors de la recuperation des evenements", e);
+                }
+            }
+        }
+
+        throw new IllegalArgumentException("Calendrier " + connectionId + " non trouve pour l'utilisateur " + user);
+    }
+
+    public boolean checkAvailability(String user, LocalDateTime start, LocalDateTime end) {
+        for (Calendar connection : getConnectionsForUser(user)) {
+            if (connection instanceof IcalCalendar icalCal) {
+                try {
+                    List<CalendarEvent> allEvents = IcalEventProvider.fetchEventsFromUrl(icalCal.getSourceUrl(), start);
+                    if (!IcalEventProvider.isAvailable(allEvents, start, end)) {
+                        return false;
+                    }
+                } catch (IOException e) {
+                    log.warn("Erreur lors de la verification de disponibilite pour {}", user, e);
+                }
+            }
+        }
+
+        return true;
+    }
+
+    public boolean canAttendWatchParty(String user, LocalDateTime start, LocalDateTime end) {
+        List<Calendar> userConnections = getConnectionsForUser(user);
+        if (userConnections.isEmpty()) {
+            return false;
+        }
+
+        boolean checkedCalendar = false;
+        for (Calendar connection : userConnections) {
+            if (connection instanceof IcalCalendar icalCal) {
+                checkedCalendar = true;
+                try {
+                    List<CalendarEvent> allEvents = IcalEventProvider.fetchEventsFromUrl(icalCal.getSourceUrl(), start);
+                    if (!IcalEventProvider.isAvailable(allEvents, start, end)) {
+                        return false;
+                    }
+                } catch (IOException e) {
+                    log.debug("Impossible de verifier la disponibilite de {} sur {}", user, connection.getId(), e);
+                    return false;
+                }
+            }
+        }
+
+        return checkedCalendar;
+    }
+
+    private Map<String, Object> providerInfo(
+            CalendarProviderType type, String description, List<String> requiredFields) {
         Map<String, Object> provider = new HashMap<>();
         provider.put("provider", type.name());
         provider.put("description", description);
@@ -164,7 +235,8 @@ public class CalendarIntegrationService {
         try {
             provider = CalendarProviderType.valueOf(request.getProvider().trim().toUpperCase());
         } catch (IllegalArgumentException ex) {
-            throw new IllegalArgumentException("Provider invalide. Valeurs supportees: " + java.util.Arrays.toString(CalendarProviderType.values()));
+            throw new IllegalArgumentException(
+                    "Provider invalide. Valeurs supportees: " + java.util.Arrays.toString(CalendarProviderType.values()));
         }
 
         switch (provider) {
@@ -190,21 +262,6 @@ public class CalendarIntegrationService {
         }
     }
 
-    private boolean isBlank(String value) {
-        return value == null || value.isBlank();
-    }
-
-    private String defaultIfBlank(String value, String fallback) {
-        return isBlank(value) ? fallback : value;
-    }
-
-    private String normalize(String value) {
-        return Optional.ofNullable(value)
-                .map(String::trim)
-                .filter(v -> !v.isEmpty())
-                .orElse(null);
-    }
-
     private void validateEventCreationRequest(String user, CalendarEvent event) {
         if (user == null || user.isBlank()) {
             throw new IllegalArgumentException("Le champ 'user' est requis");
@@ -227,7 +284,9 @@ public class CalendarIntegrationService {
         List<Calendar> userConnections = getConnectionsForUser(user);
 
         for (Calendar connection : userConnections) {
-            boolean connectionMatches = connectionId == null || connectionId.isBlank() || connection.getId().equals(connectionId);
+            boolean connectionMatches = connectionId == null
+                    || connectionId.isBlank()
+                    || connection.getId().equals(connectionId);
             if (connectionMatches && connection instanceof GoogleCalendar googleCalendar) {
                 return googleCalendar;
             }
@@ -247,73 +306,24 @@ public class CalendarIntegrationService {
         return payload;
     }
 
-    /**
-     * Récupère les événements d'un calendrier ICAL pour un créneau donné
-     */
-    public List<CalendarEvent> getEventsForCalendar(String user, String connectionId, LocalDateTime start, LocalDateTime end) {
-        List<Calendar> userConnections = getConnectionsForUser(user);
-        
-        for (Calendar connection : userConnections) {
-            if (connection.getId().equals(connectionId) && connection instanceof IcalCalendar) {
-                IcalCalendar icalCal = (IcalCalendar) connection;
-                try {
-                    List<CalendarEvent> allEvents = IcalEventProvider.fetchEventsFromUrl(icalCal.getSourceUrl(), start);
-                    return IcalEventProvider.getEventsInTimeRange(allEvents, start, end);
-                } catch (Exception e) {
-                    throw new RuntimeException("Erreur lors de la recuperation des evenements: " + e.getMessage());
-                }
-            }
-        }
-        
-        throw new IllegalArgumentException("Calendrier " + connectionId + " non trouve pour l'utilisateur " + user);
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
-    /**
-     * Vérifie si un utilisateur est libre sur tous ses calendriers ICAL
-     */
-    public boolean checkAvailability(String user, LocalDateTime start, LocalDateTime end) {
-        List<Calendar> userConnections = getConnectionsForUser(user);
-        
-        for (Calendar connection : userConnections) {
-            if (connection instanceof IcalCalendar) {
-                IcalCalendar icalCal = (IcalCalendar) connection;
-                try {
-                    List<CalendarEvent> allEvents = IcalEventProvider.fetchEventsFromUrl(icalCal.getSourceUrl(), start);
-                    if (!IcalEventProvider.isAvailable(allEvents, start, end)) {
-                        return false;  // Conflit trouvé
-                    }
-                } catch (Exception e) {
-                    System.err.println("Erreur lors de la vérification de disponibilité: " + e.getMessage());
-                }
-            }
-        }
-        
-        return true;  // Aucun conflit
+    private String defaultIfBlank(String value, String fallback) {
+        return isBlank(value) ? fallback : value;
     }
 
-    public boolean canAttendWatchParty(String user, LocalDateTime start, LocalDateTime end) {
-        List<Calendar> userConnections = getConnectionsForUser(user);
-        if (userConnections.isEmpty()) {
-            return false;
+    private String normalize(String value) {
+        return Optional.ofNullable(value)
+                .map(String::trim)
+                .filter(v -> !v.isEmpty())
+                .orElse(null);
+    }
+
+    private static final class CalendarAccessException extends IllegalStateException {
+        private CalendarAccessException(String message, Throwable cause) {
+            super(message, cause);
         }
-
-        boolean checkedCalendar = false;
-
-        for (Calendar connection : userConnections) {
-            if (connection instanceof IcalCalendar) {
-                checkedCalendar = true;
-                IcalCalendar icalCal = (IcalCalendar) connection;
-                try {
-                    List<CalendarEvent> allEvents = IcalEventProvider.fetchEventsFromUrl(icalCal.getSourceUrl(), start);
-                    if (!IcalEventProvider.isAvailable(allEvents, start, end)) {
-                        return false;
-                    }
-                } catch (Exception e) {
-                    return false;
-                }
-            }
-        }
-
-        return checkedCalendar;
     }
 }

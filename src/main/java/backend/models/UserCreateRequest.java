@@ -3,7 +3,9 @@ package backend.models;
 public class UserCreateRequest {
     private String name;
 
-    public UserCreateRequest() {}
+    public UserCreateRequest() {
+        // Default constructor required by Jackson for request deserialization.
+    }
 
     public String getName() {
         return name;

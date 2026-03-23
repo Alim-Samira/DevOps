@@ -7,7 +7,9 @@ public class CalendarConnectionRequest {
     private String oauthAccessToken;
     private String externalCalendarId;
 
-    public CalendarConnectionRequest() {}
+    public CalendarConnectionRequest() {
+        // Default constructor required by Jackson for request deserialization.
+    }
 
     public String getProvider() {
         return provider;

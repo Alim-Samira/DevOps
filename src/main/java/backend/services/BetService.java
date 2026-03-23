@@ -1,5 +1,6 @@
 package backend.services;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,10 +20,13 @@ import backend.models.WatchParty;
 @Service
 public class BetService {
 
+    private static final double BONUS_IN_OR_OUT_TICKET_CHANCE = 0.10;
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private static final String ADMIN_REQUIRED_ERROR = "❌ Seuls les admins peuvent créer des paris";
     private static final String WATCH_PARTY_NOT_FOUND = "❌ Watch party introuvable: ";
     private static final String ACTIVE_BET_EXISTS = "❌ Un pari est déjà actif pour cette watch party";
     private static final String NO_ACTIVE_BET = "❌ Aucun pari actif pour cette watch party";
+    private static final String WATCH_PARTY_CREATOR_REQUIRED = "❌ Seuls le créateur de la watchparty ou les admins globaux peuvent ";
 
     private final WatchPartyManager watchPartyManager;
     private final UserService userService;
@@ -37,19 +41,6 @@ public class BetService {
         this.userService = userService;
         this.rankingService = rankingService;
         this.settlementService = settlementService;
-    }
-
-    private String validateBetCreation(User admin, WatchParty wp, String watchPartyName) {
-        if (wp == null) {
-            return WATCH_PARTY_NOT_FOUND + watchPartyName;
-        }
-        if (!wp.isAdmin(admin)) {
-            return ADMIN_REQUIRED_ERROR;
-        }
-        if (wp.hasActiveBet()) {
-            return ACTIVE_BET_EXISTS;
-        }
-        return null;
     }
 
     public String createDiscreteChoiceBet(String watchPartyName,
@@ -130,7 +121,7 @@ public class BetService {
 
         User admin = userService.getUser(adminName);
         if (!wp.isAdmin(admin)) {
-            return "❌ Seuls le créateur de la watchparty ou les admins globaux peuvent fermer le vote";
+            return WATCH_PARTY_CREATOR_REQUIRED + "fermer le vote";
         }
 
         return wp.closeActiveBet();
@@ -144,7 +135,7 @@ public class BetService {
 
         User admin = userService.getUser(adminName);
         if (!wp.isAdmin(admin)) {
-            return "❌ Seuls le créateur de la watchparty ou les admins globaux peuvent résoudre un pari";
+            return WATCH_PARTY_CREATOR_REQUIRED + "résoudre un pari";
         }
         if (!wp.hasActiveBet()) {
             return NO_ACTIVE_BET;
@@ -161,7 +152,7 @@ public class BetService {
 
         User admin = userService.getUser(adminName);
         if (!wp.isAdmin(admin)) {
-            return "❌ Seuls le créateur de la watchparty ou les admins globaux peuvent annuler un pari";
+            return WATCH_PARTY_CREATOR_REQUIRED + "annuler un pari";
         }
         if (!wp.hasActiveBet()) {
             return NO_ACTIVE_BET;
@@ -188,10 +179,7 @@ public class BetService {
 
     public Bet getActiveBet(String watchPartyName) {
         WatchParty wp = watchPartyManager.getWatchPartyByName(watchPartyName);
-        if (wp == null) {
-            return null;
-        }
-        return wp.getActiveBet();
+        return wp == null ? null : wp.getActiveBet();
     }
 
     public boolean tryAutoResolveLiveBet(WatchParty wp, Frame frame) {
@@ -228,6 +216,19 @@ public class BetService {
         return activeBet.getState() == Bet.State.RESOLVED;
     }
 
+    private String validateBetCreation(User admin, WatchParty wp, String watchPartyName) {
+        if (wp == null) {
+            return WATCH_PARTY_NOT_FOUND + watchPartyName;
+        }
+        if (!wp.isAdmin(admin)) {
+            return ADMIN_REQUIRED_ERROR;
+        }
+        if (wp.hasActiveBet()) {
+            return ACTIVE_BET_EXISTS;
+        }
+        return null;
+    }
+
     private String resolveActiveBet(WatchParty wp, Bet bet, Object correctValue) {
         String result = bet.resolve(correctValue);
         if (bet.getState() == Bet.State.RESOLVED) {
@@ -254,7 +255,7 @@ public class BetService {
         TicketType ticketType = getTicketTypeForBet(bet);
         for (User winner : bet.getLastWinners()) {
             wp.grantTicket(winner, ticketType);
-            if (Math.random() < 0.10) { // NOSONAR S2245: Random is acceptable for game mechanics.
+            if (SECURE_RANDOM.nextDouble() < BONUS_IN_OR_OUT_TICKET_CHANCE) {
                 wp.grantTicket(winner, TicketType.IN_OR_OUT);
             }
         }

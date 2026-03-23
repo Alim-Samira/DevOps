@@ -1,9 +1,8 @@
 package backend;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -55,6 +54,6 @@ class WatchPartyManagerNotificationTest {
         ArgumentCaptor<UserNotification> captor = ArgumentCaptor.forClass(UserNotification.class);
         verify(notificationService).addNotification(eq("alice"), captor.capture());
         verify(notificationService, never()).addNotification(eq("bob"), any());
-        assertTrue(captor.getValue().getWatchPartyName().equals("IRL Finals"));
+        assertEquals("IRL Finals", captor.getValue().getWatchPartyName());
     }
 }

@@ -2,7 +2,6 @@ package backend.services;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -51,7 +50,7 @@ class AutoWatchPartySchedulerTest {
         scheduler.forceUpdate();
 
         assertEquals("riot-match", liveMatch.getRiotEventId());
-        verify(liveMonitor).startMonitoring(eq(watchParty), eq("riot-game-1"));
+        verify(liveMonitor).startMonitoring(watchParty, "riot-game-1");
     }
 
     @Test

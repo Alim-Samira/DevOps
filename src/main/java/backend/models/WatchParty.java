@@ -30,6 +30,8 @@ public class WatchParty {
 
     private static final String ERROR_ICON = "\u274c";
     private static final String SUCCESS_ICON = "\u2705";
+    private static final String SYSTEM_USER_NAME = "system";
+    private static final String CHAT_SUFFIX = " Chat";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -99,7 +101,7 @@ public class WatchParty {
         this.participants = new ArrayList<>();
         this.creator = null;
         this.matchState = MatchState.PRE_MATCH;
-        this.chat = new Chat(name + " Chat", new User("system", true));
+        this.chat = new Chat(name + CHAT_SUFFIX, new User(SYSTEM_USER_NAME, true));
     }
 
     private WatchParty(String name, User creator, AutoConfig autoConfig) {
@@ -113,7 +115,7 @@ public class WatchParty {
         this.participants = new ArrayList<>();
         this.creator = creator;
         this.matchState = MatchState.PRE_MATCH;
-        this.chat = new Chat(name + " Chat", creator != null ? creator : new User("system", true));
+        this.chat = new Chat(name + CHAT_SUFFIX, creator != null ? creator : new User(SYSTEM_USER_NAME, true));
     }
 
     public static WatchParty createAutoWatchParty(User creator, String target, AutoType type) {
@@ -279,7 +281,7 @@ public class WatchParty {
             participants.add(creator);
             creator.setPointsForWatchParty(this.name, 200);
         }
-        this.chat = new Chat(name + " Chat", creator != null ? creator : new User("system", true));
+        this.chat = new Chat(name + CHAT_SUFFIX, creator != null ? creator : new User(SYSTEM_USER_NAME, true));
     }
 
     public Chat getChat() {

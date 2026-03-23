@@ -84,40 +84,54 @@ public class DiscreteChoiceBetResolutionDelegate implements BetResolutionDelegat
 
         List<MilestoneCandidate> candidates = new ArrayList<>();
         for (String choice : bet.getChoices()) {
-            Optional<ParticipantFrame> currentParticipant = BetResolutionSupport.findParticipantForChoice(
-                    context.currentFrame(), choice);
-            if (currentParticipant.isEmpty()) {
-                continue;
-            }
-
-            ParticipantFrame current = currentParticipant.get();
-            int currentValue = definition.metric().extract(current);
-            if (currentValue < definition.threshold()) {
-                continue;
-            }
-
-            int previousValue = 0;
-            if (context.previousFrame() != null) {
-                previousValue = BetResolutionSupport.findParticipantForChoice(context.previousFrame(), choice)
-                        .map(definition.metric()::extract)
-                        .orElse(0);
-                if (previousValue >= definition.threshold()) {
-                    continue;
-                }
-            }
-
-            candidates.add(new MilestoneCandidate(
-                    choice,
-                    currentValue,
-                    Math.max(0, currentValue - previousValue),
-                    current.gold(),
-                    current.level()));
+            buildMilestoneCandidate(choice, definition, context).ifPresent(candidates::add);
         }
 
         return candidates.stream()
                 .sorted(MilestoneCandidate.COMPARATOR)
                 .map(MilestoneCandidate::choice)
                 .findFirst();
+    }
+
+    private Optional<MilestoneCandidate> buildMilestoneCandidate(
+            String choice,
+            MilestoneRaceDefinition definition,
+            BetResolutionContext context) {
+        Optional<ParticipantFrame> currentParticipant = BetResolutionSupport.findParticipantForChoice(
+                context.currentFrame(), choice);
+        if (currentParticipant.isEmpty()) {
+            return Optional.empty();
+        }
+
+        ParticipantFrame current = currentParticipant.get();
+        int currentValue = definition.metric().extract(current);
+        if (currentValue < definition.threshold()) {
+            return Optional.empty();
+        }
+
+        int previousValue = extractPreviousValue(choice, definition, context);
+        if (previousValue >= definition.threshold()) {
+            return Optional.empty();
+        }
+
+        return Optional.of(new MilestoneCandidate(
+                choice,
+                currentValue,
+                Math.max(0, currentValue - previousValue),
+                current.gold(),
+                current.level()));
+    }
+
+    private int extractPreviousValue(
+            String choice,
+            MilestoneRaceDefinition definition,
+            BetResolutionContext context) {
+        if (context.previousFrame() == null) {
+            return 0;
+        }
+        return BetResolutionSupport.findParticipantForChoice(context.previousFrame(), choice)
+                .map(definition.metric()::extract)
+                .orElse(0);
     }
 
     private Optional<MilestoneRaceDefinition> parseMilestoneDefinition(String normalizedQuestion) {
