@@ -180,8 +180,12 @@
             <option value="GOOGLE">GOOGLE</option>
           </select>
           <input id="cal-url" placeholder="URL ICAL" style="flex: 1;" />
-          <input id="cal-token" placeholder="OAuth access token Google" style="display:none; flex: 1;" />
           <input id="cal-external-id" placeholder="Calendar ID Google (optionnel)" style="display:none; width: 220px;" />
+          <select id="cal-google-mode" style="display:none; width: 180px;">
+            <option value="APP_ONLY">Connexion Google</option>
+            <option value="GOOGLE_INVITE">Invitation Google</option>
+          </select>
+          <input id="cal-invite-email" placeholder="Email invitation Google" style="display:none; width: 240px;" />
           <button id="btn-connect-calendar">Connecter</button>
         </div>
 

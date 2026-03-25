@@ -190,11 +190,50 @@ class WatchPartyControllerTest {
         assertTrue(String.valueOf(response.get("error")).contains("Watch party introuvable"));
     }
 
+    @Test
+    void acceptWatchPartyCalendarInviteShouldReturnCreatedEvent() {
+        TrackingCalendarIntegrationService trackingCalendarIntegrationService = new TrackingCalendarIntegrationService();
+        controller = new WatchPartyController(
+                manager,
+                userService,
+                new RankingService(userService, manager),
+                trackingCalendarIntegrationService);
+
+        WatchParty wp = new WatchParty("Accept Calendar WP", LocalDateTime.of(2026, 4, 10, 20, 0), "LoL");
+        wp.setCreator(alice);
+        manager.addWatchParty(wp);
+
+        Map<String, Object> response = controller.acceptWatchPartyCalendarInvite(wp.getName(), Map.of(
+                "user", "alice",
+                "connectionId", "google-conn-3"));
+
+        assertEquals(true, response.get("success"));
+        assertNotNull(response.get("event"));
+        assertEquals("alice", trackingCalendarIntegrationService.lastAcceptedUser);
+        assertEquals("Accept Calendar WP", trackingCalendarIntegrationService.lastAcceptedWatchPartyName);
+        assertEquals("google-conn-3", trackingCalendarIntegrationService.lastAcceptedConnectionId);
+        assertEquals(1, trackingCalendarIntegrationService.acceptCallCount);
+    }
+
+    @Test
+    void acceptWatchPartyCalendarInviteShouldReturnErrorWhenWatchPartyDoesNotExist() {
+        Map<String, Object> response = controller.acceptWatchPartyCalendarInvite("Unknown Accept WP", Map.of(
+                "user", "alice",
+                "connectionId", "google-conn-3"));
+
+        assertEquals(false, response.get("success"));
+        assertTrue(String.valueOf(response.get("error")).contains("Watch party introuvable"));
+    }
+
     private static class TrackingCalendarIntegrationService extends CalendarIntegrationService {
         private String lastUser;
         private String lastWatchPartyName;
         private String lastConnectionId;
         private int callCount;
+        private String lastAcceptedUser;
+        private String lastAcceptedWatchPartyName;
+        private String lastAcceptedConnectionId;
+        private int acceptCallCount;
 
         @Override
         public Map<String, Object> addWatchPartyToGoogleCalendar(String user, WatchParty watchParty, String connectionId) {
@@ -203,6 +242,15 @@ class WatchPartyControllerTest {
             this.lastConnectionId = connectionId;
             this.callCount++;
             return Map.of("id", "event-123");
+        }
+
+        @Override
+        public Map<String, Object> acceptWatchPartyCalendarInvite(String user, WatchParty watchParty, String connectionId) {
+            this.lastAcceptedUser = user;
+            this.lastAcceptedWatchPartyName = watchParty.getName();
+            this.lastAcceptedConnectionId = connectionId;
+            this.acceptCallCount++;
+            return Map.of("id", "accepted-event-123");
         }
     }
 

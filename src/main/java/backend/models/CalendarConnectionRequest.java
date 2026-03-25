@@ -6,6 +6,8 @@ public class CalendarConnectionRequest {
     private String sourceUrl;
     private String oauthAccessToken;
     private String externalCalendarId;
+    private String googleDeliveryMode;
+    private String inviteEmail;
 
     public CalendarConnectionRequest() {
         // Default constructor required by Jackson for request deserialization.
@@ -49,5 +51,21 @@ public class CalendarConnectionRequest {
 
     public void setExternalCalendarId(String externalCalendarId) {
         this.externalCalendarId = externalCalendarId;
+    }
+
+    public String getGoogleDeliveryMode() {
+        return googleDeliveryMode;
+    }
+
+    public void setGoogleDeliveryMode(String googleDeliveryMode) {
+        this.googleDeliveryMode = googleDeliveryMode;
+    }
+
+    public String getInviteEmail() {
+        return inviteEmail;
+    }
+
+    public void setInviteEmail(String inviteEmail) {
+        this.inviteEmail = inviteEmail;
     }
 }
