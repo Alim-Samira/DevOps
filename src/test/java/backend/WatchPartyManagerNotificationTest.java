@@ -56,4 +56,61 @@ class WatchPartyManagerNotificationTest {
         verify(notificationService, never()).addNotification(eq("bob"), any());
         assertEquals("IRL Finals", captor.getValue().getWatchPartyName());
     }
+
+    @Test
+    @DisplayName("Planifying a watch party can send a Google invite instead of an app notification")
+    void testPlanifyWatchPartyCanSendGoogleInvite() {
+        WatchPartyRepository watchPartyRepository = mock(WatchPartyRepository.class);
+        CalendarIntegrationService calendarIntegrationService = mock(CalendarIntegrationService.class);
+        UserService userService = mock(UserService.class);
+        NotificationService notificationService = mock(NotificationService.class);
+
+        WatchPartyManager manager = new WatchPartyManager(watchPartyRepository, calendarIntegrationService, userService, notificationService);
+
+        User creator = new User("creator", false);
+        User alice = new User("alice", false);
+
+        when(calendarIntegrationService.hasConnectedCalendar("alice")).thenReturn(true);
+        when(calendarIntegrationService.canAttendWatchParty(eq("alice"), any(), any())).thenReturn(true);
+        when(calendarIntegrationService.prefersGoogleInvite("alice")).thenReturn(true);
+        when(calendarIntegrationService.sendWatchPartyInviteViaGoogle(eq("creator"), eq("alice"), any())).thenReturn(true);
+
+        WatchParty wp = new WatchParty("IRL Finals", LocalDateTime.now().plusDays(1), "LoL");
+        wp.setCreator(creator);
+        wp.join(alice);
+
+        manager.planifyWatchParty(wp);
+
+        verify(calendarIntegrationService).sendWatchPartyInviteViaGoogle(eq("creator"), eq("alice"), any());
+        verify(notificationService, never()).addNotification(eq("alice"), any());
+    }
+
+    @Test
+    @DisplayName("Planifying a watch party can send a Google invite with invite-only attendee config")
+    void testPlanifyWatchPartyCanSendGoogleInviteWithoutAvailabilityCheck() {
+        WatchPartyRepository watchPartyRepository = mock(WatchPartyRepository.class);
+        CalendarIntegrationService calendarIntegrationService = mock(CalendarIntegrationService.class);
+        UserService userService = mock(UserService.class);
+        NotificationService notificationService = mock(NotificationService.class);
+
+        WatchPartyManager manager = new WatchPartyManager(watchPartyRepository, calendarIntegrationService, userService, notificationService);
+
+        User creator = new User("creator", false);
+        User alice = new User("alice", false);
+
+        when(calendarIntegrationService.hasConnectedCalendar("alice")).thenReturn(true);
+        when(calendarIntegrationService.prefersGoogleInvite("alice")).thenReturn(true);
+        when(calendarIntegrationService.canCheckAvailability("alice")).thenReturn(false);
+        when(calendarIntegrationService.sendWatchPartyInviteViaGoogle(eq("creator"), eq("alice"), any())).thenReturn(true);
+
+        WatchParty wp = new WatchParty("IRL Finals", LocalDateTime.now().plusDays(1), "LoL");
+        wp.setCreator(creator);
+        wp.join(alice);
+
+        manager.planifyWatchParty(wp);
+
+        verify(calendarIntegrationService).sendWatchPartyInviteViaGoogle(eq("creator"), eq("alice"), any());
+        verify(calendarIntegrationService, never()).canAttendWatchParty(eq("alice"), any(), any());
+        verify(notificationService, never()).addNotification(eq("alice"), any());
+    }
 }

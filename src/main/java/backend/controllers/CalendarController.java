@@ -6,6 +6,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,6 +25,7 @@ import backend.models.Calendar;
 import backend.models.CalendarConnectionRequest;
 import backend.models.CalendarEvent;
 import backend.services.CalendarIntegrationService;
+import backend.services.GoogleOAuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
@@ -31,9 +38,16 @@ public class CalendarController {
     private static final String KEY_ERROR = "error";
 
     private final CalendarIntegrationService calendarIntegrationService;
+    private final GoogleOAuthService googleOAuthService;
+    private final ObjectMapper objectMapper;
 
-    public CalendarController(CalendarIntegrationService calendarIntegrationService) {
+    public CalendarController(
+            CalendarIntegrationService calendarIntegrationService,
+            GoogleOAuthService googleOAuthService,
+            ObjectProvider<ObjectMapper> objectMapperProvider) {
         this.calendarIntegrationService = calendarIntegrationService;
+        this.googleOAuthService = googleOAuthService;
+        this.objectMapper = objectMapperProvider.getIfAvailable(ObjectMapper::new);
     }
 
     @Operation(summary = "Get supported calendar providers")
@@ -59,6 +73,48 @@ public class CalendarController {
             response.put(KEY_ERROR, ex.getMessage());
             return response;
         }
+    }
+
+    @Operation(summary = "Start Google OAuth calendar connection")
+    @PostMapping("/users/{user}/calendars/google/authorize")
+    public Map<String, Object> authorizeGoogle(
+            @PathVariable("user") String user,
+            @RequestBody CalendarConnectionRequest request) {
+        try {
+            Map<String, Object> authorization = googleOAuthService.beginAuthorization(user, request);
+            Map<String, Object> response = new HashMap<>();
+            response.put(KEY_SUCCESS, true);
+            response.putAll(authorization);
+            return response;
+        } catch (Exception ex) {
+            Map<String, Object> response = new HashMap<>();
+            response.put(KEY_SUCCESS, false);
+            response.put(KEY_ERROR, ex.getMessage());
+            return response;
+        }
+    }
+
+    @GetMapping(value = "/oauth/google/callback", produces = MediaType.TEXT_HTML_VALUE)
+    public ResponseEntity<String> googleCallback(
+            @RequestParam(value = "code", required = false) String code,
+            @RequestParam(value = "state", required = false) String state,
+            @RequestParam(value = "error", required = false) String error) {
+        Map<String, Object> payload = new HashMap<>();
+        if (error != null && !error.isBlank()) {
+            payload.put(KEY_SUCCESS, false);
+            payload.put(KEY_ERROR, "Connexion Google refusee: " + error);
+            return ResponseEntity.ok(renderPopupResponse(payload));
+        }
+
+        try {
+            Calendar connection = googleOAuthService.completeAuthorization(code, state);
+            payload.put(KEY_SUCCESS, true);
+            payload.put("connection", connection);
+        } catch (Exception ex) {
+            payload.put(KEY_SUCCESS, false);
+            payload.put(KEY_ERROR, ex.getMessage());
+        }
+        return ResponseEntity.ok(renderPopupResponse(payload));
     }
 
     @Operation(summary = "List all calendar connections for a user")
@@ -152,6 +208,18 @@ public class CalendarController {
             response.put(KEY_SUCCESS, false);
             response.put(KEY_ERROR, ex.getMessage());
             return response;
+        }
+    }
+
+    private String renderPopupResponse(Map<String, Object> payload) {
+        try {
+            String json = objectMapper.writeValueAsString(payload);
+            return "<!doctype html><html><body><script>"
+                    + "if(window.opener){window.opener.postMessage({source:'google-oauth',payload:" + json + "}, window.location.origin);}"
+                    + "window.close();"
+                    + "</script><p>Connexion Google terminee. Vous pouvez fermer cette fenetre.</p></body></html>";
+        } catch (JsonProcessingException e) {
+            return "<!doctype html><html><body><script>window.close();</script><p>Connexion Google terminee.</p></body></html>";
         }
     }
 }

@@ -104,10 +104,12 @@ Le système peut :
 La fonctionnalité calendrier permet :
 
 - connexion d'un calendrier `ICAL` par URL publique
-- connexion d'un calendrier `GOOGLE` via token OAuth et `calendarId`
+- connexion d'un calendrier `GOOGLE` via OAuth Google depuis le front
+- configuration d'un utilisateur en mode `GOOGLE_INVITE` avec une simple adresse email
 - lecture des événements sur une plage temporelle
-- vérification de disponibilité
+- vérification de disponibilité sur `ICAL` et sur Google quand l'utilisateur a une vraie connexion OAuth
 - ajout d'une watch party à Google Calendar
+- envoi d'invitations Google Calendar aux participants
 - notifications de disponibilité pour des watch parties en présentiel
 
 ## Persistance
@@ -136,6 +138,8 @@ Ce front permet notamment de :
 - consulter les rankings
 - connecter des calendriers
 - voir les notifications
+- lancer la connexion OAuth Google
+- configurer une invitation Google sans saisie manuelle de token
 
 Il sert avant tout d'interface de démonstration et de validation backend.
 
@@ -203,6 +207,21 @@ Pour l'API LoL Esports, il est recommandé de passer le token via variable d'env
 LOLESPORTS_AUTH_TOKEN=...
 ```
 
+Pour Google OAuth en local, l'application charge automatiquement `config/application.properties` si ce fichier existe. Exemple :
+
+```properties
+google.oauth.client-id=your_google_oauth_client_id
+google.oauth.client-secret=your_google_oauth_client_secret
+google.oauth.redirect-uri=http://localhost:8080/api/oauth/google/callback
+```
+
+Un modèle est fourni dans [config/application.properties.example](config/application.properties.example).
+
+Pour le calendrier Google, deux modes sont possibles :
+
+- `Connexion Google` : l'utilisateur connecte réellement son agenda via OAuth. Ce mode permet de lire les événements, vérifier la disponibilité et ajouter des événements dans son agenda.
+- `Invitation Google` : l'utilisateur renseigne seulement une adresse email. Ce mode ne lit pas son agenda, mais permet de recevoir une invitation Google Calendar envoyée par un organisateur connecté.
+
 ### Lancement
 
 ```bash
@@ -244,6 +263,7 @@ GET  /api/watchparties
 GET  /api/watchparties/{name}/chat
 POST /api/watchparties/{name}/chat
 POST /api/watchparties/{name}/calendar
+POST /api/watchparties/{name}/calendar/accept
 ```
 
 ### Paris
@@ -263,11 +283,22 @@ POST /api/watchparties/{name}/bets/use-ticket
 ```http
 GET    /api/calendars/providers
 POST   /api/users/{user}/calendars
+POST   /api/users/{user}/calendars/google/authorize
 GET    /api/users/{user}/calendars
 DELETE /api/users/{user}/calendars/{connectionId}
 GET    /api/users/{user}/calendars/{connectionId}/events
 GET    /api/users/{user}/availability
+POST   /api/users/{user}/calendars/{connectionId}/events
+GET    /api/oauth/google/callback
 ```
+
+### Modes Google
+
+- `Connexion Google` : le front lance OAuth Google. Aucun token n'est saisi manuellement.
+- `Invitation Google` : l'utilisateur renseigne seulement l'adresse email de l'invité.
+- pour lire les événements et vérifier la disponibilité Google, une vraie connexion OAuth est nécessaire
+- pour recevoir une invitation Google, un email peut suffire
+- un organisateur connecté à Google peut envoyer une invitation Google Calendar à un participant configuré en `Invitation Google`
 
 ### Classements, récompenses et utilisateurs
 

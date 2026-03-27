@@ -253,6 +253,10 @@ public class WatchPartyManager {
 
         for (User user : wp.getParticipants()) {
             if (shouldNotifyUserForPresentiel(user, start, end)) {
+                if (shouldSendGoogleInvite(user, wp)) {
+                    log.info("Invitation Google envoyee pour une watch party en presentiel");
+                    continue;
+                }
                 String message = "Tu es dispo pour la watch party '" + wp.name() + "' le " + start
                         + ". On peut te proposer du presentiel.";
                 notificationService.addNotification(
@@ -264,9 +268,32 @@ public class WatchPartyManager {
     }
 
     private boolean shouldNotifyUserForPresentiel(User user, LocalDateTime start, LocalDateTime end) {
-        return user != null
-                && calendarIntegrationService.hasConnectedCalendar(user.getName())
-                && calendarIntegrationService.canAttendWatchParty(user.getName(), start, end);
+        if (user == null || !calendarIntegrationService.hasConnectedCalendar(user.getName())) {
+            return false;
+        }
+        if (calendarIntegrationService.prefersGoogleInvite(user.getName())
+                && !calendarIntegrationService.canCheckAvailability(user.getName())) {
+            return true;
+        }
+        return calendarIntegrationService.canAttendWatchParty(user.getName(), start, end);
+    }
+
+    private boolean shouldSendGoogleInvite(User user, WatchParty wp) {
+        if (user == null || wp == null || wp.getCreator() == null) {
+            return false;
+        }
+        if (!calendarIntegrationService.prefersGoogleInvite(user.getName())) {
+            return false;
+        }
+        try {
+            return calendarIntegrationService.sendWatchPartyInviteViaGoogle(
+                    wp.getCreator().getName(),
+                    user.getName(),
+                    wp);
+        } catch (IllegalArgumentException ex) {
+            log.warn("Invitation Google impossible pour {}", user.getName(), ex);
+            return false;
+        }
     }
 
     private void replaceInMemoryWatchParty(WatchParty wp) {

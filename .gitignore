@@ -10,6 +10,8 @@
 .env
 .env.local
 .env.*.local
+application-local.properties
+config/application.properties
 src/main/resources/application.properties
 
 .gradle

@@ -9,3 +9,10 @@ Usage:
 2. Ouvrir: http://localhost:8080/
 
 Aucune dépendance ni build nécessaire.
+
+Calendrier Google :
+- mode `Connexion Google` : le bouton `Connecter` lance OAuth Google
+- mode `Invitation Google` : le bouton `Connecter` enregistre seulement l'email de l'invité
+- aucun token Google n'est saisi manuellement dans l'interface
+- un utilisateur connecté via OAuth peut servir d'organisateur et envoyer des invitations Google Calendar
+- un utilisateur configuré en `Invitation Google` peut recevoir l'invitation sans connecter son agenda

@@ -28,21 +28,28 @@ async function refreshWatchParties(){
     const sel = document.getElementById('bet-wp');
     list.innerHTML = '';
     sel.innerHTML = '';
+    if (!Array.isArray(wps)) {
+      log('Erreur fetch WP: réponse inattendue ' + JSON.stringify(wps));
+      return;
+    }
     wps.forEach(wp => {
       const li = document.createElement('li');
       const isPublic = wp.public === true || wp.isPublic === true;
       let typeLabel = 'private';
-      if (wp.autoConfig) {
-        const autoTarget = wp.autoConfig.target ? `:${wp.autoConfig.target}` : '';
-        typeLabel = `auto(${wp.autoConfig.type}${autoTarget})`;
+      if (wp.autoConfig || wp.autoType) {
+        const autoType = wp.autoConfig?.type || wp.autoType;
+        const autoTargetValue = wp.autoConfig?.target || wp.autoTarget;
+        const autoTarget = autoTargetValue ? `:${autoTargetValue}` : '';
+        typeLabel = `auto(${autoType}${autoTarget})`;
       } else if (isPublic) {
         typeLabel = 'public';
       }
-      li.textContent = `${wp.name} — ${typeLabel}` + (wp.creator? ` (creator=${wp.creator.name})` : '');
+      const creatorName = wp.creator?.name || wp.creatorName;
+      li.textContent = `${wp.name} — ${typeLabel}` + (creatorName ? ` (creator=${creatorName})` : '');
       list.appendChild(li);
       const opt = document.createElement('option');
       opt.value = wp.name; opt.textContent = wp.name;
-      opt.dataset.creator = wp.creator ? wp.creator.name : '';
+      opt.dataset.creator = creatorName || '';
       sel.appendChild(opt);
     });
     if (sel.options.length > 0) {
@@ -409,17 +416,32 @@ function toggleWpMode(){
 function toggleCalendarProviderFields() {
   const provider = document.getElementById('cal-provider').value;
   const url = document.getElementById('cal-url');
-  const token = document.getElementById('cal-token');
   const externalId = document.getElementById('cal-external-id');
+  const googleMode = document.getElementById('cal-google-mode');
+  const inviteEmail = document.getElementById('cal-invite-email');
 
   if (provider === 'GOOGLE') {
     url.style.display = 'none';
-    token.style.display = '';
     externalId.style.display = '';
+    googleMode.style.display = '';
+    toggleGoogleInviteEmailField();
   } else {
     url.style.display = '';
-    token.style.display = 'none';
     externalId.style.display = 'none';
+    googleMode.style.display = 'none';
+    inviteEmail.style.display = 'none';
+  }
+}
+
+function toggleGoogleInviteEmailField() {
+  const provider = document.getElementById('cal-provider').value;
+  const googleMode = document.getElementById('cal-google-mode').value;
+  const inviteEmail = document.getElementById('cal-invite-email');
+
+  if (provider === 'GOOGLE' && googleMode === 'GOOGLE_INVITE') {
+    inviteEmail.style.display = '';
+  } else {
+    inviteEmail.style.display = 'none';
   }
 }
 
@@ -429,16 +451,12 @@ async function connectCalendar() {
   const user = document.getElementById('cal-user').value.trim();
   const provider = document.getElementById('cal-provider').value;
   const url = document.getElementById('cal-url').value.trim();
-  const token = document.getElementById('cal-token').value.trim();
   const externalCalendarId = document.getElementById('cal-external-id').value.trim();
+  const googleDeliveryMode = document.getElementById('cal-google-mode').value;
+  const inviteEmail = document.getElementById('cal-invite-email').value.trim();
 
   if (!user) {
     log('Remplissez username');
-    return;
-  }
-
-  if (provider === 'GOOGLE' && !token) {
-    log('Remplissez le token OAuth Google');
     return;
   }
 
@@ -447,10 +465,19 @@ async function connectCalendar() {
     return;
   }
 
+  if (provider === 'GOOGLE' && googleDeliveryMode === 'GOOGLE_INVITE' && !inviteEmail) {
+    log('Remplissez l email pour l invitation Google');
+    return;
+  }
+
   try {
     let payload;
     if (provider === 'GOOGLE') {
-      payload = { provider, oauthAccessToken: token, externalCalendarId };
+      if (googleDeliveryMode === 'APP_ONLY') {
+        await connectGoogleOAuth();
+        return;
+      }
+      payload = { provider, externalCalendarId, googleDeliveryMode, inviteEmail };
     } else {
       payload = { provider, sourceUrl: url };
     }
@@ -466,6 +493,52 @@ async function connectCalendar() {
     }
   } catch(e) {
     log('Erreur connexion calendar: ' + e);
+  }
+}
+
+async function connectGoogleOAuth() {
+  const user = document.getElementById('cal-user').value.trim();
+  const provider = document.getElementById('cal-provider').value;
+  const externalCalendarId = document.getElementById('cal-external-id').value.trim();
+  const googleDeliveryMode = document.getElementById('cal-google-mode').value;
+  const inviteEmail = document.getElementById('cal-invite-email').value.trim();
+
+  if (!user) {
+    log('Remplissez username');
+    return;
+  }
+
+  if (provider !== 'GOOGLE') {
+    log('Choisissez GOOGLE pour lancer OAuth');
+    return;
+  }
+
+  if (googleDeliveryMode === 'GOOGLE_INVITE' && !inviteEmail) {
+    log('Remplissez l email pour l invitation Google');
+    return;
+  }
+
+  try {
+    const payload = { provider, externalCalendarId, googleDeliveryMode, inviteEmail };
+    const res = await fetch(`/api/users/${encodeURIComponent(user)}/calendars/google/authorize`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const result = await res.json();
+    if (!result.success) {
+      log('OAuth Google → ' + JSON.stringify(result));
+      return;
+    }
+
+    const popup = window.open(result.authorizationUrl, 'google-oauth', 'width=520,height=700');
+    if (!popup) {
+      log('Popup bloquee. Autorisez les popups pour continuer.');
+      return;
+    }
+    log('Connexion Google en cours...');
+  } catch (e) {
+    log('Erreur lancement OAuth Google: ' + e);
   }
 }
 
@@ -489,6 +562,12 @@ async function listCalendars() {
       let details = cal.sourceUrl;
       if (cal.type === 'GOOGLE') {
         details = cal.calendarId || 'primary';
+        if (cal.deliveryMode) {
+          details += ` | mode=${cal.deliveryMode}`;
+        }
+        if (cal.inviteEmail) {
+          details += ` | invite=${cal.inviteEmail}`;
+        }
       }
       li.textContent = `${cal.id} - ${cal.type} (${details})`;
       list.appendChild(li);
@@ -600,6 +679,7 @@ function bind(){
   document.getElementById('bet-wp').onchange = () => { refreshWatchPartyRanking(); setWpAdminFromSelector(); updateChatWPSelector(); };
   document.getElementById('wp-mode').onchange = toggleWpMode;
   document.getElementById('cal-provider').onchange = toggleCalendarProviderFields;
+  document.getElementById('cal-google-mode').onchange = toggleGoogleInviteEmailField;
   document.getElementById('btn-lookup-user').onclick = lookupUser;
   document.getElementById('btn-load-chat').onclick = loadWatchPartyChat;
   document.getElementById('btn-send-chat').onclick = sendChatMessage;
@@ -613,5 +693,21 @@ function bind(){
   // Notification bindings
   document.getElementById('btn-load-notifications').onclick = loadNotifications;
 }
+
+globalThis.addEventListener('message', async event => {
+  if (event.origin !== window.location.origin) {
+    return;
+  }
+  if (!event.data || event.data.source !== 'google-oauth') {
+    return;
+  }
+
+  const payload = event.data.payload || {};
+  log('OAuth Google → ' + JSON.stringify(payload));
+  if (payload.success) {
+    document.getElementById('cal-list-user').value = document.getElementById('cal-user').value.trim();
+    await listCalendars();
+  }
+});
 
 globalThis.addEventListener('DOMContentLoaded', async () => { bind(); toggleWpMode(); toggleCalendarProviderFields(); await refreshWatchParties(); updateChatWPSelector(); await refreshRankings(); await refreshWatchPartyRanking(); log('UI ready'); });
