@@ -1,0 +1,5 @@
+# Copy this file to `config/application.properties` and fill in your local values.
+
+google.oauth.client-id=your_google_oauth_client_id
+google.oauth.client-secret=your_google_oauth_client_secret
+google.oauth.redirect-uri=http://localhost:8080/api/oauth/google/callback

@@ -66,13 +66,29 @@ L’application est directement connectée à une API spécialisée dans les com
 
 ## Calendrier
 ### Ce que ça fait :
-La nouvelle fonctionnalité calendrier permet de connecter un calendrier utilisateur, de lire ses événements et, selon le provider, d’ajouter de nouveaux événements. Elle sert aussi à interagir avec les watchparties.
+La fonctionnalité calendrier permet de connecter un calendrier utilisateur, de lire ses événements et, selon le provider, d’ajouter de nouveaux événements. Elle sert aussi à interagir avec les watchparties et avec Google Calendar.
 
 Lorsqu’une watchparty est planifiée, l’application peut vérifier les calendriers connectés des participants. Si un utilisateur est libre sur le créneau concerné, une notification lui est envoyée pour lui proposer une participation en présentiel.
 
 Deux providers sont actuellement supportés :
 - `ICAL` pour connecter un agenda à partir d’un lien public `.ics`
-- `GOOGLE` pour créer des événements dans Google Calendar via OAuth
+- `GOOGLE` avec deux usages :
+  - une connexion complète via OAuth Google pour lire les événements, vérifier la disponibilité et créer des événements
+  - un mode `GOOGLE_INVITE` pour enregistrer seulement une adresse email et recevoir une invitation Google Calendar sans token manuel
+
+Le front de test ne demande plus de token Google à la main :
+- en mode `Connexion Google`, il ouvre une popup OAuth
+- en mode `Invitation Google`, il demande seulement l’adresse email de l’invité
+
+Lorsqu’un organisateur connecté à Google planifie une watchparty et qu’un participant est configuré en `GOOGLE_INVITE`, l’application peut créer une invitation Google Calendar directement pour cet invité.
+
+En pratique, cela permet maintenant deux parcours distincts :
+- un parcours "agenda connecté" pour les utilisateurs qui veulent partager leur disponibilité et recevoir un ajout direct dans leur calendrier
+- un parcours "invité Google" plus léger pour les utilisateurs qui ne veulent pas connecter leur agenda mais souhaitent recevoir une invitation Google Calendar et répondre depuis Google
+
+Limite actuelle :
+-  L'application étant encore en test la connexion a google se fait uniquement aux adresses mails autorisés. Pour autoriser une adresse mail contacter : tesstdev025@gmail.com
+
 
 ### Diagramme de classe calendrier
 

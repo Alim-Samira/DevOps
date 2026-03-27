@@ -63,8 +63,20 @@ public class WatchPartyController {
     }
 
     @GetMapping
-    public List<WatchParty> getAllWatchParties() {
-        return manager.getAllWatchParties();
+    public List<WatchPartySummaryResponse> getAllWatchParties() {
+        return manager.getAllWatchParties().stream()
+                .filter(Objects::nonNull)
+                .map(wp -> new WatchPartySummaryResponse(
+                        wp.getName(),
+                        wp.getDate(),
+                        wp.getGame(),
+                        wp.isPublic(),
+                        wp.isPlanned(),
+                        wp.getStatus() != null ? wp.getStatus().name() : null,
+                        wp.getCreator() != null ? wp.getCreator().getName() : null,
+                        wp.getAutoConfig() != null ? wp.getAutoConfig().getType().name() : null,
+                        wp.getAutoConfig() != null ? wp.getAutoConfig().getTarget() : null))
+                .toList();
     }
 
     @PostMapping
@@ -233,6 +245,34 @@ public class WatchPartyController {
         }
     }
 
+    @PostMapping("/{name}/calendar/accept")
+    public Map<String, Object> acceptWatchPartyCalendarInvite(
+            @PathVariable("name") String name,
+            @RequestBody Map<String, String> payload) {
+        Map<String, Object> response = new HashMap<>();
+        String user = payload.get(KEY_USER);
+        String connectionId = payload.get(KEY_CONNECTION_ID);
+
+        WatchParty wp = manager.getWatchPartyByName(name);
+        if (wp == null) {
+            response.put(KEY_SUCCESS, false);
+            response.put(KEY_ERROR, "Watch party introuvable: " + name);
+            return response;
+        }
+
+        try {
+            Map<String, Object> createdEvent =
+                    calendarIntegrationService.acceptWatchPartyCalendarInvite(user, wp, connectionId);
+            response.put(KEY_SUCCESS, true);
+            response.put(KEY_EVENT, createdEvent);
+            return response;
+        } catch (Exception ex) {
+            response.put(KEY_SUCCESS, false);
+            response.put(KEY_ERROR, ex.getMessage());
+            return response;
+        }
+    }
+
     private String createManualWatchParty(Map<String, String> payload, boolean isPublic) {
         String name = payload.get(KEY_NAME);
         if (name == null || name.isBlank()) {
@@ -310,5 +350,17 @@ public class WatchPartyController {
     }
 
     public record ChatMessageResponse(Long id, String senderName, String content, String timestamp) {
+    }
+
+    public record WatchPartySummaryResponse(
+            String name,
+            LocalDateTime date,
+            String game,
+            boolean isPublic,
+            boolean planned,
+            String status,
+            String creatorName,
+            String autoType,
+            String autoTarget) {
     }
 }
